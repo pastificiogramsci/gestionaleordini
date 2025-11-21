@@ -2324,15 +2324,26 @@
                     return false;
                 }
             }
-            async syncToDropbox(silent = false) {
+
+            async syncToDropbox(silent = false, retryCount = 0) {
                 if (!this.dropboxClient || !this.dropboxAccessToken) {
                     console.error('❌ Dropbox non configurato');
                     if (!silent) this.showToast('Dropbox non configurato', 'error');
                     return;
                 }
 
+                if (retryCount > 3) {
+                    console.error('❌ Troppi tentativi di sincronizzazione falliti');
+                    if (!silent) this.showToast('❌ Errore sincronizzazione: troppi conflitti', 'error');
+                    return;
+                }
+
                 // MERGE con dati remoti PRIMA di uploadare
-                await this.mergeWithRemoteData();
+                const mergeSuccess = await this.mergeWithRemoteData();
+                if (!mergeSuccess) {
+                    console.error('❌ Merge fallito');
+                    return;
+                }
 
                 if (!authManager.password) {
                     console.error('❌ Password non disponibile per crittografia');
@@ -2372,12 +2383,23 @@
 
                     console.log('📦 Dimensione dati criptati:', (blob.size / 1024).toFixed(2), 'KB');
 
-                    await this.dropboxClient.filesUpload({
-                        path: '/gestionale-ordini-backup.json',
-                        contents: blob,
-                        mode: 'overwrite',
-                        autorename: false
-                    });
+                    // Prova upload con controllo conflitti
+                    try {
+                        await this.dropboxClient.filesUpload({
+                            path: '/gestionale-ordini-backup.json',
+                            contents: blob,
+                            mode: { '.tag': 'overwrite' },
+                            autorename: false
+                        });
+                    } catch (uploadErr) {
+                        // Se c'è un conflitto (409), riprova con merge
+                        if (uploadErr.status === 409) {
+                            console.log('⚠️ Conflitto rilevato, riprovo con nuovo merge... (tentativo ' + (retryCount + 1) + ')');
+                            await new Promise(resolve => setTimeout(resolve, 1000)); // Aspetta 1 secondo
+                            return await this.syncToDropbox(silent, retryCount + 1);
+                        }
+                        throw uploadErr;
+                    }
 
                     const now = new Date().toISOString();
                     localStorage.setItem('lastDropboxSync', now);
@@ -2396,7 +2418,7 @@
                         const nuovoToken = await this.rinnovaAccessToken();
                         if (nuovoToken) {
                             console.log('🔁 Riprovo upload...');
-                            await this.syncToDropbox(silent);
+                            await this.syncToDropbox(silent, retryCount);
                             return;
                         }
                     }
