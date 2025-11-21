@@ -2297,7 +2297,7 @@
 
                     console.log('🔀 Merge: unisco i dati...');
 
-                    // MERGE ORDINI (con aggiornamento stato deleted)
+                    // ========== MERGE ORDINI ==========
                     const localOrderMap = new Map(this.db.orders.map(o => [o.id, o]));
                     let addedOrders = 0;
                     let updatedOrders = 0;
@@ -2306,19 +2306,58 @@
                         const localOrder = localOrderMap.get(remoteOrder.id);
 
                         if (localOrder) {
-                            // Ordine esiste: aggiorna se remoto è più recente O se è stato eliminato
-                            const remoteTime = new Date(remoteOrder.deletedAt || remoteOrder.date || 0);
-                            const localTime = new Date(localOrder.deletedAt || localOrder.date || 0);
+                            // Ordine esiste: aggiorna SOLO campi specifici
 
-                            // Priorità agli ordini eliminati (deleted: true vince sempre)
+                            // CASO 1: Remoto deleted, locale no → marca come deleted
                             if (remoteOrder.deleted && !localOrder.deleted) {
-                                Object.assign(localOrder, remoteOrder);
+                                localOrder.deleted = true;
+                                localOrder.deletedAt = remoteOrder.deletedAt;
                                 updatedOrders++;
-                            } else if (!remoteOrder.deleted && localOrder.deleted) {
-                                // Locale deleted, remoto no: mantieni locale deleted (più recente)
-                            } else if (remoteTime > localTime) {
-                                Object.assign(localOrder, remoteOrder);
-                                updatedOrders++;
+                            }
+                            // CASO 2: Locale deleted, remoto no → mantieni locale deleted (priorità)
+                            else if (localOrder.deleted && !remoteOrder.deleted) {
+                                // Non fare nulla
+                            }
+                            // CASO 3: Entrambi non deleted → aggiorna campi modificabili
+                            else if (!remoteOrder.deleted && !localOrder.deleted) {
+                                let hasChanges = false;
+
+                                // Confronta e aggiorna items
+                                if (JSON.stringify(localOrder.items) !== JSON.stringify(remoteOrder.items)) {
+                                    localOrder.items = remoteOrder.items;
+                                    hasChanges = true;
+                                }
+
+                                // Aggiorna stati
+                                if (localOrder.prepStatus !== remoteOrder.prepStatus) {
+                                    localOrder.prepStatus = remoteOrder.prepStatus;
+                                    hasChanges = true;
+                                }
+
+                                if (localOrder.paymentStatus !== remoteOrder.paymentStatus) {
+                                    localOrder.paymentStatus = remoteOrder.paymentStatus;
+                                    hasChanges = true;
+                                }
+
+                                // Aggiorna preparazione
+                                if (JSON.stringify(localOrder.preparedItems) !== JSON.stringify(remoteOrder.preparedItems)) {
+                                    localOrder.preparedItems = remoteOrder.preparedItems;
+                                    hasChanges = true;
+                                }
+
+                                // Aggiorna acconto
+                                if (localOrder.deposit !== remoteOrder.deposit) {
+                                    localOrder.deposit = remoteOrder.deposit;
+                                    hasChanges = true;
+                                }
+
+                                // Aggiorna note
+                                if (localOrder.notes !== remoteOrder.notes) {
+                                    localOrder.notes = remoteOrder.notes;
+                                    hasChanges = true;
+                                }
+
+                                if (hasChanges) updatedOrders++;
                             }
                         } else {
                             // Ordine nuovo: aggiungilo
@@ -2327,7 +2366,7 @@
                         }
                     });
 
-                    // MERGE PRODOTTI
+                    // ========== MERGE PRODOTTI ==========
                     const localProductMap = new Map(this.db.products.map(p => [p.id, p]));
                     let addedProducts = 0;
                     let updatedProducts = 0;
@@ -2336,27 +2375,36 @@
                         const localProduct = localProductMap.get(remoteProduct.id);
 
                         if (localProduct) {
-                            // Prodotto esiste: aggiorna se modificato o eliminato
+                            // Prodotto esiste
+
                             if (remoteProduct.deleted && !localProduct.deleted) {
-                                Object.assign(localProduct, remoteProduct);
+                                localProduct.deleted = true;
+                                localProduct.deletedAt = remoteProduct.deletedAt;
                                 updatedProducts++;
-                            } else if (!remoteProduct.deleted && localProduct.deleted) {
-                                // Mantieni locale deleted
-                            } else {
-                                // Aggiorna se remoto è diverso
-                                if (JSON.stringify(remoteProduct) !== JSON.stringify(localProduct)) {
-                                    Object.assign(localProduct, remoteProduct);
+                            }
+                            else if (!remoteProduct.deleted && !localProduct.deleted) {
+                                // Aggiorna solo se diverso
+                                const remoteStr = JSON.stringify(remoteProduct);
+                                const localStr = JSON.stringify(localProduct);
+
+                                if (remoteStr !== localStr) {
+                                    // Aggiorna campi (escluso id)
+                                    localProduct.name = remoteProduct.name;
+                                    localProduct.category = remoteProduct.category;
+                                    localProduct.price = remoteProduct.price;
+                                    localProduct.unit = remoteProduct.unit;
+                                    localProduct.weightPerPiece = remoteProduct.weightPerPiece;
                                     updatedProducts++;
                                 }
                             }
                         } else {
-                            // Prodotto nuovo: aggiungilo
+                            // Prodotto nuovo
                             this.db.products.push(remoteProduct);
                             addedProducts++;
                         }
                     });
 
-                    // MERGE CLIENTI
+                    // ========== MERGE CLIENTI ==========
                     const localCustomerMap = new Map(this.db.customers.map(c => [c.id, c]));
                     let addedCustomers = 0;
                     let updatedCustomers = 0;
@@ -2365,21 +2413,29 @@
                         const localCustomer = localCustomerMap.get(remoteCustomer.id);
 
                         if (localCustomer) {
-                            // Cliente esiste: aggiorna se modificato o eliminato
+                            // Cliente esiste
+
                             if (remoteCustomer.deleted && !localCustomer.deleted) {
-                                Object.assign(localCustomer, remoteCustomer);
+                                localCustomer.deleted = true;
+                                localCustomer.deletedAt = remoteCustomer.deletedAt;
                                 updatedCustomers++;
-                            } else if (!remoteCustomer.deleted && localCustomer.deleted) {
-                                // Mantieni locale deleted
-                            } else {
-                                // Aggiorna se remoto è diverso
-                                if (JSON.stringify(remoteCustomer) !== JSON.stringify(localCustomer)) {
-                                    Object.assign(localCustomer, remoteCustomer);
+                            }
+                            else if (!remoteCustomer.deleted && !localCustomer.deleted) {
+                                // Aggiorna solo se diverso
+                                const remoteStr = JSON.stringify(remoteCustomer);
+                                const localStr = JSON.stringify(localCustomer);
+
+                                if (remoteStr !== localStr) {
+                                    localCustomer.firstName = remoteCustomer.firstName;
+                                    localCustomer.lastName = remoteCustomer.lastName;
+                                    localCustomer.phone = remoteCustomer.phone;
+                                    localCustomer.address = remoteCustomer.address;
+                                    localCustomer.fidelity = remoteCustomer.fidelity;
                                     updatedCustomers++;
                                 }
                             }
                         } else {
-                            // Cliente nuovo: aggiungilo
+                            // Cliente nuovo
                             this.db.customers.push(remoteCustomer);
                             addedCustomers++;
                         }
