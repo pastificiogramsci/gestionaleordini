@@ -2852,59 +2852,66 @@
                     console.log('📅 Timestamp locale:', datiLocali.lastModified);
                     console.log('📅 Timestamp remoto:', datiRemoti.lastModified);
 
+                    // MERGE SEMPRE, indipendentemente dal timestamp!
                     if (dataRemota > dataLocale) {
-                        console.log('🆕 Dati remoti più recenti, aggiorno...');
-
-                        // ⚠️ NON sovrascrivere! Fai il MERGE!
-                        // Prima salva i dati locali temporaneamente
-                        const oldLocalData = {
-                            orders: [...this.db.orders],
-                            products: [...this.db.products],
-                            customers: [...this.db.customers]
-                        };
-
-                        // Sostituisci temporaneamente con dati remoti
-                        this.db = datiRemoti;
-                        if (!this.db.categories) this.db.categories = [];
-
-                        // Ora fai il MERGE dei dati locali con quelli remoti
-                        // Aggiungi ordini locali che non sono presenti nei dati remoti
-                        const remoteOrderIds = new Set(this.db.orders.map(o => o.id));
-                        const localOnlyOrders = oldLocalData.orders.filter(o => !remoteOrderIds.has(o.id));
-                        this.db.orders.push(...localOnlyOrders);
-
-                        // Stessa cosa per prodotti
-                        const remoteProductIds = new Set(this.db.products.map(p => p.id));
-                        const localOnlyProducts = oldLocalData.products.filter(p => !remoteProductIds.has(p.id));
-                        this.db.products.push(...localOnlyProducts);
-
-                        // E clienti
-                        const remoteCustomerIds = new Set(this.db.customers.map(c => c.id));
-                        const localOnlyCustomers = oldLocalData.customers.filter(c => !remoteCustomerIds.has(c.id));
-                        this.db.customers.push(...localOnlyCustomers);
-
-                        console.log(`🔀 Merge durante download: +${localOnlyOrders.length} ordini, +${localOnlyProducts.length} prodotti, +${localOnlyCustomers.length} clienti locali preservati`);
-
-                        // Salva criptato
-                        const encrypted = authManager.encrypt(this.db);
-                        if (encrypted) {
-                            localStorage.setItem('orderManagerData', encrypted);
-                            localStorage.setItem('lastModified', datiRemoti.lastModified);
-                        }
-
-                        const now = new Date().toISOString();
-                        localStorage.setItem('lastDropboxSync', now);
-                        this.updateLastSyncInfo();
-
-                        this.render();
-                        this.renderDashboard();
-                        this.renderPreparation();
-                        this.updateStats();
-
-                        console.log('✅ Dati sincronizzati da Dropbox (silent)');
+                        console.log('🆕 Dati remoti più recenti, faccio merge...');
+                    } else if (dataRemota.getTime() === dataLocale.getTime()) {
+                        console.log('⚖️ Timestamp uguali, faccio merge...');
                     } else {
-                        console.log('ℹ️ Dati locali già aggiornati');
+                        console.log('ℹ️ Dati locali più recenti, faccio merge comunque...');
                     }
+
+                    // Salva i dati locali PRIMA di sovrascrivere
+                    const oldLocalData = {
+                        orders: [...this.db.orders],
+                        products: [...this.db.products],
+                        customers: [...this.db.customers]
+                    };
+
+                    // Carica dati remoti
+                    this.db = datiRemoti;
+                    if (!this.db.categories) this.db.categories = [];
+
+                    // MERGE: Aggiungi elementi locali che non sono nei dati remoti
+
+                    // Ordini
+                    const remoteOrderIds = new Set(this.db.orders.map(o => o.id));
+                    const localOnlyOrders = oldLocalData.orders.filter(o => !remoteOrderIds.has(o.id));
+                    this.db.orders.push(...localOnlyOrders);
+
+                    // Prodotti
+                    const remoteProductIds = new Set(this.db.products.map(p => p.id));
+                    const localOnlyProducts = oldLocalData.products.filter(p => !remoteProductIds.has(p.id));
+                    this.db.products.push(...localOnlyProducts);
+
+                    // Clienti
+                    const remoteCustomerIds = new Set(this.db.customers.map(c => c.id));
+                    const localOnlyCustomers = oldLocalData.customers.filter(c => !remoteCustomerIds.has(c.id));
+                    this.db.customers.push(...localOnlyCustomers);
+
+                    console.log(`🔀 Merge completato: +${localOnlyOrders.length} ordini, +${localOnlyProducts.length} prodotti, +${localOnlyCustomers.length} clienti locali preservati`);
+
+                    // Aggiorna timestamp solo se remoto è più recente
+                    const newTimestamp = dataRemota > dataLocale ? datiRemoti.lastModified : datiLocali.lastModified;
+                    this.db.lastModified = newTimestamp;
+
+                    // Salva criptato
+                    const encrypted = authManager.encrypt(this.db);
+                    if (encrypted) {
+                        localStorage.setItem('orderManagerData', encrypted);
+                        localStorage.setItem('lastModified', newTimestamp);
+                    }
+
+                    const now = new Date().toISOString();
+                    localStorage.setItem('lastDropboxSync', now);
+                    this.updateLastSyncInfo();
+
+                    this.render();
+                    this.renderDashboard();
+                    this.renderPreparation();
+                    this.updateStats();
+
+                    console.log('✅ Dati sincronizzati da Dropbox (silent)');
 
                 } catch (error) {
 
