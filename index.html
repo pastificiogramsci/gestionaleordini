@@ -2855,8 +2855,35 @@
                     if (dataRemota > dataLocale) {
                         console.log('🆕 Dati remoti più recenti, aggiorno...');
 
+                        // ⚠️ NON sovrascrivere! Fai il MERGE!
+                        // Prima salva i dati locali temporaneamente
+                        const oldLocalData = {
+                            orders: [...this.db.orders],
+                            products: [...this.db.products],
+                            customers: [...this.db.customers]
+                        };
+
+                        // Sostituisci temporaneamente con dati remoti
                         this.db = datiRemoti;
                         if (!this.db.categories) this.db.categories = [];
+
+                        // Ora fai il MERGE dei dati locali con quelli remoti
+                        // Aggiungi ordini locali che non sono presenti nei dati remoti
+                        const remoteOrderIds = new Set(this.db.orders.map(o => o.id));
+                        const localOnlyOrders = oldLocalData.orders.filter(o => !remoteOrderIds.has(o.id));
+                        this.db.orders.push(...localOnlyOrders);
+
+                        // Stessa cosa per prodotti
+                        const remoteProductIds = new Set(this.db.products.map(p => p.id));
+                        const localOnlyProducts = oldLocalData.products.filter(p => !remoteProductIds.has(p.id));
+                        this.db.products.push(...localOnlyProducts);
+
+                        // E clienti
+                        const remoteCustomerIds = new Set(this.db.customers.map(c => c.id));
+                        const localOnlyCustomers = oldLocalData.customers.filter(c => !remoteCustomerIds.has(c.id));
+                        this.db.customers.push(...localOnlyCustomers);
+
+                        console.log(`🔀 Merge durante download: +${localOnlyOrders.length} ordini, +${localOnlyProducts.length} prodotti, +${localOnlyCustomers.length} clienti locali preservati`);
 
                         // Salva criptato
                         const encrypted = authManager.encrypt(this.db);
