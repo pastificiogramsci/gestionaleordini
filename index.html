@@ -5972,9 +5972,9 @@
             }
 
             updateStats() {
-                document.getElementById('stats-orders').textContent = this.db.orders.length;
-                document.getElementById('stats-products').textContent = this.db.products.length;
-                document.getElementById('stats-customers').textContent = this.db.customers.length;
+                document.getElementById('stats-orders').textContent = this.db.orders.filter(o => !o.deleted).length;
+                document.getElementById('stats-products').textContent = this.db.products.filter(p => !p.deleted).length;
+                document.getElementById('stats-customers').textContent = this.db.customers.filter(c => !c.deleted).length;
             }
 
             // CONFERMA ELIMINAZIONE
@@ -6070,25 +6070,25 @@
 
                 const firstDayMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 
-                // Ordini e fatturato oggi
+                // Ordini e fatturato oggi (FILTRO AGGIUNTO)
                 const ordersToday = this.db.orders.filter(o => {
+                    if (o.deleted) return false; // ← AGGIUNTO
                     const orderDate = new Date(o.deliveryDate);
                     orderDate.setHours(0, 0, 0, 0);
                     return orderDate.getTime() === today.getTime();
                 });
 
-                // CORREZIONE: item.price è già il totale
                 const revenueToday = ordersToday.reduce((sum, order) => {
                     return sum + order.items.reduce((itemSum, item) => itemSum + item.price, 0);
                 }, 0);
 
-                // Ordini e fatturato mese
+                // Ordini e fatturato mese (FILTRO AGGIUNTO)
                 const ordersMonth = this.db.orders.filter(o => {
+                    if (o.deleted) return false; // ← AGGIUNTO
                     const orderDate = new Date(o.deliveryDate);
                     return orderDate >= firstDayMonth;
                 });
 
-                // CORREZIONE: item.price è già il totale
                 const revenueMonth = ordersMonth.reduce((sum, order) => {
                     return sum + order.items.reduce((itemSum, item) => itemSum + item.price, 0);
                 }, 0);
@@ -6129,12 +6129,16 @@
                     'pagato': 0
                 };
 
-                this.db.orders.forEach(order => {
+                // FILTRO AGGIUNTO: ignora ordini eliminati
+                const visibleOrders = this.db.orders.filter(o => !o.deleted);
+
+                visibleOrders.forEach(order => {
                     prepCounts[order.prepStatus]++;
                     paymentCounts[order.paymentStatus]++;
                 });
 
-                const total = this.db.orders.length || 1;
+                // CORREZIONE: usa visibleOrders invece di this.db.orders
+                const total = visibleOrders.length || 1;
 
                 // Render preparazione
                 prepStatusChart.innerHTML = Object.entries(prepCounts).map(([status, count]) => {
@@ -6145,18 +6149,18 @@
                         'consegnato': 'bg-blue-500'
                     };
                     return `
-                        <div class="flex items-center gap-2 mb-2">
-                            <div class="flex-1">
-                                <div class="flex justify-between text-sm mb-1">
-                                    <span class="font-medium capitalize">${status}</span>
-                                    <span class="text-gray-600">${count} (${percentage}%)</span>
-                                </div>
-                                <div class="w-full bg-gray-200 rounded-full h-2">
-                                    <div class="${colors[status]} h-2 rounded-full" style="width: ${percentage}%"></div>
-                                </div>
-                            </div>
-                        </div>
-                    `;
+            <div class="flex items-center gap-2 mb-2">
+                <div class="flex-1">
+                    <div class="flex justify-between text-sm mb-1">
+                        <span class="font-medium capitalize">${status}</span>
+                        <span class="text-gray-600">${count} (${percentage}%)</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div class="${colors[status]} h-2 rounded-full" style="width: ${percentage}%"></div>
+                    </div>
+                </div>
+            </div>
+        `;
                 }).join('');
 
                 // Render pagamenti
@@ -6167,18 +6171,18 @@
                         'pagato': 'bg-green-500'
                     };
                     return `
-                        <div class="flex items-center gap-2 mb-2">
-                            <div class="flex-1">
-                                <div class="flex justify-between text-sm mb-1">
-                                    <span class="font-medium capitalize">${status}</span>
-                                    <span class="text-gray-600">${count} (${percentage}%)</span>
-                                </div>
-                                <div class="w-full bg-gray-200 rounded-full h-2">
-                                    <div class="${colors[status]} h-2 rounded-full" style="width: ${percentage}%"></div>
-                                </div>
-                            </div>
-                        </div>
-                    `;
+            <div class="flex items-center gap-2 mb-2">
+                <div class="flex-1">
+                    <div class="flex justify-between text-sm mb-1">
+                        <span class="font-medium capitalize">${status}</span>
+                        <span class="text-gray-600">${count} (${percentage}%)</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div class="${colors[status]} h-2 rounded-full" style="width: ${percentage}%"></div>
+                    </div>
+                </div>
+            </div>
+        `;
                 }).join('');
             }
 
@@ -6189,8 +6193,8 @@
                 // Calcola totale speso per cliente
                 const customerTotals = {};
 
-                this.db.orders.forEach(order => {
-                    // CORREZIONE: item.price è già il totale
+                // FILTRO AGGIUNTO: ignora ordini eliminati
+                this.db.orders.filter(o => !o.deleted).forEach(order => {
                     const total = order.items.reduce((sum, item) => sum + item.price, 0);
                     if (!customerTotals[order.customerId]) {
                         customerTotals[order.customerId] = { total: 0, orders: 0 };
@@ -6217,31 +6221,30 @@
                 container.innerHTML = topCustomers.map((item, index) => {
                     const medals = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣'];
                     return `
-                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                            <div class="flex items-center gap-3">
-                                <span class="text-2xl">${medals[index]}</span>
-                                <div>
-                                    <div class="font-semibold">${item.customer.lastName} ${item.customer.firstName}</div>
-                                    <div class="text-sm text-gray-600">${item.orders} ordini</div>
-                                </div>
-                            </div>
-                            <div class="text-right">
-                                <div class="font-bold text-green-600">${this.formatPrice(item.total)}</div>
-                            </div>
-                        </div>
-                    `;
+            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div class="flex items-center gap-3">
+                    <span class="text-2xl">${medals[index]}</span>
+                    <div>
+                        <div class="font-semibold">${item.customer.lastName} ${item.customer.firstName}</div>
+                        <div class="text-sm text-gray-600">${item.orders} ordini</div>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <div class="font-bold text-green-600">${this.formatPrice(item.total)}</div>
+                </div>
+            </div>
+        `;
                 }).join('');
             }
-
             // EXPORT CSV
             exportOrders() {
-                if (this.db.orders.length === 0) {
+                if (this.db.orders.filter(o => !o.deleted).length === 0) {
                     this.showToast('⚠️ Nessun ordine da esportare', 'error');
                     return;
                 }
 
                 const headers = ['Numero', 'Cliente', 'Data Consegna', 'Stato Prep', 'Stato Pagamento', 'Totale', 'Acconto', 'Resto'];
-                const rows = this.db.orders.map(order => {
+                const rows = this.db.orders.filter(o => !o.deleted).map(order => {
                     const customer = this.db.customers.find(c => c.id === order.customerId);
                     const customerName = customer ? `${customer.lastName} ${customer.firstName}` : 'Sconosciuto';
                     const total = order.items.reduce((sum, item) => sum + item.price, 0);
@@ -6566,7 +6569,8 @@
                 const statusFilter = document.getElementById('prep-status-filter').value;
 
                 // Filtra ordini per data
-                let ordersToShow = this.db.orders;
+                let ordersToShow = this.db.orders.filter(o => !o.deleted);
+                this.db.orders.filter
                 if (dateFilter) {
                     ordersToShow = ordersToShow.filter(o => o.deliveryDate === dateFilter);
                 }
