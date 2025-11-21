@@ -24,12 +24,9 @@
         if (hostname === "127.0.0.1" || hostname === "localhost") {
             // Ambiente locale (PC)
             redirectUri = "http://127.0.0.1:5500/";
-        } else if (/^192\.168\./.test(hostname) || /^10\./.test(hostname)) {
-            // Accesso da LAN (telefono/tablet in WiFi)
-            redirectUri = `${window.location.origin}/`;
         } else {
-            // Online (Netlify)
-            redirectUri = "https://gestionaleordini.netlify.app/";
+            // Online (usa l'origine corrente dinamicamente)
+            redirectUri = `${window.location.origin}${window.location.pathname}`;
         }
 
         const DROPBOX_CONFIG = {
