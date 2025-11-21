@@ -2597,6 +2597,80 @@
                 }
             }
 
+            // ========== SISTEMA DI LOCK PER ORDINI SIMULTANEI ==========
+
+            async acquireLock() {
+                const lockData = {
+                    locked: true,
+                    device: /Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent) ? 'Smartphone/Tablet' : 'PC',
+                    timestamp: new Date().toISOString()
+                };
+
+                try {
+                    await this.dropboxClient.filesUpload({
+                        path: '/order-lock.json',
+                        contents: new Blob([JSON.stringify(lockData)], { type: 'application/json' }),
+                        mode: { '.tag': 'overwrite' }
+                    });
+                    console.log('🔒 Lock acquisito');
+                    return true;
+                } catch (err) {
+                    console.error('❌ Errore acquisizione lock:', err);
+                    return false;
+                }
+            }
+
+            async releaseLock() {
+                try {
+                    await this.dropboxClient.filesDeleteV2({ path: '/order-lock.json' });
+                    console.log('🔓 Lock rilasciato');
+                } catch (err) {
+                    // Lock già rimosso o non esiste
+                    console.log('ℹ️ Lock già rilasciato');
+                }
+            }
+
+            async checkLock() {
+                try {
+                    const response = await this.dropboxClient.filesDownload({ path: '/order-lock.json' });
+                    const blob = response.result.fileBlob;
+                    const text = await blob.text();
+                    const lockData = JSON.parse(text);
+
+                    // Timeout: se lock > 30 secondi, consideralo scaduto
+                    const lockAge = Date.now() - new Date(lockData.timestamp).getTime();
+                    if (lockAge > 30000) {
+                        console.log('⏰ Lock scaduto, lo rimuovo');
+                        await this.releaseLock();
+                        return null;
+                    }
+
+                    return lockData;
+                } catch (err) {
+                    return null; // Nessun lock attivo
+                }
+            }
+
+            async waitForLock(maxWait = 30000) {
+                const startTime = Date.now();
+                let attempts = 0;
+
+                while (Date.now() - startTime < maxWait) {
+                    const lock = await this.checkLock();
+                    if (!lock) {
+                        console.log('✅ Lock libero, procedo');
+                        return true; // Lock libero
+                    }
+
+                    attempts++;
+                    console.log(`⏳ Attesa lock... tentativo ${attempts}`);
+                    this.showToast(`⏳ Attendi... ${lock.device} sta salvando ordine`, 'info');
+                    await new Promise(resolve => setTimeout(resolve, 2000)); // Controlla ogni 2 secondi
+                }
+
+                console.log('❌ Timeout attesa lock');
+                return false; // Timeout
+            }
             toggleAutoSync() {
                 this.autoSyncEnabled = document.getElementById('auto-sync-toggle').checked;
                 localStorage.setItem('autoSync', this.autoSyncEnabled);
@@ -2906,10 +2980,16 @@
                     localStorage.setItem('lastDropboxSync', now);
                     this.updateLastSyncInfo();
 
+                    // Salva posizione scroll
+                    const scrollPos = window.scrollY;
+
                     this.render();
                     this.renderDashboard();
                     this.renderPreparation();
                     this.updateStats();
+
+                    // Ripristina posizione scroll
+                    setTimeout(() => window.scrollTo(0, scrollPos), 50);
 
                     console.log('✅ Dati sincronizzati da Dropbox (silent)');
 
@@ -5775,7 +5855,7 @@
                 }
             }
 
-            saveOrder() {
+            async saveOrder() {
                 const number = document.getElementById('order-number').value.trim();
                 const firstName = document.getElementById('customer-firstname').value.trim();
                 const lastName = document.getElementById('customer-lastname').value.trim();
@@ -5809,8 +5889,6 @@
                     }
                 }
 
-                // Nota: non serve più controllo duplicati numero ordine perché è auto-generato univoco per data
-
                 let customerId = document.getElementById('selected-customer-id').value;
                 const marketing = document.getElementById('customer-marketing-order').checked;
 
@@ -5836,7 +5914,6 @@
                 }
 
                 const deposit = parseFloat(document.getElementById('order-deposit').value) || 0;
-                const depositInfo = document.getElementById('deposit-info');
 
                 // Rileggi il numero ordine (potrebbe essere stato generato automaticamente)
                 const finalOrderNumber = document.getElementById('order-number').value.trim();
@@ -5854,31 +5931,54 @@
                 };
 
                 const isNewOrder = !this.editingId;
-                // CORREZIONE: item.price è già il totale
                 const orderTotal = order.items.reduce((sum, item) => sum + item.price, 0);
 
-                if (this.editingId) {
-                    const idx = this.db.orders.findIndex(o => o.id === this.editingId);
-                    if (idx > -1) this.db.orders[idx] = order;
-                } else {
-                    this.db.orders.push(order);
+                // ========== ACQUISISCI LOCK PER EVITARE DUPLICATI ==========
+                if (!this.editingId) {
+                    // Solo per ordini nuovi
+                    console.log('🔒 Acquisizione lock...');
+                    const canProceed = await this.waitForLock();
+
+                    if (!canProceed) {
+                        this.showToast('❌ Timeout: altro dispositivo occupato. Riprova!', 'error');
+                        return;
+                    }
+
+                    await this.acquireLock();
                 }
 
-                this.saveData();
+                try {
+                    if (this.editingId) {
+                        const idx = this.db.orders.findIndex(o => o.id === this.editingId);
+                        if (idx > -1) this.db.orders[idx] = order;
+                    } else {
+                        this.db.orders.push(order);
+                    }
 
-                // Aggiungi bollini solo per ordini nuovi con pagamento completato
-                if (isNewOrder && order.paymentStatus === 'pagato') {
-                    this.addStampsFromOrder(customerId, orderTotal);
+                    this.saveData();
+                    await this.syncToDropbox(true);
+
+                    // Aggiungi bollini solo per ordini nuovi con pagamento completato
+                    if (isNewOrder && order.paymentStatus === 'pagato') {
+                        this.addStampsFromOrder(customerId, orderTotal);
+                    }
+
+                    this.render();
+                    this.closeModal('order-modal');
+                    this.showToast('✅ Ordine salvato');
+
+                    // Genera messaggio WhatsApp sempre (sia per ordini nuovi che modificati)
+                    const customer = this.db.customers.find(c => c.id === customerId);
+                    this.generateWhatsAppMessage(order, customer);
+
+                } finally {
+                    // Rilascia sempre il lock
+                    if (!this.editingId) {
+                        await this.releaseLock();
+                    }
                 }
-
-                this.render();
-                this.closeModal('order-modal');
-                this.showToast('Ordine salvato');
-
-                // Genera messaggio WhatsApp sempre (sia per ordini nuovi che modificati)
-                const customer = this.db.customers.find(c => c.id === customerId);
-                this.generateWhatsAppMessage(order, customer);
             }
+            
             generateWhatsAppMessage(order, customer) {
                 if (!customer) {
                     console.error('Cliente non trovato per generare messaggio WhatsApp');
