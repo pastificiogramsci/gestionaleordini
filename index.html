@@ -2283,7 +2283,7 @@
                     const text = await blob.text();
                     const parsedData = JSON.parse(text);
 
-                    // Decripta usando authManager (non this!)
+                    // Decripta usando authManager
                     let remoteData;
                     if (parsedData.encrypted) {
                         remoteData = authManager.decrypt(parsedData.data);
@@ -2297,22 +2297,98 @@
 
                     console.log('🔀 Merge: unisco i dati...');
 
-                    // MERGE ORDINI
-                    const localOrderIds = new Set(this.db.orders.map(o => o.id));
-                    const remoteOnlyOrders = remoteData.orders.filter(o => !localOrderIds.has(o.id));
-                    this.db.orders = [...this.db.orders, ...remoteOnlyOrders];
+                    // MERGE ORDINI (con aggiornamento stato deleted)
+                    const localOrderMap = new Map(this.db.orders.map(o => [o.id, o]));
+                    let addedOrders = 0;
+                    let updatedOrders = 0;
+
+                    remoteData.orders.forEach(remoteOrder => {
+                        const localOrder = localOrderMap.get(remoteOrder.id);
+
+                        if (localOrder) {
+                            // Ordine esiste: aggiorna se remoto è più recente O se è stato eliminato
+                            const remoteTime = new Date(remoteOrder.deletedAt || remoteOrder.date || 0);
+                            const localTime = new Date(localOrder.deletedAt || localOrder.date || 0);
+
+                            // Priorità agli ordini eliminati (deleted: true vince sempre)
+                            if (remoteOrder.deleted && !localOrder.deleted) {
+                                Object.assign(localOrder, remoteOrder);
+                                updatedOrders++;
+                            } else if (!remoteOrder.deleted && localOrder.deleted) {
+                                // Locale deleted, remoto no: mantieni locale deleted (più recente)
+                            } else if (remoteTime > localTime) {
+                                Object.assign(localOrder, remoteOrder);
+                                updatedOrders++;
+                            }
+                        } else {
+                            // Ordine nuovo: aggiungilo
+                            this.db.orders.push(remoteOrder);
+                            addedOrders++;
+                        }
+                    });
 
                     // MERGE PRODOTTI
-                    const localProductIds = new Set(this.db.products.map(p => p.id));
-                    const remoteOnlyProducts = remoteData.products.filter(p => !localProductIds.has(p.id));
-                    this.db.products = [...this.db.products, ...remoteOnlyProducts];
+                    const localProductMap = new Map(this.db.products.map(p => [p.id, p]));
+                    let addedProducts = 0;
+                    let updatedProducts = 0;
+
+                    remoteData.products.forEach(remoteProduct => {
+                        const localProduct = localProductMap.get(remoteProduct.id);
+
+                        if (localProduct) {
+                            // Prodotto esiste: aggiorna se modificato o eliminato
+                            if (remoteProduct.deleted && !localProduct.deleted) {
+                                Object.assign(localProduct, remoteProduct);
+                                updatedProducts++;
+                            } else if (!remoteProduct.deleted && localProduct.deleted) {
+                                // Mantieni locale deleted
+                            } else {
+                                // Aggiorna se remoto è diverso
+                                if (JSON.stringify(remoteProduct) !== JSON.stringify(localProduct)) {
+                                    Object.assign(localProduct, remoteProduct);
+                                    updatedProducts++;
+                                }
+                            }
+                        } else {
+                            // Prodotto nuovo: aggiungilo
+                            this.db.products.push(remoteProduct);
+                            addedProducts++;
+                        }
+                    });
 
                     // MERGE CLIENTI
-                    const localCustomerIds = new Set(this.db.customers.map(c => c.id));
-                    const remoteOnlyCustomers = remoteData.customers.filter(c => !localCustomerIds.has(c.id));
-                    this.db.customers = [...this.db.customers, ...remoteOnlyCustomers];
+                    const localCustomerMap = new Map(this.db.customers.map(c => [c.id, c]));
+                    let addedCustomers = 0;
+                    let updatedCustomers = 0;
 
-                    console.log(`✅ Merge completato: +${remoteOnlyOrders.length} ordini, +${remoteOnlyProducts.length} prodotti, +${remoteOnlyCustomers.length} clienti`);
+                    remoteData.customers.forEach(remoteCustomer => {
+                        const localCustomer = localCustomerMap.get(remoteCustomer.id);
+
+                        if (localCustomer) {
+                            // Cliente esiste: aggiorna se modificato o eliminato
+                            if (remoteCustomer.deleted && !localCustomer.deleted) {
+                                Object.assign(localCustomer, remoteCustomer);
+                                updatedCustomers++;
+                            } else if (!remoteCustomer.deleted && localCustomer.deleted) {
+                                // Mantieni locale deleted
+                            } else {
+                                // Aggiorna se remoto è diverso
+                                if (JSON.stringify(remoteCustomer) !== JSON.stringify(localCustomer)) {
+                                    Object.assign(localCustomer, remoteCustomer);
+                                    updatedCustomers++;
+                                }
+                            }
+                        } else {
+                            // Cliente nuovo: aggiungilo
+                            this.db.customers.push(remoteCustomer);
+                            addedCustomers++;
+                        }
+                    });
+
+                    console.log(`✅ Merge completato:`);
+                    console.log(`   Ordini: +${addedOrders} nuovi, ${updatedOrders} aggiornati`);
+                    console.log(`   Prodotti: +${addedProducts} nuovi, ${updatedProducts} aggiornati`);
+                    console.log(`   Clienti: +${addedCustomers} nuovi, ${updatedCustomers} aggiornati`);
 
                     return true;
                 } catch (error) {
@@ -2332,16 +2408,9 @@
                     return;
                 }
 
-                if (retryCount > 3) {
+                if (retryCount > 5) {
                     console.error('❌ Troppi tentativi di sincronizzazione falliti');
                     if (!silent) this.showToast('❌ Errore sincronizzazione: troppi conflitti', 'error');
-                    return;
-                }
-
-                // MERGE con dati remoti PRIMA di uploadare
-                const mergeSuccess = await this.mergeWithRemoteData();
-                if (!mergeSuccess) {
-                    console.error('❌ Merge fallito');
                     return;
                 }
 
@@ -2359,6 +2428,30 @@
                 try {
                     this.syncInProgress = true;
                     if (!silent) this.showSyncIndicator(true);
+
+                    // PASSO 1: Ottieni revision corrente del file
+                    let currentRev = null;
+                    try {
+                        const metadata = await this.dropboxClient.filesGetMetadata({
+                            path: '/gestionale-ordini-backup.json'
+                        });
+                        currentRev = metadata.result.rev;
+                        console.log('📋 Revision corrente:', currentRev);
+                    } catch (metaErr) {
+                        if (metaErr.status === 409) {
+                            // File non esiste, primo upload
+                            console.log('📝 Primo upload (file non esiste)');
+                        } else {
+                            throw metaErr;
+                        }
+                    }
+
+                    // PASSO 2: MERGE con dati remoti
+                    const mergeSuccess = await this.mergeWithRemoteData();
+                    if (!mergeSuccess) {
+                        console.error('❌ Merge fallito');
+                        return;
+                    }
 
                     console.log('📤 Upload su Dropbox con crittografia...');
 
@@ -2383,19 +2476,37 @@
 
                     console.log('📦 Dimensione dati criptati:', (blob.size / 1024).toFixed(2), 'KB');
 
-                    // Prova upload con controllo conflitti
+                    // PASSO 3: Upload con controllo revision
                     try {
-                        await this.dropboxClient.filesUpload({
+                        const uploadParams = {
                             path: '/gestionale-ordini-backup.json',
                             contents: blob,
-                            mode: { '.tag': 'overwrite' },
                             autorename: false
-                        });
+                        };
+
+                        if (currentRev) {
+                            // File esiste: usa mode 'update' con revision
+                            uploadParams.mode = {
+                                '.tag': 'update',
+                                update: currentRev
+                            };
+                        } else {
+                            // File non esiste: usa mode 'add'
+                            uploadParams.mode = { '.tag': 'add' };
+                        }
+
+                        await this.dropboxClient.filesUpload(uploadParams);
+
                     } catch (uploadErr) {
-                        // Se c'è un conflitto (409), riprova con merge
-                        if (uploadErr.status === 409) {
-                            console.log('⚠️ Conflitto rilevato, riprovo con nuovo merge... (tentativo ' + (retryCount + 1) + ')');
-                            await new Promise(resolve => setTimeout(resolve, 1000)); // Aspetta 1 secondo
+                        // Conflitto rilevato: il file è stato modificato da altro dispositivo
+                        if (uploadErr.status === 409 || uploadErr.error?.error['.tag'] === 'conflict') {
+                            console.log('⚠️ Conflitto rilevato! Un altro dispositivo ha modificato il file.');
+                            console.log('🔄 Riprovo con nuovo merge... (tentativo ' + (retryCount + 1) + '/5)');
+
+                            // Aspetta un tempo casuale tra 500ms e 2000ms per ridurre conflitti
+                            const waitTime = 500 + Math.random() * 1500;
+                            await new Promise(resolve => setTimeout(resolve, waitTime));
+
                             return await this.syncToDropbox(silent, retryCount + 1);
                         }
                         throw uploadErr;
@@ -2408,7 +2519,7 @@
                     this.updateLastSyncInfo();
 
                     if (!silent) this.showToast('✅ Dati criptati caricati su Dropbox!');
-                    console.log('✅ Upload completato con successo');
+                    console.log('✅ Upload completato con successo' + (retryCount > 0 ? ` (dopo ${retryCount} retry)` : ''));
 
                 } catch (err) {
                     console.error('❌ Errore upload Dropbox:', err);
