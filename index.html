@@ -5945,6 +5945,15 @@
                     }
 
                     await this.acquireLock();
+
+                    // RIGENERA il numero ordine DOPO aver acquisito il lock
+                    console.log('🔄 Rigenero numero ordine con dati aggiornati...');
+                    await this.syncFromDropboxSilent(); // Scarica ultimi ordini
+                    this.updateOrderNumber(); // Rigenera numero
+
+                    // Aggiorna il numero nell'oggetto order
+                    order.number = document.getElementById('order-number').value.trim();
+                    console.log('📋 Nuovo numero ordine:', order.number);
                 }
 
                 try {
@@ -5978,7 +5987,6 @@
                     }
                 }
             }
-            
             generateWhatsAppMessage(order, customer) {
                 if (!customer) {
                     console.error('Cliente non trovato per generare messaggio WhatsApp');
