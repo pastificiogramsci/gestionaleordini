@@ -6553,6 +6553,7 @@
 
                 this.saveData();
                 this.syncToDropbox(); // ⭐ Sincronizza eliminazione su Dropbox
+                this.filteredOrders = null; // ⭐ Reset filtri per aggiornare la vista
                 this.render();
                 this.renderDashboard();
                 this.closeModal('confirm-modal');
@@ -6907,8 +6908,9 @@
                 const container = document.getElementById('orders-list');
 
                 // Usa ordini filtrati se disponibili, altrimenti tutti
-                const ordersToShow = this.filteredOrders !== null ? this.filteredOrders : this.db.orders.filter(o => !o.deleted);
-
+                const ordersToShow = this.filteredOrders !== null
+                    ? this.filteredOrders.filter(o => !o.deleted)
+                    : this.db.orders.filter(o => !o.deleted);
                 if (ordersToShow.length === 0) {
                     const message = this.filteredOrders !== null
                         ? '<p class="text-gray-500 text-center p-4">⚠️ Nessun ordine corrisponde ai filtri</p>'
