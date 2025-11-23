@@ -2953,31 +2953,88 @@
                     this.db = datiRemoti;
                     if (!this.db.categories) this.db.categories = [];
 
-                    // MERGE: Aggiungi elementi locali che non sono nei dati remoti
+                    // ===== MERGE INTELLIGENTE: Confronta timestamp di ogni elemento =====
 
-                    // Ordini
-                    const remoteOrderIds = new Set(this.db.orders.map(o => o.id));
-                    const localOnlyOrders = oldLocalData.orders.filter(o => !remoteOrderIds.has(o.id));
-                    this.db.orders.push(...localOnlyOrders);
+                    // ORDINI: Merge con confronto timestamp
+                    const mergedOrders = new Map();
 
-                    // Prodotti
-                    const remoteProductIds = new Set(this.db.products.map(p => p.id));
-                    const localOnlyProducts = oldLocalData.products.filter(p => !remoteProductIds.has(p.id));
-                    this.db.products.push(...localOnlyProducts);
+                    // 1. Aggiungi ordini remoti
+                    this.db.orders.forEach(order => {
+                        mergedOrders.set(order.id, { ...order, source: 'remote' });
+                    });
 
-                    // Clienti
-                    const remoteCustomerIds = new Set(this.db.customers.map(c => c.id));
-                    const localOnlyCustomers = oldLocalData.customers.filter(c => !remoteCustomerIds.has(c.id));
-                    this.db.customers.push(...localOnlyCustomers);
+                    // 2. Sovrascrivi con ordini locali se più recenti o solo locali
+                    oldLocalData.orders.forEach(localOrder => {
+                        const remoteOrder = mergedOrders.get(localOrder.id);
 
-                    console.log(`🔀 Merge completato: +${localOnlyOrders.length} ordini, +${localOnlyProducts.length} prodotti, +${localOnlyCustomers.length} clienti locali preservati`);
+                        if (!remoteOrder) {
+                            // Ordine solo locale → mantienilo
+                            mergedOrders.set(localOrder.id, { ...localOrder, source: 'local-only' });
+                        } else {
+                            // Ordine in entrambi → confronta timestamp
+                            const localTime = new Date(localOrder.deletedAt || localOrder.createdDate || 0).getTime();
+                            const remoteTime = new Date(remoteOrder.deletedAt || remoteOrder.createdDate || 0).getTime();
+
+                            if (localTime >= remoteTime) {
+                                // Locale più recente o uguale → usa locale
+                                mergedOrders.set(localOrder.id, { ...localOrder, source: 'local-newer' });
+                            }
+                            // Altrimenti mantieni remoto (già in map)
+                        }
+                    });
+
+                    this.db.orders = Array.from(mergedOrders.values());
+
+                    // PRODOTTI: Stesso merge intelligente
+                    const mergedProducts = new Map();
+                    this.db.products.forEach(product => {
+                        mergedProducts.set(product.id, { ...product, source: 'remote' });
+                    });
+                    oldLocalData.products.forEach(localProduct => {
+                        const remoteProduct = mergedProducts.get(localProduct.id);
+                        if (!remoteProduct) {
+                            mergedProducts.set(localProduct.id, { ...localProduct, source: 'local-only' });
+                        } else {
+                            const localTime = new Date(localProduct.deletedAt || localProduct.createdAt || 0).getTime();
+                            const remoteTime = new Date(remoteProduct.deletedAt || remoteProduct.createdAt || 0).getTime();
+                            if (localTime >= remoteTime) {
+                                mergedProducts.set(localProduct.id, { ...localProduct, source: 'local-newer' });
+                            }
+                        }
+                    });
+                    this.db.products = Array.from(mergedProducts.values());
+
+                    // CLIENTI: Stesso merge intelligente
+                    const mergedCustomers = new Map();
+                    this.db.customers.forEach(customer => {
+                        mergedCustomers.set(customer.id, { ...customer, source: 'remote' });
+                    });
+                    oldLocalData.customers.forEach(localCustomer => {
+                        const remoteCustomer = mergedCustomers.get(localCustomer.id);
+                        if (!remoteCustomer) {
+                            mergedCustomers.set(localCustomer.id, { ...localCustomer, source: 'local-only' });
+                        } else {
+                            const localTime = new Date(localCustomer.deletedAt || localCustomer.createdAt || 0).getTime();
+                            const remoteTime = new Date(remoteCustomer.deletedAt || remoteCustomer.createdAt || 0).getTime();
+                            if (localTime >= remoteTime) {
+                                mergedCustomers.set(localCustomer.id, { ...localCustomer, source: 'local-newer' });
+                            }
+                        }
+                    });
+                    this.db.customers = Array.from(mergedCustomers.values());
+
+                    // Conta quanti elementi locali sono stati preservati
+                    const localOnlyOrders = Array.from(mergedOrders.values()).filter(o => o.source === 'local-only' || o.source === 'local-newer').length;
+                    const localOnlyProducts = Array.from(mergedProducts.values()).filter(p => p.source === 'local-only' || p.source === 'local-newer').length;
+                    const localOnlyCustomers = Array.from(mergedCustomers.values()).filter(c => c.source === 'local-only' || c.source === 'local-newer').length;
+
+                    console.log(`🔀 Merge completato: ${localOnlyOrders} ordini locali preservati, ${localOnlyProducts} prodotti, ${localOnlyCustomers} clienti`);
 
                     // Aggiorna timestamp solo se remoto è più recente
                     const newTimestamp = dataRemota > dataLocale ? datiRemoti.lastModified : datiLocali.lastModified;
                     this.db.lastModified = newTimestamp;
 
                     // Se non ci sono cambiamenti, NON fare render (evita scroll jump)
-                    // CONTROLLA ANCHE se ci sono nuovi elementi remoti O modifiche agli esistenti!
                     const oldOrderCount = oldLocalData.orders.length;
                     const oldProductCount = oldLocalData.products.length;
                     const oldCustomerCount = oldLocalData.customers.length;
@@ -2985,36 +3042,21 @@
                     const newProductCount = this.db.products.length;
                     const newCustomerCount = this.db.customers.length;
 
-                    // ✅ FIX: Controlla anche se gli elementi sono stati modificati (non solo aggiunti)
-                    const ordersModified = this.db.orders.some(remoteOrder => {
-                        const localOrder = oldLocalData.orders.find(o => o.id === remoteOrder.id);
-                        if (!localOrder) return true; // Nuovo ordine remoto
-                        // Confronta timestamp o proprietà chiave
-                        return JSON.stringify(remoteOrder) !== JSON.stringify(localOrder);
-                    });
-
-                    const productsModified = this.db.products.some(remoteProduct => {
-                        const localProduct = oldLocalData.products.find(p => p.id === remoteProduct.id);
-                        if (!localProduct) return true;
-                        return JSON.stringify(remoteProduct) !== JSON.stringify(localProduct);
-                    });
-
-                    const customersModified = this.db.customers.some(remoteCustomer => {
-                        const localCustomer = oldLocalData.customers.find(c => c.id === remoteCustomer.id);
-                        if (!localCustomer) return true;
-                        return JSON.stringify(remoteCustomer) !== JSON.stringify(localCustomer);
-                    });
-
-                    const hasChanges =
-                        localOnlyOrders.length > 0 ||
-                        localOnlyProducts.length > 0 ||
-                        localOnlyCustomers.length > 0 ||
+                    // ✅ FIX: Controlla SOLO cambiamenti significativi (count)
+                    const countChanged =
                         newOrderCount !== oldOrderCount ||
                         newProductCount !== oldProductCount ||
-                        newCustomerCount !== oldCustomerCount ||
-                        ordersModified ||
-                        productsModified ||
-                        customersModified;
+                        newCustomerCount !== oldCustomerCount;
+
+                    // ✅ FIX: Se è il primo caricamento (localStorage vuoto), forza render
+                    const isFirstLoad = !localStorage.getItem('orderManagerData') || oldOrderCount === 0;
+
+                    const hasChanges =
+                        localOnlyOrders > 0 ||       // ← SENZA .length (già numero dal merge intelligente)
+                        localOnlyProducts > 0 ||     // ← SENZA .length
+                        localOnlyCustomers > 0 ||    // ← SENZA .length
+                        countChanged ||
+                        isFirstLoad;
 
                     if (!hasChanges) {
                         console.log('ℹ️ Nessun cambiamento, skip render');
@@ -3033,6 +3075,10 @@
                         console.log('✅ Dati sincronizzati da Dropbox (silent) - no render');
                         return; // Exit PRIMA del render
                     }
+
+                    // Se arriviamo qui, ci sono cambiamenti → fai render
+                    console.log('🔄 Cambiamenti rilevati, faccio render');
+
                     // Salva criptato
                     const encrypted = authManager.encrypt(this.db);
                     if (encrypted) {
