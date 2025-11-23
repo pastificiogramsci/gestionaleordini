@@ -6552,6 +6552,7 @@
                 }
 
                 this.saveData();
+                this.syncToDropbox(); // ⭐ Sincronizza eliminazione su Dropbox
                 this.render();
                 this.renderDashboard();
                 this.closeModal('confirm-modal');
@@ -7046,9 +7047,9 @@
 
             renderCustomers() {
                 const container = document.getElementById('customers-list');
-                if (this.db.customers.length === 0) { container.innerHTML = '<p class="text-gray-500 text-center p-4">Nessun cliente</p>'; return; }
-                const sorted = [...this.db.customers].sort((a, b) => a.lastName.localeCompare(b.lastName));
-                container.innerHTML = sorted.map(cust => {
+                const activeCustomers = this.db.customers.filter(c => !c.deleted);
+                if (activeCustomers.length === 0) { container.innerHTML = '<p class="text-gray-500 text-center p-4">Nessun cliente</p>'; return; }
+                const sorted = [...activeCustomers].sort((a, b) => a.lastName.localeCompare(b.lastName)); container.innerHTML = sorted.map(cust => {
                     const stamps = cust.fidelity?.stamps || 0;
                     const rewards = cust.fidelity?.rewards || 0;
                     return `<div onclick="app.openCustomerModal('${cust.id}')" class="bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-md transition">
