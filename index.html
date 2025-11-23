@@ -2170,11 +2170,14 @@
                         return;
                     }
 
-                    // Salva token
+                    // Salva access token
+                    this.dropboxAccessToken = data.access_token;
                     localStorage.setItem("dropboxAccessToken", data.access_token);
 
+                    // CORREZIONE: Salva refresh token se presente
                     if (data.refresh_token) {
-                        sessionStorage.removeItem("dropbox_pkce_verifier");
+                        this.dropboxRefreshToken = data.refresh_token;
+                        localStorage.setItem("dropboxRefreshToken", data.refresh_token);
                         console.log("✅ Refresh token salvato");
                     }
 
@@ -2182,7 +2185,6 @@
                     sessionStorage.removeItem("dropbox_pkce_verifier");
 
                     // Ricrea il client Dropbox
-                    this.dropboxAccessToken = data.access_token;
                     this.dropboxClient = new Dropbox.Dropbox({
                         accessToken: this.dropboxAccessToken
                     });
@@ -2732,6 +2734,11 @@
             }
 
             async checkForRemoteUpdates() {
+                if (this.modalOpen) {
+                    console.log('⏸️ Modal aperto, skip autosync');
+                    return;
+                }
+
                 if (!this.dropboxClient || this.syncInProgress) {
                     console.log('⏭️ Skip check: client=', !!this.dropboxClient, 'syncing=', this.syncInProgress);
                     return;
@@ -2969,6 +2976,26 @@
                     const newTimestamp = dataRemota > dataLocale ? datiRemoti.lastModified : datiLocali.lastModified;
                     this.db.lastModified = newTimestamp;
 
+                    // Se non ci sono cambiamenti, NON fare render (evita scroll jump)
+                    const hasChanges = localOnlyOrders.length > 0 || localOnlyProducts.length > 0 || localOnlyCustomers.length > 0;
+
+                    if (!hasChanges) {
+                        console.log('ℹ️ Nessun cambiamento, skip render');
+
+                        // Salva comunque (potrebbero esserci aggiornamenti di stato)
+                        const encrypted = authManager.encrypt(this.db);
+                        if (encrypted) {
+                            localStorage.setItem('orderManagerData', encrypted);
+                            localStorage.setItem('lastModified', newTimestamp);
+                        }
+
+                        const now = new Date().toISOString();
+                        localStorage.setItem('lastDropboxSync', now);
+                        this.updateLastSyncInfo();
+
+                        console.log('✅ Dati sincronizzati da Dropbox (silent) - no render');
+                        return; // Exit PRIMA del render
+                    }
                     // Salva criptato
                     const encrypted = authManager.encrypt(this.db);
                     if (encrypted) {
@@ -4914,8 +4941,15 @@
                 }
             }
 
-            openModal(modalId) { document.getElementById(modalId).classList.add('open'); }
-            closeModal(modalId) { document.getElementById(modalId).classList.remove('open'); }
+            openModal(modalId) {
+                this.modalOpen = true;
+                document.getElementById(modalId).classList.add('open');
+            }
+
+            closeModal(modalId) {
+                this.modalOpen = false;
+                document.getElementById(modalId).classList.remove('open');
+            }
 
             // CATEGORIE
             openCategoryModal(id = null) {
@@ -5326,6 +5360,7 @@
 
             // ORDINI
             openOrderModal(id = null) {
+                this.modalOpen = true;
                 this.editingId = id;
                 this.currentOrder = { items: [] };
                 document.getElementById('order-number').value = '';
