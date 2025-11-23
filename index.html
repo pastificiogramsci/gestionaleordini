@@ -5340,7 +5340,7 @@
             }
 
             deleteCustomer() {
-                const usedInOrders = this.db.orders.some(o => o.customerId === this.editingId);
+                const usedInOrders = this.db.orders.some(o => o.customerId === this.editingId && !o.deleted);
                 if (usedInOrders) {
                     this.showToast('❌ Impossibile eliminare: cliente presente in ordini esistenti', 'error');
                     return;
@@ -5364,7 +5364,7 @@
             }
 
             deleteFidelityCustomer(customerId) {
-                const usedInOrders = this.db.orders.some(o => o.customerId === customerId);
+                const usedInOrders = this.db.orders.some(o => o.customerId === customerId && !o.deleted);
                 if (usedInOrders) {
                     this.showToast('❌ Impossibile eliminare: cliente presente in ordini esistenti', 'error');
                     return;
