@@ -5928,19 +5928,30 @@
             }
 
             async saveOrder() {
-                // ===== FIX: Protezione double-click =====
+                // ===== FIX: Protezione double-click RAFFORZATA =====
+                const saveBtn = document.getElementById('save-order-btn');
+
+                // Controlla PRIMA il bottone (più veloce del flag)
+                if (saveBtn && saveBtn.disabled) {
+                    console.log('⏸️ Bottone già disabilitato, ignoro click');
+                    return;
+                }
+
+                // Controlla anche il flag
                 if (this.savingOrder) {
                     console.log('⏸️ Salvataggio già in corso, ignoro click');
                     return;
                 }
 
-                this.savingOrder = true;
-                const saveBtn = document.getElementById('save-order-btn');
+                // DISABILITA IMMEDIATAMENTE (prima di settare il flag)
                 if (saveBtn) {
                     saveBtn.disabled = true;
                     saveBtn.textContent = '⏳ Salvataggio...';
                     saveBtn.classList.add('opacity-50', 'cursor-not-allowed');
                 }
+
+                // ADESSO setta il flag
+                this.savingOrder = true;
 
                 // Helper per resettare bottone in caso di errore
                 const resetButton = () => {
