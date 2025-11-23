@@ -2977,7 +2977,7 @@
                     this.db.lastModified = newTimestamp;
 
                     // Se non ci sono cambiamenti, NON fare render (evita scroll jump)
-                    // CONTROLLA ANCHE se ci sono nuovi elementi remoti!
+                    // CONTROLLA ANCHE se ci sono nuovi elementi remoti O modifiche agli esistenti!
                     const oldOrderCount = oldLocalData.orders.length;
                     const oldProductCount = oldLocalData.products.length;
                     const oldCustomerCount = oldLocalData.customers.length;
@@ -2985,13 +2985,36 @@
                     const newProductCount = this.db.products.length;
                     const newCustomerCount = this.db.customers.length;
 
+                    // ✅ FIX: Controlla anche se gli elementi sono stati modificati (non solo aggiunti)
+                    const ordersModified = this.db.orders.some(remoteOrder => {
+                        const localOrder = oldLocalData.orders.find(o => o.id === remoteOrder.id);
+                        if (!localOrder) return true; // Nuovo ordine remoto
+                        // Confronta timestamp o proprietà chiave
+                        return JSON.stringify(remoteOrder) !== JSON.stringify(localOrder);
+                    });
+
+                    const productsModified = this.db.products.some(remoteProduct => {
+                        const localProduct = oldLocalData.products.find(p => p.id === remoteProduct.id);
+                        if (!localProduct) return true;
+                        return JSON.stringify(remoteProduct) !== JSON.stringify(localProduct);
+                    });
+
+                    const customersModified = this.db.customers.some(remoteCustomer => {
+                        const localCustomer = oldLocalData.customers.find(c => c.id === remoteCustomer.id);
+                        if (!localCustomer) return true;
+                        return JSON.stringify(remoteCustomer) !== JSON.stringify(localCustomer);
+                    });
+
                     const hasChanges =
                         localOnlyOrders.length > 0 ||
                         localOnlyProducts.length > 0 ||
                         localOnlyCustomers.length > 0 ||
                         newOrderCount !== oldOrderCount ||
                         newProductCount !== oldProductCount ||
-                        newCustomerCount !== oldCustomerCount;
+                        newCustomerCount !== oldCustomerCount ||
+                        ordersModified ||
+                        productsModified ||
+                        customersModified;
 
                     if (!hasChanges) {
                         console.log('ℹ️ Nessun cambiamento, skip render');
