@@ -3035,40 +3035,38 @@
                         return cleanCustomer;
                     });
 
-                    // Conta quanti elementi locali sono stati preservati
-                    const localOnlyOrders = Array.from(mergedOrders.values()).filter(o => o.source === 'local-only' || o.source === 'local-newer').length;
-                    const localOnlyProducts = Array.from(mergedProducts.values()).filter(p => p.source === 'local-only' || p.source === 'local-newer').length;
-                    const localOnlyCustomers = Array.from(mergedCustomers.values()).filter(c => c.source === 'local-only' || c.source === 'local-newer').length;
+                    // Conta quanti elementi SOLO locali (non presenti su remoto)
+                    const localOnlyOrders = Array.from(mergedOrders.values()).filter(o => o.source === 'local-only').length;
+                    const localOnlyProducts = Array.from(mergedProducts.values()).filter(p => p.source === 'local-only').length;
+                    const localOnlyCustomers = Array.from(mergedCustomers.values()).filter(c => c.source === 'local-only').length;
 
-                    console.log(`🔀 Merge completato: ${localOnlyOrders} ordini locali preservati, ${localOnlyProducts} prodotti, ${localOnlyCustomers} clienti`);
-
+                    console.log(`🔀 Merge completato: ${this.db.orders.length} ordini totali (${localOnlyOrders} solo locali), ${this.db.products.length} prodotti, ${this.db.customers.length} clienti`);
                     // Aggiorna timestamp solo se remoto è più recente
                     const newTimestamp = dataRemota > dataLocale ? datiRemoti.lastModified : datiLocali.lastModified;
                     this.db.lastModified = newTimestamp;
 
-                    // Se non ci sono cambiamenti, NON fare render (evita scroll jump)
-                    const oldOrderCount = oldLocalData.orders.length;
-                    const oldProductCount = oldLocalData.products.length;
-                    const oldCustomerCount = oldLocalData.customers.length;
-                    const newOrderCount = this.db.orders.length;
-                    const newProductCount = this.db.products.length;
-                    const newCustomerCount = this.db.customers.length;
+                    // ✅ FIX SCROLL: Confronto intelligente basato su hash degli ID
+                    const createHash = (arr) => {
+                        // Crea una stringa ordinata con ID e timestamp per confronto veloce
+                        return arr.map(item => `${item.id}:${item.deletedAt || item.lastModified || item.createdAt || item.createdDate || ''}`).sort().join('|');
+                    };
 
-                    // ✅ FIX: Controlla SOLO cambiamenti significativi (count)
-                    const countChanged =
-                        newOrderCount !== oldOrderCount ||
-                        newProductCount !== oldProductCount ||
-                        newCustomerCount !== oldCustomerCount;
+                    const oldOrdersHash = createHash(oldLocalData.orders);
+                    const newOrdersHash = createHash(this.db.orders);
+                    const oldProductsHash = createHash(oldLocalData.products);
+                    const newProductsHash = createHash(this.db.products);
+                    const oldCustomersHash = createHash(oldLocalData.customers);
+                    const newCustomersHash = createHash(this.db.customers);
 
-                    // ✅ FIX: Se è il primo caricamento (localStorage vuoto), forza render
-                    const isFirstLoad = !localStorage.getItem('orderManagerData') || oldOrderCount === 0;
+                    const ordersChanged = oldOrdersHash !== newOrdersHash;
+                    const productsChanged = oldProductsHash !== newProductsHash;
+                    const customersChanged = oldCustomersHash !== newCustomersHash;
 
-                    const hasChanges =
-                        localOnlyOrders > 0 ||
-                        localOnlyProducts > 0 ||
-                        localOnlyCustomers > 0 ||
-                        countChanged ||
-                        isFirstLoad;
+                    // ✅ Se è il primo caricamento (localStorage vuoto), forza render
+                    const isFirstLoad = !localStorage.getItem('orderManagerData') || oldLocalData.orders.length === 0;
+
+                    const hasChanges = ordersChanged || productsChanged || customersChanged || isFirstLoad;
+
 
                     if (!hasChanges) {
                         console.log('ℹ️ Nessun cambiamento, skip render');
