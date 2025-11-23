@@ -2977,7 +2977,21 @@
                     this.db.lastModified = newTimestamp;
 
                     // Se non ci sono cambiamenti, NON fare render (evita scroll jump)
-                    const hasChanges = localOnlyOrders.length > 0 || localOnlyProducts.length > 0 || localOnlyCustomers.length > 0;
+                    // CONTROLLA ANCHE se ci sono nuovi elementi remoti!
+                    const oldOrderCount = oldLocalData.orders.length;
+                    const oldProductCount = oldLocalData.products.length;
+                    const oldCustomerCount = oldLocalData.customers.length;
+                    const newOrderCount = this.db.orders.length;
+                    const newProductCount = this.db.products.length;
+                    const newCustomerCount = this.db.customers.length;
+
+                    const hasChanges =
+                        localOnlyOrders.length > 0 ||
+                        localOnlyProducts.length > 0 ||
+                        localOnlyCustomers.length > 0 ||
+                        newOrderCount !== oldOrderCount ||
+                        newProductCount !== oldProductCount ||
+                        newCustomerCount !== oldCustomerCount;
 
                     if (!hasChanges) {
                         console.log('ℹ️ Nessun cambiamento, skip render');
@@ -6155,34 +6169,76 @@
 
                 console.log('>>> Modal aggiunto al DOM');
 
+                // ===== FIX: Variabile per prevenire doppio click =====
+                let modalClosed = false;
+
+                const closeModal = () => {
+                    if (modalClosed) {
+                        console.log('>>> Modal già chiuso, ignoro');
+                        return;
+                    }
+                    modalClosed = true;
+                    console.log('>>> Chiusura modal WhatsApp');
+                    modal.remove();
+                };
+
                 // Event listeners
                 const btnClose = document.getElementById('btn-wa-close');
                 const btnOpen = document.getElementById('btn-wa-open');
 
-                btnClose.addEventListener('click', function () {
+                btnClose.addEventListener('click', function (e) {
+                    e.stopPropagation(); // Previeni propagazione evento
                     console.log('>>> Bottone CHIUDI cliccato');
-                    modal.remove();
+                    closeModal();
                 });
 
-                btnOpen.addEventListener('click', function () {
+                btnOpen.addEventListener('click', function (e) {
+                    e.stopPropagation(); // Previeni propagazione evento
                     console.log('>>> Bottone APRI WHATSAPP cliccato MANUALMENTE');
                     console.log('>>> Apertura URL:', fullWhatsappUrl);
 
-                    // Apri WhatsApp
-                    window.open(fullWhatsappUrl, '_blank');
+                    // ===== FIX: Chiudi PRIMA di aprire WhatsApp =====
+                    closeModal();
 
-                    // Chiudi modal dopo l'apertura
+                    // Apri WhatsApp dopo aver chiuso il modal
                     setTimeout(() => {
-                        modal.remove();
-                    }, 500);
+                        window.open(fullWhatsappUrl, '_blank');
+                    }, 100);
                 });
+
+                // ===== FIX: Auto-chiusura quando torni dall'app =====
+                const handleVisibilityChange = () => {
+                    if (!document.hidden && !modalClosed) {
+                        console.log('>>> App tornata in foreground, chiudo modal automaticamente');
+                        setTimeout(() => {
+                            closeModal();
+                        }, 1000);
+                    }
+                };
+
+                document.addEventListener('visibilitychange', handleVisibilityChange);
 
                 // Chiudi modal cliccando fuori (opzionale)
                 modal.addEventListener('click', function (e) {
                     if (e.target === modal) {
-                        modal.remove();
+                        closeModal();
                     }
                 });
+
+                // ===== FIX: Pulizia listener quando modal viene rimosso =====
+                const observer = new MutationObserver((mutations) => {
+                    mutations.forEach((mutation) => {
+                        mutation.removedNodes.forEach((node) => {
+                            if (node === modal) {
+                                console.log('>>> Modal rimosso, pulisco listener');
+                                document.removeEventListener('visibilitychange', handleVisibilityChange);
+                                observer.disconnect();
+                            }
+                        });
+                    });
+                });
+
+                observer.observe(document.body, { childList: true });
 
                 console.log('>>> Modal pronto, attesa click manuale');
                 this.showToast('📱 Verifica il messaggio e clicca "Apri WhatsApp"');
