@@ -6144,25 +6144,59 @@
                     // ========== ACQUISISCI LOCK PER EVITARE DUPLICATI ==========
                     if (!this.editingId) {
                         // Solo per ordini nuovi
-                        console.log('🔒 Acquisizione lock...');
-                        const canProceed = await this.waitForLock();
+                        console.log('🔒 Acquisizione lock con retry automatico...');
 
-                        if (!canProceed) {
+                        // ⭐ RETRY LOOP: Riprova automaticamente fino a 5 volte
+                        let lockAcquired = false;
+                        let retryCount = 0;
+                        const maxRetries = 5;
+
+                        while (!lockAcquired && retryCount < maxRetries) {
+                            // Aspetta che il lock sia libero
+                            const canProceed = await this.waitForLock();
+
+                            if (!canProceed) {
+                                resetButton();
+                                this.showToast('❌ Timeout: altro dispositivo occupato troppo a lungo. Riprova!', 'error');
+                                return;
+                            }
+
+                            // Tenta di acquisire il lock
+                            lockAcquired = await this.acquireLock();
+
+                            if (!lockAcquired) {
+                                retryCount++;
+                                console.log(`⚠️ Lock non acquisito, riprovo... (tentativo ${retryCount}/${maxRetries})`);
+                                this.showToast(`⏳ Altro dispositivo più veloce, riprovo... (${retryCount}/${maxRetries})`, 'info');
+                                await new Promise(resolve => setTimeout(resolve, 2000)); // Attendi 2 secondi prima di riprovare
+                            }
+                        }
+
+                        // Se dopo 5 tentativi non ha acquisito il lock, fermati
+                        if (!lockAcquired) {
                             resetButton();
-                            this.showToast('❌ Timeout: altro dispositivo occupato. Riprova!', 'error');
+                            this.showToast('❌ Impossibile acquisire lock dopo 5 tentativi. Riprova manualmente!', 'error');
                             return;
                         }
 
-                        await this.acquireLock();
+                        // ✅ Lock acquisito con successo!
+                        console.log('🔒✅ Lock acquisito con successo');
 
-                        // RIGENERA il numero ordine DOPO aver acquisito il lock
+                        // ⏰ ATTESA EXTRA per propagazione Dropbox (importante se c'era un altro salvataggio)
+                        if (retryCount > 0) {
+                            console.log(`⏰ Attendo 1.5s per propagazione Dropbox (c'erano ${retryCount} retry)...`);
+                            this.showToast('⏰ Attendo sincronizzazione dati...', 'info');
+                            await new Promise(resolve => setTimeout(resolve, 1500));
+                        }
+
+                        // RIGENERA il numero ordine DOPO aver acquisito il lock e atteso
                         console.log('🔄 Rigenero numero ordine con dati aggiornati...');
-                        await this.syncFromDropboxSilent(); // Scarica ultimi ordini
-                        this.updateOrderNumber(); // Rigenera numero
+                        await this.syncFromDropboxSilent(); // Scarica ultimi ordini (ora sicuramente aggiornati)
+                        this.updateOrderNumber(); // Rigenera numero in base ai dati freschi
 
                         // Aggiorna il numero nell'oggetto order
                         order.number = document.getElementById('order-number').value.trim();
-                        console.log('📋 Nuovo numero ordine:', order.number);
+                        console.log('📋 Nuovo numero ordine generato:', order.number);
                     }
 
                     if (this.editingId) {
