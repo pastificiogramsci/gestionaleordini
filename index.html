@@ -1031,7 +1031,7 @@
                 <div class="flex gap-3 ml-auto">
                     <button onclick="app.closeModal('order-modal')"
                         class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300">Annulla</button>
-                    <button onclick="app.saveOrder()"
+                    <button id="save-order-btn" onclick="app.saveOrder()"
                         class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Salva Ordine</button>
                 </div>
             </div>
@@ -5928,22 +5928,60 @@
             }
 
             async saveOrder() {
+                // ===== FIX: Protezione double-click =====
+                if (this.savingOrder) {
+                    console.log('⏸️ Salvataggio già in corso, ignoro click');
+                    return;
+                }
+
+                this.savingOrder = true;
+                const saveBtn = document.getElementById('save-order-btn');
+                if (saveBtn) {
+                    saveBtn.disabled = true;
+                    saveBtn.textContent = '⏳ Salvataggio...';
+                    saveBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                }
+
+                // Helper per resettare bottone in caso di errore
+                const resetButton = () => {
+                    this.savingOrder = false;
+                    if (saveBtn) {
+                        saveBtn.disabled = false;
+                        saveBtn.textContent = 'Salva Ordine';
+                        saveBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    }
+                };
+
+                // ===== VALIDAZIONI PRIMA DEL TRY =====
                 const number = document.getElementById('order-number').value.trim();
                 const firstName = document.getElementById('customer-firstname').value.trim();
                 const lastName = document.getElementById('customer-lastname').value.trim();
                 const phone = document.getElementById('customer-phone').value.trim();
                 const deliveryDate = document.getElementById('order-delivery-date').value;
 
-                // Validazioni
-                if (!firstName || !lastName) { this.showToast('❌ Dati cliente obbligatori', 'error'); return; }
-                if (this.currentOrder.items.length === 0) { this.showToast('❌ Aggiungi almeno un prodotto', 'error'); return; }
-                if (!deliveryDate) { this.showToast('❌ Data consegna obbligatoria', 'error'); return; }
+                // Validazioni con reset
+                if (!firstName || !lastName) {
+                    resetButton();
+                    this.showToast('❌ Dati cliente obbligatori', 'error');
+                    return;
+                }
+                if (this.currentOrder.items.length === 0) {
+                    resetButton();
+                    this.showToast('❌ Aggiungi almeno un prodotto', 'error');
+                    return;
+                }
+                if (!deliveryDate) {
+                    resetButton();
+                    this.showToast('❌ Data consegna obbligatoria', 'error');
+                    return;
+                }
 
                 // Assicurati che il numero sia stato generato
                 if (!number) {
                     this.updateOrderNumber();
                     const generatedNumber = document.getElementById('order-number').value.trim();
                     if (!generatedNumber) {
+                        resetButton();
                         this.showToast('❌ Errore generazione numero ordine', 'error');
                         return;
                     }
@@ -5957,78 +5995,81 @@
 
                 if (delivery < today && !this.editingId) {
                     if (!confirm('⚠️ La data di consegna è nel passato. Confermi?')) {
+                        resetButton();
                         return;
                     }
                 }
 
-                let customerId = document.getElementById('selected-customer-id').value;
-                const marketing = document.getElementById('customer-marketing-order').checked;
-
-                if (!customerId) {
-                    // Nuovo cliente
-                    const newCustomer = {
-                        id: this.generateId(),
-                        firstName,
-                        lastName,
-                        phone,
-                        email: '',
-                        marketing: marketing,
-                        fidelity: { stamps: 0, totalSpent: 0, rewards: 0, history: [] }
-                    };
-                    this.db.customers.push(newCustomer);
-                    customerId = newCustomer.id;
-                } else {
-                    // Cliente esistente - aggiorna consenso marketing
-                    const existingCustomer = this.db.customers.find(c => c.id === customerId);
-                    if (existingCustomer) {
-                        existingCustomer.marketing = marketing;
-                    }
-                }
-
-                const deposit = parseFloat(document.getElementById('order-deposit').value) || 0;
-
-                // Rileggi il numero ordine (potrebbe essere stato generato automaticamente)
-                const finalOrderNumber = document.getElementById('order-number').value.trim();
-
-                const order = {
-                    id: this.editingId || this.generateId(),
-                    number: finalOrderNumber,
-                    customerId,
-                    createdDate: document.getElementById('order-created-date').value,
-                    deliveryDate,
-                    prepStatus: document.getElementById('order-prep-status').value,
-                    paymentStatus: document.getElementById('order-payment-status').value,
-                    items: [...this.currentOrder.items],
-                    deposit: deposit > 0 ? deposit : 0
-                };
-
-                const isNewOrder = !this.editingId;
-                const orderTotal = order.items.reduce((sum, item) => sum + item.price, 0);
-
-                // ========== ACQUISISCI LOCK PER EVITARE DUPLICATI ==========
-                if (!this.editingId) {
-                    // Solo per ordini nuovi
-                    console.log('🔒 Acquisizione lock...');
-                    const canProceed = await this.waitForLock();
-
-                    if (!canProceed) {
-                        this.showToast('❌ Timeout: altro dispositivo occupato. Riprova!', 'error');
-                        return;
-                    }
-
-                    await this.acquireLock();
-
-                    // RIGENERA il numero ordine DOPO aver acquisito il lock
-                    console.log('🔄 Rigenero numero ordine con dati aggiornati...');
-                    await this.syncFromDropboxSilent(); // Scarica ultimi ordini
-                    this.updateOrderNumber(); // Rigenera numero
-
-                    // Aggiorna il numero nell'oggetto order
-                    order.number = document.getElementById('order-number').value.trim();
-                    console.log('📋 Nuovo numero ordine:', order.number);
-                }
-
+                // ===== INIZIO TRY-CATCH =====
                 try {
+                    let customerId = document.getElementById('selected-customer-id').value;
+                    const marketing = document.getElementById('customer-marketing-order').checked;
+
+                    if (!customerId) {
+                        // Nuovo cliente
+                        const newCustomer = {
+                            id: this.generateId(),
+                            firstName,
+                            lastName,
+                            phone,
+                            email: '',
+                            marketing: marketing,
+                            fidelity: { stamps: 0, totalSpent: 0, rewards: 0, history: [] }
+                        };
+                        this.db.customers.push(newCustomer);
+                        customerId = newCustomer.id;
+                    } else {
+                        // Cliente esistente - aggiorna consenso marketing
+                        const existingCustomer = this.db.customers.find(c => c.id === customerId);
+                        if (existingCustomer) {
+                            existingCustomer.marketing = marketing;
+                        }
+                    }
+
+                    const deposit = parseFloat(document.getElementById('order-deposit').value) || 0;
+
+                    // Rileggi il numero ordine (potrebbe essere stato generato automaticamente)
+                    const finalOrderNumber = document.getElementById('order-number').value.trim();
+
+                    const order = {
+                        id: this.editingId || this.generateId(),
+                        number: finalOrderNumber,
+                        customerId,
+                        createdDate: document.getElementById('order-created-date').value,
+                        deliveryDate,
+                        prepStatus: document.getElementById('order-prep-status').value,
+                        paymentStatus: document.getElementById('order-payment-status').value,
+                        items: [...this.currentOrder.items],
+                        deposit: deposit > 0 ? deposit : 0
+                    };
+
+                    const isNewOrder = !this.editingId;
+                    const orderTotal = order.items.reduce((sum, item) => sum + item.price, 0);
+
+                    // ========== ACQUISISCI LOCK PER EVITARE DUPLICATI ==========
+                    if (!this.editingId) {
+                        // Solo per ordini nuovi
+                        console.log('🔒 Acquisizione lock...');
+                        const canProceed = await this.waitForLock();
+
+                        if (!canProceed) {
+                            resetButton();
+                            this.showToast('❌ Timeout: altro dispositivo occupato. Riprova!', 'error');
+                            return;
+                        }
+
+                        await this.acquireLock();
+
+                        // RIGENERA il numero ordine DOPO aver acquisito il lock
+                        console.log('🔄 Rigenero numero ordine con dati aggiornati...');
+                        await this.syncFromDropboxSilent(); // Scarica ultimi ordini
+                        this.updateOrderNumber(); // Rigenera numero
+
+                        // Aggiorna il numero nell'oggetto order
+                        order.number = document.getElementById('order-number').value.trim();
+                        console.log('📋 Nuovo numero ordine:', order.number);
+                    }
+
                     if (this.editingId) {
                         const idx = this.db.orders.findIndex(o => o.id === this.editingId);
                         if (idx > -1) this.db.orders[idx] = order;
@@ -6052,13 +6093,20 @@
                     const customer = this.db.customers.find(c => c.id === customerId);
                     this.generateWhatsAppMessage(order, customer);
 
+                } catch (error) {
+                    console.error('❌ Errore salvataggio ordine:', error);
+                    this.showToast('❌ Errore durante il salvataggio', 'error');
                 } finally {
                     // Rilascia sempre il lock
                     if (!this.editingId) {
                         await this.releaseLock();
                     }
+
+                    // Reset flag e bottone
+                    resetButton();
                 }
             }
+
             generateWhatsAppMessage(order, customer) {
                 if (!customer) {
                     console.error('Cliente non trovato per generare messaggio WhatsApp');
