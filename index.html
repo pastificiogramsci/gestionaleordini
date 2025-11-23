@@ -1685,6 +1685,11 @@
                 this.pendingDelete = null;
                 this.filteredOrders = null;
                 this.searchDebounceTimer = null;
+                this.savingOrder = false;           // 🛡️ Protezione doppio click
+                this.lastSaveTime = 0;              // 🛡️ Timestamp ultimo salvataggio  
+                this.currentLockSessionId = null;   // 🔒 Session ID del lock corrente
+
+                // Setup debug logger intercept
 
                 // Setup debug logger intercept
                 this.setupDebugLogger();
@@ -2605,30 +2610,53 @@
                 const lockData = {
                     locked: true,
                     device: /Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent) ? 'Smartphone/Tablet' : 'PC',
-                    timestamp: new Date().toISOString()
+                    timestamp: new Date().toISOString(),
+                    sessionId: Math.random().toString(36).substring(7) // ID univoco
                 };
 
                 try {
+                    // ✅ USA 'add' invece di 'overwrite' - fallisce se lock esiste già
                     await this.dropboxClient.filesUpload({
                         path: '/order-lock.json',
                         contents: new Blob([JSON.stringify(lockData)], { type: 'application/json' }),
-                        mode: { '.tag': 'overwrite' }
+                        mode: { '.tag': 'add' },
+                        autorename: false
                     });
-                    console.log('🔒 Lock acquisito');
-                    return true;
+
+                    // ✅ Verifica che il lock sia veramente nostro
+                    await new Promise(resolve => setTimeout(resolve, 500)); // Piccola pausa
+                    const verifyLock = await this.checkLock();
+
+                    if (verifyLock && verifyLock.sessionId === lockData.sessionId) {
+                        console.log('🔒 Lock acquisito e verificato:', lockData.device);
+                        this.currentLockSessionId = lockData.sessionId; // Salva per rilascio
+                        return true;
+                    } else {
+                        console.error('❌ Lock acquisito ma verification failed');
+                        return false;
+                    }
                 } catch (err) {
-                    console.error('❌ Errore acquisizione lock:', err);
+                    // Lock già esistente o altro errore
+                    console.log('⚠️ Lock già presente o errore:', err.error?.error_summary || err.message);
                     return false;
                 }
             }
 
             async releaseLock() {
                 try {
-                    await this.dropboxClient.filesDeleteV2({ path: '/order-lock.json' });
-                    console.log('🔓 Lock rilasciato');
+                    // ✅ Verifica che il lock sia nostro prima di rimuoverlo
+                    const currentLock = await this.checkLock();
+                    if (currentLock && currentLock.sessionId === this.currentLockSessionId) {
+                        await this.dropboxClient.filesDeleteV2({ path: '/order-lock.json' });
+                        console.log('🔓 Lock rilasciato');
+                    } else {
+                        console.log('⚠️ Lock non nostro, non lo rimuovo');
+                    }
+                    this.currentLockSessionId = null;
                 } catch (err) {
                     // Lock già rimosso o non esiste
-                    console.log('ℹ️ Lock già rilasciato');
+                    console.log('ℹ️ Lock già rilasciato o errore');
+                    this.currentLockSessionId = null;
                 }
             }
 
@@ -6147,6 +6175,11 @@
                     this.saveData();
                     await this.syncToDropbox(true);
 
+                    // ✅ SINCRONIZZAZIONE IMMEDIATA dopo upload
+                    console.log('🔄 Sincronizzazione post-salvataggio...');
+                    await new Promise(resolve => setTimeout(resolve, 1000)); // Attesa propagazione Dropbox
+                    await this.syncFromDropboxSilent(); // Scarica eventuali altri ordini salvati
+
                     // Aggiungi bollini solo per ordini nuovi con pagamento completato
                     if (isNewOrder && order.paymentStatus === 'pagato') {
                         this.addStampsFromOrder(customerId, orderTotal);
@@ -6154,7 +6187,7 @@
 
                     this.render();
                     this.closeModal('order-modal');
-                    this.showToast('✅ Ordine salvato');
+                    this.showToast('✅ Ordine salvato e sincronizzato');
 
                     // Genera messaggio WhatsApp sempre (sia per ordini nuovi che modificati)
                     const customer = this.db.customers.find(c => c.id === customerId);
