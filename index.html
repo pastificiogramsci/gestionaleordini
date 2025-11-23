@@ -6465,6 +6465,52 @@
                 }, 100);
             }
 
+            // ⚡ AZIONI RAPIDE per ordini
+            quickEditOrder(orderId, event) {
+                event.stopPropagation(); // Previene apertura modal dal click sul div
+                this.openOrderModal(orderId);
+            }
+
+            quickDeleteOrder(orderId, event) {
+                event.stopPropagation(); // Previene apertura modal dal click sul div
+
+                const order = this.db.orders.find(o => o.id === orderId);
+                if (!order) return;
+
+                this.pendingDelete = {
+                    type: 'order',
+                    id: orderId,
+                    name: 'Ordine #' + order.number
+                };
+
+                const confirmMsg = 'Sei sicuro di voler eliminare ' + this.pendingDelete.name + '? Questa azione non può essere annullata.';
+                document.getElementById('confirm-message').textContent = confirmMsg;
+                this.openModal('confirm-modal');
+            }
+
+            // ⚡ AZIONI RAPIDE per ordini
+            quickEditOrder(orderId, event) {
+                event.stopPropagation(); // Previene apertura modal dal click sul div
+                this.openOrderModal(orderId);
+            }
+
+            quickDeleteOrder(orderId, event) {
+                event.stopPropagation(); // Previene apertura modal dal click sul div
+
+                const order = this.db.orders.find(o => o.id === orderId);
+                if (!order) return;
+
+                this.pendingDelete = {
+                    type: 'order',
+                    id: orderId,
+                    name: 'Ordine #' + order.number
+                };
+
+                const confirmMsg = 'Sei sicuro di voler eliminare ' + this.pendingDelete.name + '? Questa azione non può essere annullata.';
+                document.getElementById('confirm-message').textContent = confirmMsg;
+                this.openModal('confirm-modal');
+            }
+
             updateStats() {
                 document.getElementById('stats-orders').textContent = this.db.orders.filter(o => !o.deleted).length;
                 document.getElementById('stats-products').textContent = this.db.products.filter(p => !p.deleted).length;
@@ -6877,7 +6923,9 @@
                     'non pagato': 'bg-red-100 text-red-800',
                     'pagato': 'bg-green-100 text-green-800'
                 };
+
                 const sorted = [...ordersToShow].sort((a, b) => new Date(b.deliveryDate) - new Date(a.deliveryDate));
+
                 container.innerHTML = sorted.map(order => {
                     const customer = this.db.customers.find(c => c.id === order.customerId);
                     const customerName = customer ? `${customer.lastName} ${customer.firstName}` : 'Sconosciuto';
@@ -6889,37 +6937,56 @@
                     const allPrepared = preparedItems === totalItems && totalItems > 0;
                     const preparationBadge = order.prepStatus === 'da preparare' ?
                         `<span class="px-2 py-1 rounded-full text-xs font-medium ${allPrepared ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'}">
-                            📦 ${preparedItems}/${totalItems}
-                        </span>` : '';
+                📦 ${preparedItems}/${totalItems}
+            </span>` : '';
 
                     // Badge acconto
                     const depositBadge = order.deposit && order.deposit > 0 ?
                         `<span class="px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                            💰 Acconto: ${this.formatPrice(order.deposit)}
-                        </span>` : '';
+                💰 Acconto: ${this.formatPrice(order.deposit)}
+            </span>` : '';
 
-                    return `<div onclick="app.openOrderModal('${order.id}')" class="bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-md transition slide-in">
-                        <div class="flex justify-between items-start">
-                            <div class="flex items-center gap-3">
-                                <div class="w-12 h-12 bg-blue-200 rounded-full flex items-center justify-center">
-                                    <span class="font-bold text-blue-900">${order.number}</span>
-                                </div>
-                                <div>
-                                    <h3 class="font-bold text-lg">${customerName}</h3>
-                                    <p class="text-sm text-gray-600">Consegna: ${this.formatDate(order.deliveryDate)}</p>
-                                </div>
-                            </div>
-                            <div class="text-right">
-                                <p class="font-bold text-xl">${this.formatPrice(total)}</p>
-                                <div class="flex gap-2 mt-1 flex-wrap justify-end">
-                                    <span class="px-2 py-1 rounded-full text-xs font-medium ${statusColors[order.prepStatus]}">${order.prepStatus}</span>
-                                    <span class="px-2 py-1 rounded-full text-xs font-medium ${statusColors[order.paymentStatus]}">${order.paymentStatus}</span>
-                                    ${preparationBadge}
-                                    ${depositBadge}
-                                </div>
-                            </div>
+                    return `
+            <div onclick="app.openOrderModal('${order.id}')" class="bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-md transition slide-in">
+                <div class="flex justify-between items-start mb-3">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 bg-blue-200 rounded-full flex items-center justify-center">
+                            <span class="font-bold text-blue-900">${order.number}</span>
                         </div>
-                    </div>`;
+                        <div>
+                            <h3 class="font-bold text-lg">${customerName}</h3>
+                            <p class="text-sm text-gray-600">Consegna: ${this.formatDate(order.deliveryDate)}</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <p class="font-bold text-xl">${this.formatPrice(total)}</p>
+                        <div class="flex gap-2 mt-1 flex-wrap justify-end">
+                            <span class="px-2 py-1 rounded-full text-xs font-medium ${statusColors[order.prepStatus]}">${order.prepStatus}</span>
+                            <span class="px-2 py-1 rounded-full text-xs font-medium ${statusColors[order.paymentStatus]}">${order.paymentStatus}</span>
+                            ${preparationBadge}
+                            ${depositBadge}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex gap-2 pt-3 border-t border-gray-200">
+                    <button onclick="app.quickEditOrder('${order.id}', event)" 
+                            class="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition flex items-center justify-center gap-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                        </svg>
+                        Modifica
+                    </button>
+                    <button onclick="app.quickDeleteOrder('${order.id}', event)" 
+                            class="flex-1 bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition flex items-center justify-center gap-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                        Elimina
+                    </button>
+                </div>
+            </div>
+        `;
                 }).join('');
             }
 
