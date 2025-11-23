@@ -2983,7 +2983,11 @@
                         }
                     });
 
-                    this.db.orders = Array.from(mergedOrders.values());
+                    // Rimuovi la proprietà 'source' prima di salvare (serve solo per il debug)
+                    this.db.orders = Array.from(mergedOrders.values()).map(order => {
+                        const { source, ...cleanOrder } = order;
+                        return cleanOrder;
+                    });
 
                     // PRODOTTI: Stesso merge intelligente
                     const mergedProducts = new Map();
@@ -3002,7 +3006,11 @@
                             }
                         }
                     });
-                    this.db.products = Array.from(mergedProducts.values());
+
+                    this.db.products = Array.from(mergedProducts.values()).map(product => {
+                        const { source, ...cleanProduct } = product;
+                        return cleanProduct;
+                    });
 
                     // CLIENTI: Stesso merge intelligente
                     const mergedCustomers = new Map();
@@ -3021,7 +3029,11 @@
                             }
                         }
                     });
-                    this.db.customers = Array.from(mergedCustomers.values());
+
+                    this.db.customers = Array.from(mergedCustomers.values()).map(customer => {
+                        const { source, ...cleanCustomer } = customer;
+                        return cleanCustomer;
+                    });
 
                     // Conta quanti elementi locali sono stati preservati
                     const localOnlyOrders = Array.from(mergedOrders.values()).filter(o => o.source === 'local-only' || o.source === 'local-newer').length;
@@ -3052,9 +3064,9 @@
                     const isFirstLoad = !localStorage.getItem('orderManagerData') || oldOrderCount === 0;
 
                     const hasChanges =
-                        localOnlyOrders > 0 ||       // ← SENZA .length (già numero dal merge intelligente)
-                        localOnlyProducts > 0 ||     // ← SENZA .length
-                        localOnlyCustomers > 0 ||    // ← SENZA .length
+                        localOnlyOrders > 0 ||
+                        localOnlyProducts > 0 ||
+                        localOnlyCustomers > 0 ||
                         countChanged ||
                         isFirstLoad;
 
