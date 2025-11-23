@@ -319,9 +319,8 @@
     </div>
 
     <div class="max-w-4xl mx-auto p-4">
-        <!-- Schermata Scanner QR (quando si apre da URL con parametro scan) -->
-        <!-- TEMPORANEAMENTE DISABILITATO - Fidelity Card in sviluppo -->
-        <div id="qr-scanner-page" class="hidden" style="display: none !important;">
+
+        <div id="qr-scanner-page" class="hidden" ;">
             <div class="bg-white rounded-lg shadow-lg p-6">
                 <h1 class="text-3xl font-bold text-center mb-6">📷 Scanner Fidelity Card</h1>
 
@@ -380,6 +379,9 @@
                     <button onclick="app.switchTab('clienti')"
                         class="tab-btn flex-1 p-4 border-b-2 border-transparent text-gray-500 whitespace-nowrap"
                         data-tab="clienti">Clienti</button>
+                    <button onclick="app.switchTab('fidelity')"
+                        class="tab-btn flex-1 p-4 border-b-2 border-transparent text-gray-500 whitespace-nowrap"
+                        data-tab="fidelity">Fidelity</button>
                     <button onclick="app.switchTab('impostazioni')"
                         class="tab-btn flex-1 p-4 border-b-2 border-transparent text-gray-500 whitespace-nowrap"
                         data-tab="impostazioni">Impostazioni</button>
@@ -414,231 +416,334 @@
                     </div>
                 </div>
 
-                <!-- Scanner QR Code nella Dashboard -->
-                <!-- TEMPORANEAMENTE DISABILITATO - Fidelity Card in sviluppo -->
-                <div class="bg-white rounded-lg shadow-lg p-6" style="display: none !important;">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-xl font-bold">📷 Scanner Tessere Fidelity</h3>
-                        <button id="dashboard-scanner-toggle" onclick="app.toggleDashboardScanner()"
-                            class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 font-medium">
-                            Avvia Scanner
-                        </button>
-                    </div>
-
-                    <div id="dashboard-scanner-container" class="hidden">
-                        <!-- Area Video Scanner -->
-                        <div class="relative mb-4">
-                            <video id="dashboard-scanner-video" class="w-full rounded-lg border-4 border-green-500"
-                                autoplay playsinline style="max-height: 400px; display: none;"></video>
-                            <canvas id="dashboard-scanner-canvas" class="hidden"></canvas>
-
-                            <!-- Overlay di mira -->
-                            <div id="dashboard-scanner-overlay"
-                                class="absolute inset-0 pointer-events-none items-center justify-center hidden">
-                                <div class="w-48 h-48 border-4 border-green-400 rounded-lg shadow-lg"
-                                    style="box-shadow: 0 0 0 9999px rgba(0,0,0,0.5);"></div>
-                            </div>
-                        </div>
-
-                        <!-- Stato Scanner -->
-                        <div id="dashboard-scanner-status" class="text-center text-lg font-semibold mb-4"></div>
-
-                        <!-- Opzione carica immagine -->
-                        <div class="text-center mb-4">
-                            <p class="text-sm text-gray-600 mb-2">Oppure carica un'immagine:</p>
-                            <input type="file" id="dashboard-scanner-file" accept="image/*" class="mx-auto"
-                                onchange="app.scanFromFileDashboard(event)">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Grafici e Analisi -->
-                <div class="bg-white rounded-lg shadow-lg p-6">
-                    <h3 class="text-xl font-bold mb-4">📊 Analisi Rapida</h3>
-                    <div class="grid md:grid-cols-2 gap-6">
-                        <div>
-                            <h4 class="font-semibold text-gray-700 mb-3">Stati Ordini</h4>
-                            <div id="prep-status-chart" class="space-y-2"></div>
-                        </div>
-                        <div>
-                            <h4 class="font-semibold text-gray-700 mb-3">Pagamenti</h4>
-                            <div id="payment-status-chart" class="space-y-2"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Top Clienti -->
-                <div class="bg-white rounded-lg shadow-lg p-6">
-                    <h3 class="text-xl font-bold mb-4">⭐ Top 5 Clienti</h3>
-                    <div id="top-customers" class="space-y-3"></div>
-                </div>
-
-                <!-- Azioni Rapide -->
-                <div class="grid md:grid-cols-3 gap-4">
-                    <button onclick="app.switchTab('clienti'); app.openCustomerModal();"
-                        class="bg-purple-600 text-white font-bold py-3 px-4 rounded-lg shadow-lg hover:bg-purple-700">
-                        👥 Nuovo Cliente
-                    </button>
-                    <button onclick="app.exportOrders()"
-                        class="bg-green-600 text-white font-bold py-3 px-4 rounded-lg shadow-lg hover:bg-green-700">
-                        📥 Esporta Ordini (CSV)
-                    </button>
-                    <button onclick="app.backupData()"
-                        class="bg-blue-600 text-white font-bold py-3 px-4 rounded-lg shadow-lg hover:bg-blue-700">
-                        💾 Backup Locale
+                <div class="bg-white rounded-lg shadow-lg p-6" ">
+                    <div class=" flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold">📷 Scanner Tessere Fidelity</h3>
+                    <button id="dashboard-scanner-toggle" onclick="app.toggleDashboardScanner()"
+                        class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 font-medium">
+                        Avvia Scanner
                     </button>
                 </div>
-            </div>
-        </div>
 
-        <div id="tab-ordini" class="tab-content">
-            <!-- Barra Ricerca e Filtri -->
-            <div class="bg-white rounded-lg shadow-lg p-4 mb-4">
-                <div class="grid md:grid-cols-3 gap-3">
-                    <input type="text" id="order-search" placeholder="🔍 Cerca per numero, cliente..."
-                        class="border-2 border-gray-300 rounded-lg px-4 py-2 focus:border-blue-500 focus:outline-none"
-                        oninput="app.filterOrders()">
-                    <select id="prep-filter"
-                        class="border-2 border-gray-300 rounded-lg px-4 py-2 focus:border-blue-500 focus:outline-none"
-                        onchange="app.filterOrders()">
-                        <option value="">Tutti gli stati</option>
-                        <option value="da preparare">Da preparare</option>
-                        <option value="completato">Completato</option>
-                        <option value="consegnato">Consegnato</option>
-                    </select>
-                    <select id="payment-filter"
-                        class="border-2 border-gray-300 rounded-lg px-4 py-2 focus:border-blue-500 focus:outline-none"
-                        onchange="app.filterOrders()">
-                        <option value="">Tutti i pagamenti</option>
-                        <option value="non pagato">Non pagato</option>
-                        <option value="pagato">Pagato</option>
-                    </select>
+                <div id="dashboard-scanner-container" class="hidden">
+                    <!-- Area Video Scanner -->
+                    <div class="relative mb-4">
+                        <video id="dashboard-scanner-video" class="w-full rounded-lg border-4 border-green-500" autoplay
+                            playsinline style="max-height: 400px; display: none;"></video>
+                        <canvas id="dashboard-scanner-canvas" class="hidden"></canvas>
+
+                        <!-- Overlay di mira -->
+                        <div id="dashboard-scanner-overlay"
+                            class="absolute inset-0 pointer-events-none items-center justify-center hidden">
+                            <div class="w-48 h-48 border-4 border-green-400 rounded-lg shadow-lg"
+                                style="box-shadow: 0 0 0 9999px rgba(0,0,0,0.5);"></div>
+                        </div>
+                    </div>
+
+                    <!-- Stato Scanner -->
+                    <div id="dashboard-scanner-status" class="text-center text-lg font-semibold mb-4"></div>
+
+                    <!-- Opzione carica immagine -->
+                    <div class="text-center mb-4">
+                        <p class="text-sm text-gray-600 mb-2">Oppure carica un'immagine:</p>
+                        <input type="file" id="dashboard-scanner-file" accept="image/*" class="mx-auto"
+                            onchange="app.scanFromFileDashboard(event)">
+                    </div>
                 </div>
             </div>
 
-            <button onclick="app.openOrderModal()"
-                class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg shadow-lg hover:bg-blue-700 mb-4">+
-                Nuovo Ordine</button>
-            <div id="orders-list" class="space-y-3"></div>
-        </div>
-
-        <!-- Tab Preparazione -->
-        <div id="tab-preparazione" class="tab-content hidden">
-            <div class="bg-gradient-to-r from-orange-500 to-red-500 text-white p-6 rounded-lg shadow-lg mb-4">
-                <h2 class="text-2xl font-bold mb-2">🔥 Preparazione in Serie</h2>
-                <p class="text-sm opacity-90">Raggruppa i prodotti per preparare tutti gli ordini contemporaneamente</p>
-            </div>
-
-            <!-- Filtri Data -->
-            <div class="bg-white rounded-lg shadow-lg p-4 mb-4">
-                <div class="grid md:grid-cols-3 gap-3">
+            <!-- Grafici e Analisi -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h3 class="text-xl font-bold mb-4">📊 Analisi Rapida</h3>
+                <div class="grid md:grid-cols-2 gap-6">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Data Consegna</label>
-                        <input type="date" id="prep-date-filter"
-                            class="w-full border-2 border-gray-300 rounded-lg px-4 py-2 focus:border-orange-500 focus:outline-none"
-                            onchange="app.filterPreparation()">
+                        <h4 class="font-semibold text-gray-700 mb-3">Stati Ordini</h4>
+                        <div id="prep-status-chart" class="space-y-2"></div>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Mostra</label>
-                        <select id="prep-status-filter"
-                            class="w-full border-2 border-gray-300 rounded-lg px-4 py-2 focus:border-orange-500 focus:outline-none"
-                            onchange="app.filterPreparation()">
-                            <option value="notcompleted">Solo da preparare</option>
-                            <option value="all">Tutti</option>
-                            <option value="completed">Solo completati</option>
-                        </select>
-                    </div>
-                    <div class="flex items-end">
-                        <button onclick="app.renderPreparation()"
-                            class="w-full bg-orange-600 text-white py-2 px-4 rounded-lg hover:bg-orange-700 font-medium">
-                            🔄 Aggiorna
-                        </button>
+                        <h4 class="font-semibold text-gray-700 mb-3">Pagamenti</h4>
+                        <div id="payment-status-chart" class="space-y-2"></div>
                     </div>
                 </div>
             </div>
 
-            <!-- Lista Prodotti Raggruppati -->
-            <div id="preparation-list" class="space-y-4"></div>
-        </div>
-
-        <div id="tab-prodotti" class="tab-content hidden">
-            <button onclick="app.openProductModal()"
-                class="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg shadow-lg hover:bg-green-700 mb-4">+
-                Nuovo Prodotto</button>
-            <div id="products-list" class="space-y-3"></div>
-        </div>
-
-        <div id="tab-clienti" class="tab-content hidden">
-            <!-- Link Scanner Rapido -->
-            <!-- TEMPORANEAMENTE DISABILITATO - Fidelity Card in sviluppo -->
-            <div class="bg-gradient-to-r from-green-500 to-emerald-500 text-white p-6 rounded-lg shadow-lg mb-4"
-                style="display: none !important;">
-                <h2 class="text-xl font-bold mb-2">🚀 Scanner Veloce</h2>
-                <p class="text-sm mb-4">Apri lo scanner in modalità fullscreen per scansionare rapidamente i clienti</p>
-                <div class="grid grid-cols-2 gap-3">
-                    <button onclick="app.openQRScannerPage()"
-                        class="bg-white text-green-600 font-bold py-3 px-4 rounded-lg hover:bg-gray-100">
-                        📷 Apri Scanner
-                    </button>
-                    <button onclick="app.copyScannerLink()"
-                        class="bg-white text-green-600 font-bold py-3 px-4 rounded-lg hover:bg-gray-100">
-                        🔗 Copia Link
-                    </button>
-                </div>
-                <p class="text-xs mt-2 opacity-90">💡 Salva il link come segnalibro per accesso rapido allo scanner!</p>
+            <!-- Top Clienti -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h3 class="text-xl font-bold mb-4">⭐ Top 5 Clienti</h3>
+                <div id="top-customers" class="space-y-3"></div>
             </div>
 
-            <!-- Aggiungi Cliente e Gestione -->
-            <div class="grid md:grid-cols-1 gap-4 mb-4">
-                <!-- Nuovo Cliente -->
-                <div class="bg-gradient-to-r from-purple-500 to-pink-500 text-white p-6 rounded-lg shadow-lg">
-                    <h2 class="text-xl font-bold mb-4">👥 Gestione Clienti</h2>
-                    <button onclick="app.openCustomerModal()"
-                        class="w-full bg-white text-purple-600 font-bold py-3 px-4 rounded-lg hover:bg-gray-100 mb-3">
-                        + Nuovo Cliente
-                    </button>
-                    <p class="text-sm opacity-90">Crea un nuovo cliente per gestire ordini e informazioni</p>
-                </div>
-
-                <!-- Cliente Veloce con Bollini -->
-                <!-- TEMPORANEAMENTE DISABILITATO - Fidelity Card in sviluppo -->
-                <div class="bg-gradient-to-r from-orange-500 to-red-500 text-white p-6 rounded-lg shadow-lg"
-                    style="display: none !important;">
-                    <h2 class="text-xl font-bold mb-4">⚡ Cliente in Negozio</h2>
-                    <button onclick="app.openQuickCustomerAdd()"
-                        class="w-full bg-white text-orange-600 font-bold py-3 px-4 rounded-lg hover:bg-gray-100 mb-3">
-                        + Aggiungi Cliente & Bollini
-                    </button>
-                    <p class="text-sm opacity-90">Cliente senza ordine? Aggiungi bollini velocemente!</p>
-                </div>
-            </div>
-
-            <!-- Scanner QR -->
-            <!-- TEMPORANEAMENTE DISABILITATO - Fidelity Card in sviluppo -->
-            <div class="bg-white p-6 rounded-lg shadow mb-4" style="display: none !important;">
-                <h2 class="text-xl font-bold mb-4">🔍 Scanner Tessera Fidelity</h2>
-                <button onclick="app.openQRScanner()"
-                    class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700">
-                    📷 Scansiona QR Code Cliente
+            <!-- Azioni Rapide -->
+            <div class="grid md:grid-cols-3 gap-4">
+                <button onclick="app.switchTab('clienti'); app.openCustomerModal();"
+                    class="bg-purple-600 text-white font-bold py-3 px-4 rounded-lg shadow-lg hover:bg-purple-700">
+                    👥 Nuovo Cliente
+                </button>
+                <button onclick="app.exportOrders()"
+                    class="bg-green-600 text-white font-bold py-3 px-4 rounded-lg shadow-lg hover:bg-green-700">
+                    📥 Esporta Ordini (CSV)
+                </button>
+                <button onclick="app.backupData()"
+                    class="bg-blue-600 text-white font-bold py-3 px-4 rounded-lg shadow-lg hover:bg-blue-700">
+                    💾 Backup Locale
                 </button>
             </div>
+        </div>
+    </div>
 
-            <!-- Ricerca Cliente -->
-            <div class="bg-white p-6 rounded-lg shadow mb-4">
-                <h2 class="text-xl font-bold mb-4">🔍 Cerca Cliente</h2>
-                <div class="relative">
-                    <input type="text" id="customer-search" class="w-full px-3 py-2 border rounded-lg"
-                        placeholder="Nome, cognome o telefono..." oninput="app.searchCustomer(this.value)">
-                    <div id="customer-suggestions" class="autocomplete-suggestions hidden"></div>
+    <div id="tab-ordini" class="tab-content">
+        <!-- Barra Ricerca e Filtri -->
+        <div class="bg-white rounded-lg shadow-lg p-4 mb-4">
+            <div class="grid md:grid-cols-3 gap-3">
+                <input type="text" id="order-search" placeholder="🔍 Cerca per numero, cliente..."
+                    class="border-2 border-gray-300 rounded-lg px-4 py-2 focus:border-blue-500 focus:outline-none"
+                    oninput="app.filterOrders()">
+                <select id="prep-filter"
+                    class="border-2 border-gray-300 rounded-lg px-4 py-2 focus:border-blue-500 focus:outline-none"
+                    onchange="app.filterOrders()">
+                    <option value="">Tutti gli stati</option>
+                    <option value="da preparare">Da preparare</option>
+                    <option value="completato">Completato</option>
+                    <option value="consegnato">Consegnato</option>
+                </select>
+                <select id="payment-filter"
+                    class="border-2 border-gray-300 rounded-lg px-4 py-2 focus:border-blue-500 focus:outline-none"
+                    onchange="app.filterOrders()">
+                    <option value="">Tutti i pagamenti</option>
+                    <option value="non pagato">Non pagato</option>
+                    <option value="pagato">Pagato</option>
+                </select>
+            </div>
+        </div>
+
+        <button onclick="app.openOrderModal()"
+            class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg shadow-lg hover:bg-blue-700 mb-4">+
+            Nuovo Ordine</button>
+        <div id="orders-list" class="space-y-3"></div>
+    </div>
+
+    <!-- Tab Preparazione -->
+    <div id="tab-preparazione" class="tab-content hidden">
+        <div class="bg-gradient-to-r from-orange-500 to-red-500 text-white p-6 rounded-lg shadow-lg mb-4">
+            <h2 class="text-2xl font-bold mb-2">🔥 Preparazione in Serie</h2>
+            <p class="text-sm opacity-90">Raggruppa i prodotti per preparare tutti gli ordini contemporaneamente</p>
+        </div>
+
+        <!-- Filtri Data -->
+        <div class="bg-white rounded-lg shadow-lg p-4 mb-4">
+            <div class="grid md:grid-cols-3 gap-3">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Data Consegna</label>
+                    <input type="date" id="prep-date-filter"
+                        class="w-full border-2 border-gray-300 rounded-lg px-4 py-2 focus:border-orange-500 focus:outline-none"
+                        onchange="app.filterPreparation()">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Mostra</label>
+                    <select id="prep-status-filter"
+                        class="w-full border-2 border-gray-300 rounded-lg px-4 py-2 focus:border-orange-500 focus:outline-none"
+                        onchange="app.filterPreparation()">
+                        <option value="notcompleted">Solo da preparare</option>
+                        <option value="all">Tutti</option>
+                        <option value="completed">Solo completati</option>
+                    </select>
+                </div>
+                <div class="flex items-end">
+                    <button onclick="app.renderPreparation()"
+                        class="w-full bg-orange-600 text-white py-2 px-4 rounded-lg hover:bg-orange-700 font-medium">
+                        🔄 Aggiorna
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lista Prodotti Raggruppati -->
+        <div id="preparation-list" class="space-y-4"></div>
+    </div>
+
+    <div id="tab-prodotti" class="tab-content hidden">
+        <button onclick="app.openProductModal()"
+            class="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg shadow-lg hover:bg-green-700 mb-4">+
+            Nuovo Prodotto</button>
+        <div id="products-list" class="space-y-3"></div>
+    </div>
+
+    <div id="tab-clienti" class="tab-content hidden">
+
+        <div class="bg-gradient-to-r from-green-500 to-emerald-500 text-white p-6 rounded-lg shadow-lg mb-4" ">
+                <h2 class=" text-xl font-bold mb-2">🚀 Scanner Veloce</h2>
+            <p class="text-sm mb-4">Apri lo scanner in modalità fullscreen per scansionare rapidamente i clienti</p>
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="app.openQRScannerPage()"
+                    class="bg-white text-green-600 font-bold py-3 px-4 rounded-lg hover:bg-gray-100">
+                    📷 Apri Scanner
+                </button>
+                <button onclick="app.copyScannerLink()"
+                    class="bg-white text-green-600 font-bold py-3 px-4 rounded-lg hover:bg-gray-100">
+                    🔗 Copia Link
+                </button>
+            </div>
+            <p class="text-xs mt-2 opacity-90">💡 Salva il link come segnalibro per accesso rapido allo scanner!</p>
+        </div>
+
+        <!-- Aggiungi Cliente e Gestione -->
+        <div class="grid md:grid-cols-1 gap-4 mb-4">
+            <!-- Nuovo Cliente -->
+            <div class="bg-gradient-to-r from-purple-500 to-pink-500 text-white p-6 rounded-lg shadow-lg">
+                <h2 class="text-xl font-bold mb-4">👥 Gestione Clienti</h2>
+                <button onclick="app.openCustomerModal()"
+                    class="w-full bg-white text-purple-600 font-bold py-3 px-4 rounded-lg hover:bg-gray-100 mb-3">
+                    + Nuovo Cliente
+                </button>
+                <p class="text-sm opacity-90">Crea un nuovo cliente per gestire ordini e informazioni</p>
+            </div>
+
+            <div class="bg-gradient-to-r from-orange-500 to-red-500 text-white p-6 rounded-lg shadow-lg" ">
+                    <h2 class=" text-xl font-bold mb-4">⚡ Cliente in Negozio</h2>
+                <button onclick="app.openQuickCustomerAdd()"
+                    class="w-full bg-white text-orange-600 font-bold py-3 px-4 rounded-lg hover:bg-gray-100 mb-3">
+                    + Aggiungi Cliente & Bollini
+                </button>
+                <p class="text-sm opacity-90">Cliente senza ordine? Aggiungi bollini velocemente!</p>
+            </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-lg shadow mb-4" ">
+                <h2 class=" text-xl font-bold mb-4">🔍 Scanner Tessera Fidelity</h2>
+            <button onclick="app.openQRScanner()"
+                class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700">
+                📷 Scansiona QR Code Cliente
+            </button>
+        </div>
+
+        <!-- Ricerca Cliente -->
+        <div class="bg-white p-6 rounded-lg shadow mb-4">
+            <h2 class="text-xl font-bold mb-4">🔍 Cerca Cliente</h2>
+            <div class="relative">
+                <input type="text" id="customer-search" class="w-full px-3 py-2 border rounded-lg"
+                    placeholder="Nome, cognome o telefono..." oninput="app.searchCustomer(this.value)">
+                <div id="customer-suggestions" class="autocomplete-suggestions hidden"></div>
+            </div>
+        </div>
+
+        <!-- Lista Clienti con Bollini e Info -->
+        <div class="bg-white p-6 rounded-lg shadow">
+            <h2 class="text-xl font-bold mb-4">💳 Tutti i Clienti</h2>
+            <div id="customers-list" class="space-y-3"></div>
+        </div>
+    </div>
+
+    <!-- Tab Fidelity -->
+    <div id="tab-fidelity" class="tab-content hidden">
+        <div class="space-y-4">
+
+            <!-- Dashboard Statistiche -->
+            <div class="bg-gradient-to-br from-purple-500 to-indigo-600 text-white rounded-lg shadow-lg p-6">
+                <h2 class="text-2xl font-bold mb-4">📊 Dashboard Fidelity Card</h2>
+
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="bg-white bg-opacity-20 rounded-lg p-4 backdrop-blur-sm">
+                        <div class="text-sm opacity-90">👥 Clienti Attivi</div>
+                        <div class="text-3xl font-bold mt-1" id="fidelity-stat-customers">0</div>
+                    </div>
+                    <div class="bg-white bg-opacity-20 rounded-lg p-4 backdrop-blur-sm">
+                        <div class="text-sm opacity-90">🎫 Bollini Attivi</div>
+                        <div class="text-3xl font-bold mt-1" id="fidelity-stat-stamps">0</div>
+                    </div>
+                    <div class="bg-white bg-opacity-20 rounded-lg p-4 backdrop-blur-sm">
+                        <div class="text-sm opacity-90">🎁 Premi Disponibili</div>
+                        <div class="text-3xl font-bold mt-1" id="fidelity-stat-rewards">0</div>
+                    </div>
+                    <div class="bg-white bg-opacity-20 rounded-lg p-4 backdrop-blur-sm">
+                        <div class="text-sm opacity-90">🎟️ Coupon Attivi</div>
+                        <div class="text-3xl font-bold mt-1" id="fidelity-stat-coupons">0</div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Lista Clienti con Bollini e Info -->
-            <div class="bg-white p-6 rounded-lg shadow">
-                <h2 class="text-xl font-bold mb-4">💳 Tutti i Clienti</h2>
-                <div id="customers-list" class="space-y-3"></div>
+            <!-- Gestione Campagne -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h3 class="text-xl font-bold text-gray-800">🎪 Campagne Promozionali</h3>
+                        <p class="text-sm text-gray-600">Gestisci le tue campagne coupon</p>
+                    </div>
+                    <button onclick="app.openNewCampaignModal()"
+                        class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 font-medium">
+                        ➕ Nuova Campagna
+                    </button>
+                </div>
+
+                <!-- Lista Campagne (usa la stessa di prima) -->
+                <div id="campaigns-list" class="space-y-3">
+                    <!-- Le campagne verranno inserite qui -->
+                </div>
+
+                <div id="no-campaigns" class="text-center py-8 text-gray-500 bg-gray-50 rounded-lg">
+                    <div class="text-4xl mb-2">🎪</div>
+                    <div class="font-medium">Nessuna campagna creata</div>
+                    <div class="text-sm">Crea campagne promozionali per periodi speciali</div>
+                </div>
             </div>
+
+            <!-- Scanner QR Tessere -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold">📷 Scanner Tessere Fidelity</h3>
+                    <button id="fidelity-scanner-toggle" onclick="app.toggleFidelityScanner()"
+                        class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 font-medium">
+                        ▶️ Avvia Scanner
+                    </button>
+                </div>
+
+                <div id="fidelity-scanner-container" class="hidden">
+                    <div class="relative mb-4">
+                        <video id="fidelity-scanner-video" class="w-full rounded-lg border-4 border-green-500" autoplay
+                            playsinline style="max-height: 400px;"></video>
+                        <canvas id="fidelity-scanner-canvas" class="hidden"></canvas>
+                    </div>
+
+                    <div class="text-center mb-4">
+                        <p class="text-sm text-gray-600 mb-2">Oppure carica un'immagine:</p>
+                        <input type="file" id="fidelity-scanner-file" accept="image/*" class="mx-auto">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lista Clienti Fidelity -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-xl font-bold">👥 Clienti Fidelity Card</h3>
+                    <select id="fidelity-filter" onchange="app.filterFidelityCustomers()"
+                        class="px-3 py-2 border rounded-lg text-sm">
+                        <option value="all">Tutti i clienti</option>
+                        <option value="active">Con attività</option>
+                        <option value="rewards">Con premi</option>
+                        <option value="coupons">Con coupon</option>
+                        <option value="inactive">Senza attività</option>
+                    </select>
+                </div>
+
+                <div class="mb-4">
+                    <input type="text" id="fidelity-search" placeholder="🔍 Cerca cliente..."
+                        oninput="app.searchFidelityCustomers()"
+                        class="w-full px-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none">
+                </div>
+
+                <div id="fidelity-customers-list" class="space-y-3">
+                    <!-- I clienti verranno inseriti qui -->
+                </div>
+
+                <div id="no-fidelity-customers" class="hidden text-center py-8 text-gray-500">
+                    <div class="text-4xl mb-2">👥</div>
+                    <div class="font-medium">Nessun cliente trovato</div>
+                </div>
+            </div>
+
         </div>
+    </div>
+
+    <div id="tab-impostazioni" class="tab-content hidden">
 
         <div id="tab-impostazioni" class="tab-content hidden">
             <!-- Sicurezza -->
@@ -861,10 +966,8 @@
                 </div>
             </div>
 
-            <!-- Configurazione Fidelity -->
-            <!-- TEMPORANEAMENTE DISABILITATO - Fidelity Card in sviluppo -->
-            <div class="bg-white p-6 rounded-lg shadow mt-4" style="display: none !important;">
-                <h2 class="text-xl font-bold mb-4">⚙️ Configurazione Fidelity Card</h2>
+            <div class="bg-white p-6 rounded-lg shadow mt-4" ">
+                <h2 class=" text-xl font-bold mb-4">⚙️ Configurazione Fidelity Card</h2>
 
                 <div class="space-y-4">
                     <div>
@@ -892,6 +995,32 @@
                             placeholder="https://chat.whatsapp.com/...">
                         <p class="text-xs text-gray-500 mt-1">I clienti con consenso marketing vedranno un pulsante per
                             unirsi al gruppo</p>
+                    </div>
+
+                    <!-- Gestione Campagne Promozionali -->
+                    <div class="border-t pt-4 mt-4">
+                        <div class="flex items-center justify-between mb-4">
+                            <div>
+                                <h4 class="font-bold text-gray-800 text-lg">🎁 Campagne Promozionali</h4>
+                                <p class="text-sm text-gray-600">Gestisci coupon per diverse festività e periodi
+                                    promozionali</p>
+                            </div>
+                            <button onclick="app.openNewCampaignModal()"
+                                class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 font-medium">
+                                ➕ Nuova Campagna
+                            </button>
+                        </div>
+
+                        <!-- Lista Campagne -->
+                        <div id="campaigns-list" class="space-y-3">
+                            <!-- Le campagne verranno inserite qui dinamicamente -->
+                        </div>
+
+                        <div id="no-campaigns" class="text-center py-8 text-gray-500 bg-gray-50 rounded-lg">
+                            <div class="text-4xl mb-2">🎪</div>
+                            <div class="font-medium">Nessuna campagna creata</div>
+                            <div class="text-sm">Clicca su "Nuova Campagna" per iniziare</div>
+                        </div>
                     </div>
 
                     <button onclick="app.saveFidelityConfig()"
@@ -1113,10 +1242,8 @@
                     </div>
                 </div>
 
-                <!-- Sezione Bollini Fedeltà (solo per clienti esistenti) -->
-                <!-- TEMPORANEAMENTE DISABILITATO - Fidelity Card in sviluppo -->
-                <div id="customer-stamps-section" class="hidden border-t pt-4 mt-4" style="display: none !important;">
-                    <h3 class="text-lg font-bold mb-3">🎫 Gestione Bollini Fedeltà</h3>
+                <div id="customer-stamps-section" class="hidden border-t pt-4 mt-4" ">
+                    <h3 class=" text-lg font-bold mb-3">🎫 Gestione Bollini Fedeltà</h3>
                     <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-4 mb-3">
                         <div class="flex items-center justify-between mb-2">
                             <span class="text-sm font-medium text-gray-700">Bollini attuali:</span>
@@ -1144,6 +1271,41 @@
                         📱 Invia Aggiornamento WhatsApp
                     </button>
                 </div>
+
+                <!-- ⬇️⬇️⬇️ NUOVA SEZIONE COUPON ⬇️⬇️⬇️ -->
+
+                <!-- Sezione Coupon Promozionali -->
+                <div id="customer-coupons-section" class="hidden border-t pt-4 mt-4">
+                    <h3 class="text-lg font-bold mb-3">🎁 Coupon Promozionali</h3>
+
+                    <!-- Coupon Disponibili -->
+                    <div id="customer-coupons-available" class="mb-4">
+                        <h4 class="text-sm font-semibold text-gray-700 mb-2">✅ Coupon Disponibili</h4>
+                        <div id="coupons-list-available" class="space-y-2">
+                            <!-- I coupon disponibili verranno inseriti qui dinamicamente -->
+                        </div>
+                        <div id="no-coupons-available" class="text-center py-4 text-gray-500 text-sm">
+                            Nessun coupon disponibile
+                        </div>
+                    </div>
+
+                    <!-- Coupon Utilizzati -->
+                    <div id="customer-coupons-used" class="mb-3">
+                        <h4 class="text-sm font-semibold text-gray-500 mb-2">📋 Coupon Utilizzati</h4>
+                        <div id="coupons-list-used" class="space-y-2 max-h-40 overflow-y-auto">
+                            <!-- I coupon usati verranno inseriti qui dinamicamente -->
+                        </div>
+                    </div>
+
+                    <button onclick="app.sendCouponReminderFromModal()"
+                        class="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 font-medium">
+                        📱 Invia Promemoria Coupon
+                    </button>
+                </div>
+
+                <!-- ⬆️⬆️⬆️ FINE SEZIONE COUPON ⬆️⬆️⬆️ -->
+
+
             </div>
             <div class="flex justify-between mt-6">
                 <button onclick="app.deleteCustomer()" id="btn-delete-customer"
@@ -1176,28 +1338,22 @@
         </div>
     </div>
 
-    <!-- Modal Fidelity Card -->
-    <!-- TEMPORANEAMENTE DISABILITATO - Fidelity Card in sviluppo -->
-    <div id="fidelity-modal" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4 z-50"
-        style="display: none !important;">
-        <div class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <h2 class="text-2xl font-bold mb-4" id="fidelity-modal-title">Fidelity Card</h2>
+    <div id="fidelity-modal" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4 z-50" ">
+        <div class=" bg-white rounded-lg shadow-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <h2 class="text-2xl font-bold mb-4" id="fidelity-modal-title">Fidelity Card</h2>
 
-            <div id="fidelity-card-content" class="space-y-4">
-                <!-- Contenuto dinamico -->
-            </div>
+        <div id="fidelity-card-content" class="space-y-4">
+            <!-- Contenuto dinamico -->
+        </div>
 
-            <div class="flex justify-end gap-3 mt-6">
-                <button onclick="app.closeModal('fidelity-modal')"
-                    class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300">Chiudi</button>
-            </div>
+        <div class="flex justify-end gap-3 mt-6">
+            <button onclick="app.closeModal('fidelity-modal')"
+                class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300">Chiudi</button>
         </div>
     </div>
+    </div>
 
-    <!-- Modal QR Scanner -->
-    <!-- TEMPORANEAMENTE DISABILITATO - Fidelity Card in sviluppo -->
-    <div id="qr-scanner-modal" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4 z-50"
-        style="display: none !important;">
+    <div id="qr-scanner-modal" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4 z-50">
         <div class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-md">
             <h2 class="text-2xl font-bold mb-4">📷 Scansiona QR Code</h2>
 
@@ -1223,11 +1379,8 @@
         </div>
     </div>
 
-    <!-- Modal Aggiungi Cliente Rapido -->
-    <!-- TEMPORANEAMENTE DISABILITATO - Fidelity Card in sviluppo -->
     <div id="quick-customer-modal"
-        class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4 z-50"
-        style="display: none !important;">
+        class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4 z-50">
         <div class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <h2 class="text-2xl font-bold mb-4">⚡ Cliente in Negozio</h2>
 
@@ -1675,38 +1828,36 @@
                 this.autoSyncInterval = null;
                 this.debugLogs = [];
                 this.qrStream = null;
+
+                // ⬇️⬇️⬇️ CORRETTO ⬇️⬇️⬇️
                 this.fidelityConfig = {
                     businessName: 'Pastificio Gramsci',
                     eurosPerStamp: 20,
                     stampsPerReward: 10,
-                    whatsappGroup: ''
+                    whatsappGroup: '',
+                    campaigns: []  // ← AGGIUNTO
                 };
+                this.editingCampaignId = null;  // ← AGGIUNTO
+                // ⬆️⬆️⬆️ FINE CORREZIONE ⬆️⬆️⬆️
+
                 this.scannerPageStream = null;
                 this.pendingDelete = null;
                 this.filteredOrders = null;
                 this.searchDebounceTimer = null;
-                this.savingOrder = false;           // 🛡️ Protezione doppio click
-                this.lastSaveTime = 0;              // 🛡️ Timestamp ultimo salvataggio  
-                this.currentLockSessionId = null;   // 🔒 Session ID del lock corrente
+                this.savingOrder = false;
+                this.lastSaveTime = 0;
+                this.currentLockSessionId = null;
 
-                // Setup debug logger intercept
-
-                // Setup debug logger intercept
                 this.setupDebugLogger();
                 this.loadFidelityConfig();
                 this.initDropbox();
                 this.checkUrlParams();
-
-                // ⚠️ NON caricare dati qui - aspetta che authManager sia pronto
-                // this.loadData(); // ❌ RIMUOVI QUESTA RIGA
-                // this.render(); // ❌ RIMUOVI QUESTA RIGA
 
                 this.updateStats();
                 this.updateLastSyncInfo();
                 this.checkDropboxStatus();
                 this.renderDashboard();
 
-                // Setup long press su titolo per mostrare debug
                 this.setupDebugPanel();
             }
 
@@ -3345,6 +3496,12 @@
                 if (config) {
                     this.fidelityConfig = JSON.parse(config);
                 }
+
+                // Assicura che campaigns esista
+                if (!this.fidelityConfig.campaigns) {
+                    this.fidelityConfig.campaigns = [];
+                }
+
                 // Carica valori nei campi
                 if (document.getElementById('business-name')) {
                     document.getElementById('business-name').value = this.fidelityConfig.businessName;
@@ -3352,22 +3509,711 @@
                     document.getElementById('stamps-per-reward').value = this.fidelityConfig.stampsPerReward;
                     document.getElementById('whatsapp-group').value = this.fidelityConfig.whatsappGroup || '';
                 }
+
+                // Renderizza le campagne
+                this.renderCampaigns();
             }
 
             saveFidelityConfig() {
-                this.fidelityConfig = {
-                    businessName: document.getElementById('business-name').value.trim() || 'La Mia Attività',
-                    eurosPerStamp: parseInt(document.getElementById('euros-per-stamp').value) || 20,
-                    stampsPerReward: parseInt(document.getElementById('stamps-per-reward').value) || 10,
-                    whatsappGroup: document.getElementById('whatsapp-group').value.trim()
-                };
+                this.fidelityConfig.businessName = document.getElementById('business-name').value.trim() || 'La Mia Attività';
+                this.fidelityConfig.eurosPerStamp = parseInt(document.getElementById('euros-per-stamp').value) || 20;
+                this.fidelityConfig.stampsPerReward = parseInt(document.getElementById('stamps-per-reward').value) || 10;
+                this.fidelityConfig.whatsappGroup = document.getElementById('whatsapp-group').value.trim();
+
                 localStorage.setItem('fidelityConfig', JSON.stringify(this.fidelityConfig));
-                this.showToast('✅ Configurazione salvata!');
+                this.showToast('✅ Configurazione salvata');
             }
 
-            // FIDELITY CARD FUNCTIONS
-            calculateStamps(amount) {
-                return Math.floor(amount / this.fidelityConfig.eurosPerStamp);
+            // ========== GESTIONE CAMPAGNE PROMOZIONALI ==========
+
+            openNewCampaignModal() {
+                this.editingCampaignId = null;
+                document.getElementById('campaign-modal-title').textContent = '🎁 Nuova Campagna Promozionale';
+                document.getElementById('campaign-name').value = '';
+                document.getElementById('campaign-code-prefix').value = '';
+
+                // Reset tipo sconto
+                document.getElementById('discount-type-fixed').checked = true;
+                document.getElementById('discount-type-percentage').checked = false;
+
+                // Reset valori sconto
+                document.getElementById('campaign-discount-fixed').value = '10';
+                document.getElementById('campaign-discount-percentage').value = '15';
+                document.getElementById('campaign-min-spend').value = '20';
+
+                // Mostra solo input importo fisso
+                document.getElementById('discount-fixed-input').classList.remove('hidden');
+                document.getElementById('discount-percentage-input').classList.add('hidden');
+                document.getElementById('min-spend-input').classList.add('hidden');
+                document.getElementById('discount-example').textContent = '💡 Esempio: Cliente riceve coupon da €10';
+
+                document.getElementById('campaign-description').value = '';
+                document.getElementById('campaign-start-date').value = '';
+                document.getElementById('campaign-expiry-date').value = '';
+                document.getElementById('campaign-suspend-stamps').checked = false;
+
+                this.openModal('campaign-modal');
+            }
+
+            toggleDiscountType() {
+                const isPercentage = document.getElementById('discount-type-percentage').checked;
+
+                if (isPercentage) {
+                    // Mostra percentuale e spesa minima
+                    document.getElementById('discount-fixed-input').classList.add('hidden');
+                    document.getElementById('discount-percentage-input').classList.remove('hidden');
+                    document.getElementById('min-spend-input').classList.remove('hidden');
+
+                    const percentage = document.getElementById('campaign-discount-percentage').value || 15;
+                    const minSpend = document.getElementById('campaign-min-spend').value || 20;
+                    const discount = Math.round((minSpend * percentage) / 100);
+                    document.getElementById('discount-example').innerHTML =
+                        `💡 <strong>Esempio:</strong> Con spesa da €${minSpend}, cliente riceve coupon da €${discount} (${percentage}%)`;
+                } else {
+                    // Mostra importo fisso
+                    document.getElementById('discount-fixed-input').classList.remove('hidden');
+                    document.getElementById('discount-percentage-input').classList.add('hidden');
+                    document.getElementById('min-spend-input').classList.add('hidden');
+
+                    const amount = document.getElementById('campaign-discount-fixed').value || 10;
+                    document.getElementById('discount-example').innerHTML =
+                        `💡 <strong>Esempio:</strong> Cliente riceve coupon da €${amount}`;
+                }
+            }
+
+            addValidDate() {
+                const dateInput = document.getElementById('date-picker-input');
+                const selectedDate = dateInput.value;
+
+                if (!selectedDate) {
+                    this.showToast('❌ Seleziona una data', 'error');
+                    return;
+                }
+
+                // Converti in formato GG/MM/AAAA
+                const [year, month, day] = selectedDate.split('-');
+                const dateFormatted = `${day}/${month}/${year}`;
+
+                // Prendi le date già selezionate
+                const currentDates = document.getElementById('campaign-valid-dates').value;
+                const datesArray = currentDates ? currentDates.split(',').map(d => d.trim()) : [];
+
+                // Controlla se la data è già presente
+                if (datesArray.includes(dateFormatted)) {
+                    this.showToast('⚠️ Data già aggiunta', 'error');
+                    return;
+                }
+
+                // Aggiungi la nuova data
+                datesArray.push(dateFormatted);
+                datesArray.sort((a, b) => {
+                    // Ordina per data crescente
+                    const [d1, m1, y1] = a.split('/');
+                    const [d2, m2, y2] = b.split('/');
+                    return new Date(y1, m1 - 1, d1) - new Date(y2, m2 - 1, d2);
+                });
+
+                // Salva nel campo hidden
+                document.getElementById('campaign-valid-dates').value = datesArray.join(', ');
+
+                // Renderizza i badge
+                this.renderValidDates();
+
+                // Reset input
+                dateInput.value = '';
+
+                this.showToast('✅ Data aggiunta');
+            }
+
+            removeValidDate(dateToRemove) {
+                const currentDates = document.getElementById('campaign-valid-dates').value;
+                let datesArray = currentDates.split(',').map(d => d.trim());
+
+                // Rimuovi la data
+                datesArray = datesArray.filter(d => d !== dateToRemove);
+
+                // Aggiorna campo hidden
+                document.getElementById('campaign-valid-dates').value = datesArray.join(', ');
+
+                // Renderizza
+                this.renderValidDates();
+
+                this.showToast('🗑️ Data rimossa');
+            }
+
+            renderValidDates() {
+                const container = document.getElementById('selected-dates-container');
+                const currentDates = document.getElementById('campaign-valid-dates').value;
+                const datesArray = currentDates ? currentDates.split(',').map(d => d.trim()).filter(d => d) : [];
+
+                if (datesArray.length === 0) {
+                    container.innerHTML = '<div id="no-dates-selected" class="text-gray-400 text-sm">Nessuna data selezionata</div>';
+                    return;
+                }
+
+                container.innerHTML = datesArray.map(date => `
+        <span class="inline-flex items-center gap-1 bg-green-600 text-white px-3 py-1 rounded-full text-sm font-medium">
+            📅 ${date}
+            <button type="button" onclick="app.removeValidDate('${date}')" 
+                class="ml-1 text-white hover:text-red-200 font-bold">
+                ✕
+            </button>
+        </span>
+    `).join('');
+            }
+
+            editCampaign(campaignId) {
+                const campaign = this.fidelityConfig.campaigns.find(c => c.id === campaignId);
+                if (!campaign) return;
+
+                this.editingCampaignId = campaignId;
+                document.getElementById('campaign-modal-title').textContent = '✏️ Modifica Campagna';
+                document.getElementById('campaign-name').value = campaign.name;
+                document.getElementById('campaign-code-prefix').value = campaign.codePrefix;
+
+                // ⬇️ GESTIONE TIPO SCONTO
+                if (campaign.discountType === 'percentage') {
+                    document.getElementById('discount-type-percentage').checked = true;
+                    document.getElementById('discount-type-fixed').checked = false;
+                    document.getElementById('campaign-discount-percentage').value = campaign.discount;
+                    document.getElementById('campaign-min-spend').value = campaign.minSpend || 20;
+                    this.toggleDiscountType();
+                } else {
+                    document.getElementById('discount-type-fixed').checked = true;
+                    document.getElementById('discount-type-percentage').checked = false;
+                    document.getElementById('campaign-discount-fixed').value = campaign.discount;
+                    this.toggleDiscountType();
+                }
+
+                document.getElementById('campaign-description').value = campaign.description;
+                document.getElementById('campaign-start-date').value = campaign.startDate || '';
+                document.getElementById('campaign-expiry-date').value = campaign.expiryDate || '';
+
+                // ⬇️ CARICA DATE VALIDE
+                document.getElementById('campaign-valid-dates').value = campaign.validDates || '';
+                document.getElementById('date-picker-input').value = '';
+                this.renderValidDates();  // ← RENDERIZZA I BADGE
+
+                document.getElementById('campaign-suspend-stamps').checked = campaign.suspendStamps || false;
+
+                this.openModal('campaign-modal');
+            }
+
+            saveCampaign() {
+                const name = document.getElementById('campaign-name').value.trim();
+                const codePrefix = document.getElementById('campaign-code-prefix').value.trim().toUpperCase();
+                const description = document.getElementById('campaign-description').value.trim();
+                const startDate = document.getElementById('campaign-start-date').value;
+                const expiryDate = document.getElementById('campaign-expiry-date').value;
+                const suspendStamps = document.getElementById('campaign-suspend-stamps').checked;
+
+                // ⬇️ NUOVO: Determina tipo sconto e valori
+                const isPercentage = document.getElementById('discount-type-percentage').checked;
+                let discount, discountType, minSpend;
+
+                if (isPercentage) {
+                    discountType = 'percentage';
+                    discount = parseInt(document.getElementById('campaign-discount-percentage').value);
+                    minSpend = parseInt(document.getElementById('campaign-min-spend').value);
+
+                    if (!discount || discount < 1 || discount > 100) {
+                        this.showToast('❌ Percentuale sconto non valida (1-100%)', 'error');
+                        return;
+                    }
+                    if (!minSpend || minSpend < 1) {
+                        this.showToast('❌ Spesa minima non valida', 'error');
+                        return;
+                    }
+                } else {
+                    discountType = 'fixed';
+                    discount = parseInt(document.getElementById('campaign-discount-fixed').value);
+                    minSpend = 0;
+
+                    if (!discount || discount < 1) {
+                        this.showToast('❌ Importo sconto non valido', 'error');
+                        return;
+                    }
+                }
+
+                if (!name || !codePrefix || !description) {
+                    this.showToast('❌ Compila tutti i campi obbligatori', 'error');
+                    return;
+                }
+
+                if (this.editingCampaignId) {
+                    // Modifica campagna esistente
+                    const campaign = this.fidelityConfig.campaigns.find(c => c.id === this.editingCampaignId);
+                    if (campaign) {
+                        campaign.name = name;
+                        campaign.codePrefix = codePrefix;
+                        campaign.discount = discount;
+                        campaign.discountType = discountType;
+                        campaign.minSpend = minSpend;
+                        campaign.description = description;
+                        campaign.startDate = startDate;
+                        campaign.expiryDate = expiryDate;
+                        campaign.suspendStamps = suspendStamps;
+                        this.showToast('✅ Campagna aggiornata');
+                    }
+                } else {
+                    // Nuova campagna
+                    const newCampaign = {
+                        id: Date.now(),
+                        name: name,
+                        codePrefix: codePrefix,
+                        discount: discount,
+                        discountType: discountType,
+                        minSpend: minSpend,
+                        description: description,
+                        startDate: startDate,
+                        expiryDate: expiryDate,
+                        suspendStamps: suspendStamps,
+                        active: false,
+                        createdAt: new Date().toISOString()
+                    };
+                    this.fidelityConfig.campaigns.push(newCampaign);
+                    this.showToast('✅ Campagna creata');
+                }
+
+                this.saveFidelityConfig();
+                this.renderCampaigns();
+                this.closeCampaignModal();
+            }
+
+            closeCampaignModal() {
+                this.closeModal('campaign-modal');
+                this.editingCampaignId = null;
+            }
+
+            toggleCampaign(campaignId) {
+                const campaign = this.fidelityConfig.campaigns.find(c => c.id === campaignId);
+                if (!campaign) return;
+
+                campaign.active = !campaign.active;
+                this.saveFidelityConfig();
+                this.renderCampaigns();
+
+                if (campaign.active) {
+                    this.showToast(`🎉 Campagna "${campaign.name}" attivata`);
+                } else {
+                    this.showToast(`⏸️ Campagna "${campaign.name}" disattivata`);
+                }
+            }
+
+            deleteCampaign(campaignId) {
+                const campaign = this.fidelityConfig.campaigns.find(c => c.id === campaignId);
+                if (!campaign) return;
+
+                if (confirm(`Vuoi eliminare la campagna "${campaign.name}"?\n\nI coupon già assegnati rimarranno validi.`)) {
+                    this.fidelityConfig.campaigns = this.fidelityConfig.campaigns.filter(c => c.id !== campaignId);
+                    this.saveFidelityConfig();
+                    this.renderCampaigns();
+                    this.showToast('🗑️ Campagna eliminata');
+                }
+            }
+
+            renderCampaigns() {
+                const list = document.getElementById('campaigns-list');
+                const noCampaigns = document.getElementById('no-campaigns');
+                const campaigns = this.fidelityConfig.campaigns || [];
+
+                if (campaigns.length === 0) {
+                    noCampaigns.classList.remove('hidden');
+                    list.classList.add('hidden');
+                    return;
+                }
+
+                noCampaigns.classList.add('hidden');
+                list.classList.remove('hidden');
+
+                // Conta campagne attive che sospendono bollini
+                const activeCampaignsWithSuspension = campaigns.filter(c => c.active && c.suspendStamps);
+
+                // Banner avviso sospensione bollini
+                const warningBanner = activeCampaignsWithSuspension.length > 0
+                    ? `<div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 mb-4 rounded">
+               <div class="flex items-center">
+                   <div class="text-yellow-600 mr-3 text-2xl">⚠️</div>
+                   <div>
+                       <div class="font-semibold text-yellow-800">Bollini Fidelity Sospesi</div>
+                       <div class="text-sm text-yellow-700">
+                           ${activeCampaignsWithSuspension.length} campagna/e attive stanno sospendendo i bollini. 
+                           I clienti riceveranno SOLO coupon promozionali finché queste campagne sono attive.
+                       </div>
+                   </div>
+               </div>
+           </div>`
+                    : '';
+
+                list.innerHTML = warningBanner + campaigns.map(campaign => {
+                    const activeClass = campaign.active ? 'bg-green-50 border-green-500' : 'bg-gray-50 border-gray-300';
+                    const statusBadge = campaign.active
+                        ? '<span class="bg-green-600 text-white text-xs px-2 py-1 rounded-full font-semibold">🟢 ATTIVA</span>'
+                        : '<span class="bg-gray-400 text-white text-xs px-2 py-1 rounded-full">⚪ Inattiva</span>';
+
+                    const dates = [];
+                    if (campaign.startDate) dates.push(`Inizio: ${new Date(campaign.startDate).toLocaleDateString('it-IT')}`);
+                    if (campaign.expiryDate) dates.push(`Scadenza: ${new Date(campaign.expiryDate).toLocaleDateString('it-IT')}`);
+                    const dateInfo = dates.length > 0 ? `<div class="text-xs text-gray-600 mt-1">${dates.join(' • ')}</div>` : '';
+
+                    // ⬇️ NUOVO: Badge sospensione bollini
+                    const suspendBadge = campaign.suspendStamps
+                        ? '<span class="bg-orange-500 text-white text-xs px-2 py-1 rounded-full ml-2">⏸️ Sospende bollini</span>'
+                        : '<span class="bg-blue-500 text-white text-xs px-2 py-1 rounded-full ml-2">✓ Con bollini</span>';
+
+                    return `
+            <div class="p-4 border-l-4 ${activeClass} rounded-lg">
+                <div class="flex items-start justify-between">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2 mb-2 flex-wrap">
+                            <h5 class="font-bold text-gray-800">${campaign.name}</h5>
+                            ${statusBadge}
+                            ${suspendBadge}
+                        </div>
+                        <div class="text-sm text-gray-700 space-y-1">
+                            <div>💰 Sconto: <strong>€${campaign.discount}</strong></div>
+                            <div>🎫 Codice: <strong>${campaign.codePrefix}-XXXXX</strong></div>
+                            <div>📝 ${campaign.description}</div>
+                            ${dateInfo}
+                        </div>
+                    </div>
+                    <div class="flex flex-col gap-2 ml-4">
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" ${campaign.active ? 'checked' : ''} 
+                                onchange="app.toggleCampaign(${campaign.id})" class="sr-only peer">
+                            <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                        </label>
+                        <button onclick="app.editCampaign(${campaign.id})" 
+                            class="bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700 whitespace-nowrap">
+                            ✏️ Modifica
+                        </button>
+                        <button onclick="app.deleteCampaign(${campaign.id})" 
+                            class="bg-red-600 text-white px-3 py-1 rounded text-xs hover:bg-red-700 whitespace-nowrap">
+                            🗑️ Elimina
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+                }).join('');
+            }
+
+            renderFidelityDashboard() {
+                const customers = this.db.customers.filter(c => c.fidelity);
+
+                // Clienti con attività fidelity
+                const activeCustomers = customers.filter(c =>
+                    (c.fidelity.stamps > 0) ||
+                    (c.fidelity.rewards > 0) ||
+                    (c.fidelity.coupons && c.fidelity.coupons.length > 0)
+                ).length;
+
+                // Totale bollini attivi
+                const totalStamps = customers.reduce((sum, c) => sum + (c.fidelity.stamps || 0), 0);
+
+                // Totale premi disponibili
+                const totalRewards = customers.reduce((sum, c) => sum + (c.fidelity.rewards || 0), 0);
+
+                // Totale coupon attivi (non usati)
+                const totalCoupons = customers.reduce((sum, c) => {
+                    const activeCoupons = c.fidelity.coupons?.filter(cp => !cp.used) || [];
+                    return sum + activeCoupons.length;
+                }, 0);
+
+                // Aggiorna UI
+                document.getElementById('fidelity-stat-customers').textContent = activeCustomers;
+                document.getElementById('fidelity-stat-stamps').textContent = totalStamps;
+                document.getElementById('fidelity-stat-rewards').textContent = totalRewards;
+                document.getElementById('fidelity-stat-coupons').textContent = totalCoupons;
+            }
+
+            renderFidelityCustomers(filter = 'all', searchTerm = '') {
+                let customers = [...this.db.customers];
+
+                // Applica filtro
+                if (filter === 'active') {
+                    customers = customers.filter(c =>
+                        c.fidelity && (
+                            c.fidelity.stamps > 0 ||
+                            c.fidelity.rewards > 0 ||
+                            (c.fidelity.coupons && c.fidelity.coupons.length > 0)
+                        )
+                    );
+                } else if (filter === 'rewards') {
+                    customers = customers.filter(c => c.fidelity && c.fidelity.rewards > 0);
+                } else if (filter === 'coupons') {
+                    customers = customers.filter(c =>
+                        c.fidelity && c.fidelity.coupons &&
+                        c.fidelity.coupons.some(cp => !cp.used)
+                    );
+                } else if (filter === 'inactive') {
+                    customers = customers.filter(c =>
+                        !c.fidelity || (
+                            c.fidelity.stamps === 0 &&
+                            c.fidelity.rewards === 0 &&
+                            (!c.fidelity.coupons || c.fidelity.coupons.length === 0)
+                        )
+                    );
+                }
+
+                // Applica ricerca
+                if (searchTerm) {
+                    const term = searchTerm.toLowerCase();
+                    customers = customers.filter(c =>
+                        c.firstName.toLowerCase().includes(term) ||
+                        c.lastName.toLowerCase().includes(term) ||
+                        (c.phone && c.phone.includes(term))
+                    );
+                }
+
+                const list = document.getElementById('fidelity-customers-list');
+                const noCustomers = document.getElementById('no-fidelity-customers');
+
+                if (customers.length === 0) {
+                    list.innerHTML = '';
+                    noCustomers.classList.remove('hidden');
+                    return;
+                }
+
+                noCustomers.classList.add('hidden');
+
+                list.innerHTML = customers.map(customer => {
+                    const fidelity = customer.fidelity || { stamps: 0, rewards: 0, coupons: [] };
+                    const activeCoupons = fidelity.coupons?.filter(c => !c.used) || [];
+                    const totalSpent = fidelity.totalSpent || 0;
+
+                    const stampsProgress = (fidelity.stamps / this.fidelityConfig.stampsPerReward) * 100;
+
+                    const couponsHtml = activeCoupons.length > 0
+                        ? `<div class="mt-2 space-y-1">
+                        <div class="text-xs font-semibold text-gray-600">Coupon disponibili:</div>
+                        ${activeCoupons.map(coupon => `
+                            <div class="flex items-center justify-between bg-green-50 p-2 rounded text-xs">
+                                <span>€${coupon.amount} - ${coupon.code}</span>
+                                <button onclick="app.useCouponFromFidelity('${customer.id}', ${coupon.id})"
+                                    class="bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700">
+                                    ✓ Usa
+                                </button>
+                            </div>
+                        `).join('')}
+                    </div>`
+                        : '';
+
+                    const hasActivity = fidelity.stamps > 0 || fidelity.rewards > 0 || activeCoupons.length > 0;
+
+                    return `
+                    <div class="border rounded-lg p-4 hover:shadow-lg transition-shadow bg-white">
+                        <div class="flex items-start justify-between mb-3">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2">
+                                    <h4 class="font-bold text-lg text-gray-800">${customer.firstName} ${customer.lastName}</h4>
+                                    ${fidelity.rewards > 0 ? '<span class="bg-green-500 text-white text-xs px-2 py-1 rounded-full">🎁 ' + fidelity.rewards + ' Premio/i</span>' : ''}
+                                </div>
+                                <div class="text-sm text-gray-600">
+                                    ${customer.phone ? '📱 ' + customer.phone : ''}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        ${hasActivity ? `
+                            <div class="border-t pt-3 space-y-2">
+                                <div class="flex items-center justify-between text-sm">
+                                    <span class="text-gray-600">🎫 Bollini:</span>
+                                    <span class="font-bold text-blue-600">${fidelity.stamps}/${this.fidelityConfig.stampsPerReward}</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-blue-600 h-2 rounded-full transition-all" style="width: ${stampsProgress}%"></div>
+                                </div>
+                                
+                                <div class="flex items-center justify-between text-sm">
+                                    <span class="text-gray-600">💰 Spesa totale:</span>
+                                    <span class="font-semibold">€${totalSpent.toFixed(2)}</span>
+                                </div>
+                                
+                                ${activeCoupons.length > 0 ? `
+                                    <div class="flex items-center justify-between text-sm">
+                                        <span class="text-gray-600">🎟️ Coupon attivi:</span>
+                                        <span class="font-bold text-green-600">${activeCoupons.length}</span>
+                                    </div>
+                                ` : ''}
+                                
+                                ${couponsHtml}
+                            </div>
+                        ` : `
+                            <div class="border-t pt-3 text-center text-sm text-gray-500">
+                                ⚠️ Nessuna attività fidelity
+                            </div>
+                        `}
+                        
+                        <div class="border-t mt-3 pt-3 flex gap-2 flex-wrap">
+                            <button onclick="app.resendFidelityCard('${customer.id}')"
+                                class="flex-1 bg-blue-600 text-white px-3 py-2 rounded text-sm hover:bg-blue-700 font-medium">
+                                📱 Reinvia Tessera
+                            </button>
+                            <button onclick="app.openFidelityDetailModal('${customer.id}')"
+                                class="flex-1 bg-purple-600 text-white px-3 py-2 rounded text-sm hover:bg-purple-700 font-medium">
+                                📊 Dettagli
+                            </button>
+                        </div>
+                    </div>
+                `;
+                }).join('');
+            }
+
+            filterFidelityCustomers() {
+                const filter = document.getElementById('fidelity-filter').value;
+                const searchTerm = document.getElementById('fidelity-search').value;
+                this.renderFidelityCustomers(filter, searchTerm);
+            }
+
+            searchFidelityCustomers() {
+                const filter = document.getElementById('fidelity-filter').value;
+                const searchTerm = document.getElementById('fidelity-search').value;
+                this.renderFidelityCustomers(filter, searchTerm);
+            }
+
+            resendFidelityCard(customerId) {
+                const customer = this.db.customers.find(c => c.id === customerId);
+                if (!customer) return;
+
+                if (!customer.phone) {
+                    this.showToast('❌ Cliente senza numero di telefono', 'error');
+                    return;
+                }
+
+                if (confirm(`Reinviare la tessera fidelity a ${customer.firstName} ${customer.lastName}?`)) {
+                    this.sendFidelityCardWhatsApp(customerId);
+                    this.showToast(`✅ Tessera inviata a ${customer.firstName}!`);
+                }
+            }
+
+            useCouponFromFidelity(customerId, couponId) {
+                this.markCouponAsUsed(customerId, couponId);
+                this.renderFidelityCustomers();
+                this.renderFidelityDashboard();
+            }
+
+            toggleFidelityScanner() {
+                const container = document.getElementById('fidelity-scanner-container');
+                const button = document.getElementById('fidelity-scanner-toggle');
+                const video = document.getElementById('fidelity-scanner-video');
+
+                if (container.classList.contains('hidden')) {
+                    // Avvia scanner
+                    container.classList.remove('hidden');
+                    button.textContent = '⏸️ Ferma Scanner';
+                    button.classList.remove('bg-green-600', 'hover:bg-green-700');
+                    button.classList.add('bg-red-600', 'hover:bg-red-700');
+
+                    // Avvia camera
+                    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+                        .then(stream => {
+                            video.srcObject = stream;
+                            video.style.display = 'block';
+                            this.fidelityScannerStream = stream;
+                            this.scanFidelityQR();
+                            this.showToast('📷 Scanner avviato');
+                        })
+                        .catch(err => {
+                            console.error('Errore camera:', err);
+                            this.showToast('❌ Impossibile accedere alla camera', 'error');
+                            this.toggleFidelityScanner();
+                        });
+                } else {
+                    // Ferma scanner
+                    container.classList.add('hidden');
+                    button.textContent = '▶️ Avvia Scanner';
+                    button.classList.remove('bg-red-600', 'hover:bg-red-700');
+                    button.classList.add('bg-green-600', 'hover:bg-green-700');
+
+                    if (this.fidelityScannerStream) {
+                        this.fidelityScannerStream.getTracks().forEach(track => track.stop());
+                        this.fidelityScannerStream = null;
+                    }
+                    video.style.display = 'none';
+                }
+            }
+
+            scanFidelityQR() {
+                if (!this.fidelityScannerStream) return;
+
+                const video = document.getElementById('fidelity-scanner-video');
+                const canvas = document.getElementById('fidelity-scanner-canvas');
+                const ctx = canvas.getContext('2d');
+
+                const scan = () => {
+                    if (!this.fidelityScannerStream) return;
+
+                    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                        canvas.width = video.videoWidth;
+                        canvas.height = video.videoHeight;
+                        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                        const code = jsQR(imageData.data, imageData.width, imageData.height);
+
+                        if (code) {
+                            try {
+                                const data = JSON.parse(code.data);
+                                if (data.app === 'fidelity-card' && data.id) {
+                                    this.showToast('✅ QR Code rilevato!');
+                                    this.toggleFidelityScanner();
+                                    this.openFidelityDetailModal(data.id);
+                                    return;
+                                }
+                            } catch (e) {
+                                // QR non valido
+                            }
+                        }
+                    }
+
+                    requestAnimationFrame(scan);
+                };
+
+                scan();
+            }
+
+            scanFidelityFromFile(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.getElementById('fidelity-scanner-canvas');
+                        const ctx = canvas.getContext('2d');
+
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        ctx.drawImage(img, 0, 0);
+
+                        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                        const code = jsQR(imageData.data, imageData.width, imageData.height);
+
+                        if (code) {
+                            try {
+                                const data = JSON.parse(code.data);
+                                if (data.app === 'fidelity-card' && data.id) {
+                                    this.showToast('✅ QR Code trovato!');
+                                    this.openFidelityDetailModal(data.id);
+                                } else {
+                                    this.showToast('❌ QR Code non valido', 'error');
+                                }
+                            } catch (e) {
+                                this.showToast('❌ QR Code non valido', 'error');
+                            }
+                        } else {
+                            this.showToast('❌ Nessun QR Code trovato', 'error');
+                        }
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+
+            openFidelityDetailModal(customerId) {
+                this.openCustomerModal(customerId);
             }
 
             addStampsFromOrder(customerId, orderTotal) {
@@ -3375,46 +4221,168 @@
                 if (!customer) return;
 
                 if (!customer.fidelity) {
-                    customer.fidelity = { stamps: 0, totalSpent: 0, rewards: 0, history: [], cardSent: false };
+                    customer.fidelity = {
+                        stamps: 0,
+                        totalSpent: 0,
+                        rewards: 0,
+                        history: [],
+                        cardSent: false,
+                        coupons: []
+                    };
                 }
 
-                const stampsEarned = this.calculateStamps(orderTotal);
-                if (stampsEarned > 0) {
-                    customer.fidelity.stamps += stampsEarned;
-                    customer.fidelity.totalSpent += orderTotal;
-                    customer.fidelity.history.push({
-                        date: new Date().toISOString(),
-                        type: 'earned',
-                        stamps: stampsEarned,
-                        amount: orderTotal
+                // ⬇️⬇️⬇️ NUOVA LOGICA: Controllo date di consegna ⬇️⬇️⬇️
+
+                // Prendi la data di consegna dall'ordine corrente
+                const orderDeliveryDate = this.currentOrder?.deliveryDate;
+                let orderDateFormatted = null;
+
+                if (orderDeliveryDate) {
+                    const [year, month, day] = orderDeliveryDate.split('-');
+                    orderDateFormatted = `${day}/${month}/${year}`;
+                }
+
+                // Filtra tutte le campagne attive
+                const allActiveCampaigns = this.fidelityConfig.campaigns?.filter(c => c.active) || [];
+
+                // Filtra le campagne APPLICABILI a questo ordine specifico
+                const applicableCampaigns = allActiveCampaigns.filter(campaign => {
+                    // Se la campagna NON ha date specifiche, si applica a TUTTI gli ordini
+                    if (!campaign.validDates || campaign.validDates.trim() === '') {
+                        return true;
+                    }
+
+                    // Se la campagna ha date specifiche, controlla se l'ordine ha una di quelle date
+                    if (!orderDeliveryDate) {
+                        // Nessuna data di consegna = campagna con date NON applicabile
+                        return false;
+                    }
+
+                    // Controlla se la data dell'ordine è nella lista delle date valide
+                    const validDatesArray = campaign.validDates.split(',').map(d => d.trim());
+                    return validDatesArray.includes(orderDateFormatted);
+                });
+
+                // ⬇️ Controlla se le campagne APPLICABILI sospendono i bollini
+                const shouldSuspendStamps = applicableCampaigns.some(c => c.suspendStamps);
+
+                // ⬇️⬇️⬇️ GESTIONE COUPON ⬇️⬇️⬇️
+                if (applicableCampaigns.length > 0) {
+                    applicableCampaigns.forEach(campaign => {
+                        // Calcola importo coupon in base al tipo
+                        let couponAmount;
+                        if (campaign.discountType === 'percentage') {
+                            // Percentuale: calcola sconto in base alla spesa
+                            couponAmount = Math.round((orderTotal * campaign.discount) / 100);
+
+                            // Verifica spesa minima se presente
+                            if (campaign.minSpend && orderTotal < campaign.minSpend) {
+                                console.log(`Ordine non raggiunge spesa minima (€${campaign.minSpend}) per coupon ${campaign.name}`);
+                                return; // Skip questo coupon
+                            }
+                        } else {
+                            // Importo fisso
+                            couponAmount = campaign.discount;
+                        }
+
+                        const couponCode = this.generateCouponCode(campaign.codePrefix);
+
+                        const coupon = {
+                            id: Date.now() + Math.random(),
+                            code: couponCode,
+                            campaignName: campaign.name,
+                            campaignId: campaign.id,
+                            amount: couponAmount,
+                            discountType: campaign.discountType,
+                            percentage: campaign.discountType === 'percentage' ? campaign.discount : null,
+                            description: campaign.description,
+                            expiryDate: campaign.expiryDate || '',
+                            createdDate: new Date().toISOString(),
+                            used: false,
+                            orderTotal: orderTotal,
+                            orderDate: new Date().toISOString(),
+                            deliveryDate: orderDeliveryDate || null
+                        };
+
+                        if (!customer.fidelity.coupons) {
+                            customer.fidelity.coupons = [];
+                        }
+
+                        customer.fidelity.coupons.push(coupon);
+
+                        customer.fidelity.history.push({
+                            date: new Date().toISOString(),
+                            type: 'coupon_earned',
+                            amount: orderTotal,
+                            couponAmount: coupon.amount,
+                            campaignName: campaign.name,
+                            description: `Coupon ${campaign.name} ricevuto`
+                        });
+
+                        // Invia messaggio WhatsApp per il coupon
+                        if (customer.phone) {
+                            setTimeout(() => {
+                                this.sendCouponWhatsApp(customer.id, coupon);
+                            }, 500 * applicableCampaigns.indexOf(campaign));
+                        }
                     });
 
-                    // Controlla se ha raggiunto un premio
-                    const rewardsEarned = Math.floor(customer.fidelity.stamps / this.fidelityConfig.stampsPerReward);
-                    if (rewardsEarned > customer.fidelity.rewards) {
-                        const newRewards = rewardsEarned - customer.fidelity.rewards;
-                        customer.fidelity.rewards = rewardsEarned;
-                        customer.fidelity.stamps = customer.fidelity.stamps % this.fidelityConfig.stampsPerReward;
+                    const totalCoupons = applicableCampaigns.reduce((sum, campaign) => {
+                        if (campaign.discountType === 'percentage') {
+                            return sum + Math.round((orderTotal * campaign.discount) / 100);
+                        }
+                        return sum + campaign.discount;
+                    }, 0);
 
-                        this.showToast(`🎁 ${customer.firstName} ha guadagnato ${newRewards} premio/i!`);
-                    }
+                    const dateInfo = orderDateFormatted ? ` (Consegna: ${orderDateFormatted})` : '';
+                    const stampsMessage = shouldSuspendStamps ? ' - Bollini sospesi' : ' + Bollini attivi';
+                    this.showToast(`🎁 ${applicableCampaigns.length} coupon (€${totalCoupons})${dateInfo}${stampsMessage}`);
+                }
 
-                    this.saveData();
+                // ⬇️⬇️⬇️ GESTIONE BOLLINI ⬇️⬇️⬇️
+                // Assegna bollini SOLO se NON sospesi dalle campagne applicabili
+                if (!shouldSuspendStamps) {
+                    const stampsEarned = this.calculateStamps(orderTotal);
+                    if (stampsEarned > 0) {
+                        customer.fidelity.stamps += stampsEarned;
+                        customer.fidelity.totalSpent += orderTotal;
+                        customer.fidelity.history.push({
+                            date: new Date().toISOString(),
+                            type: 'earned',
+                            stamps: stampsEarned,
+                            amount: orderTotal
+                        });
 
-                    // Mostra un messaggio
-                    this.showToast(`✅ +${stampsEarned} bollini per ${customer.firstName}!`);
+                        // Controlla se ha raggiunto un premio
+                        const rewardsEarned = Math.floor(customer.fidelity.stamps / this.fidelityConfig.stampsPerReward);
+                        if (rewardsEarned > customer.fidelity.rewards) {
+                            const newRewards = rewardsEarned - customer.fidelity.rewards;
+                            customer.fidelity.rewards = rewardsEarned;
+                            customer.fidelity.stamps = customer.fidelity.stamps % this.fidelityConfig.stampsPerReward;
 
-                    // Invio automatico messaggio di aggiornamento bollini se c'è un numero di telefono
-                    if (customer.phone) {
-                        // Se la tessera non è mai stata inviata, invia la tessera completa automaticamente
-                        if (!customer.fidelity.cardSent) {
-                            this.sendFidelityCardWhatsApp(customer.id);
-                        } else {
-                            // Se la tessera è già stata inviata, invia automaticamente l'aggiornamento
-                            this.sendStampsUpdateWhatsApp(customer.id, stampsEarned);
+                            this.showToast(`🎁 ${customer.firstName} ha guadagnato ${newRewards} premio/i!`);
+                        }
+
+                        // Solo se NON ci sono campagne applicabili, mostra messaggio bollini
+                        if (applicableCampaigns.length === 0) {
+                            this.showToast(`✅ +${stampsEarned} bollini per ${customer.firstName}!`);
+                        }
+
+                        // Invio automatico messaggi bollini
+                        if (customer.phone) {
+                            if (!customer.fidelity.cardSent) {
+                                this.sendFidelityCardWhatsApp(customer.id);
+                            } else {
+                                this.sendStampsUpdateWhatsApp(customer.id, stampsEarned);
+                            }
                         }
                     }
+                } else {
+                    // Bollini sospesi - mostra messaggio
+                    console.log(`⏸️ Bollini sospesi per ${customer.firstName} (Campagna attiva con sospensione)`);
                 }
+
+                this.saveData();
             }
 
             // Funzione per aggiungere bollini direttamente (senza calcolo da importo)
@@ -4008,19 +4976,30 @@
                                 if (customer.phone) {
                                     const phone = customer.phone.replace(/[^0-9]/g, '');
                                     const phoneFormatted = phone.startsWith('39') ? phone : '39' + phone;
+                                    // 🔍 DEBUG: Verifica numero
+                                    console.log('📱 Numero cliente:', customer.phone);
+                                    console.log('📱 Numero formattato:', phoneFormatted);
+
+                                    alert(`VERIFICA NUMERO:\n\n` +
+                                        `Originale: ${customer.phone}\n` +
+                                        `Formattato: ${phoneFormatted}\n\n` +
+                                        `Dovrebbe essere: 393XXXXXXXXX\n\n` +
+                                        `Il numero è corretto?`);
+
                                     const whatsappUrl = `https://wa.me/${phoneFormatted}?text=${encodeURIComponent(messageText)}`;
+                                    console.log('📱 URL WhatsApp:', whatsappUrl);
                                     window.open(whatsappUrl, '_blank');
                                 } else {
                                     this.showToast('⚠️ Numero di telefono mancante per aprire WhatsApp', 'warning');
                                 }
+                                document.body.removeChild(qrContainer);
                             }, 800);
                         }, 'image/png', 1.0);
                     }
-                    document.body.removeChild(qrContainer);
                 }, 500);
             }
 
-            sendFidelityCardWhatsApp(customerId) {
+            async sendFidelityCardWhatsApp(customerId) {
                 const customer = this.db.customers.find(c => c.id === customerId);
                 if (!customer || !customer.phone) {
                     this.showToast('❌ Cliente senza numero di telefono', 'error');
@@ -4045,7 +5024,7 @@
                     colorLight: "#ffffff"
                 });
 
-                setTimeout(() => {
+                setTimeout(async () => {  // ← ASYNC QUI ANCHE
                     const qrImg = qrContainer.querySelector('img');
                     if (qrImg) {
                         const canvas = document.createElement('canvas');
@@ -4154,52 +5133,207 @@
                             `Grazie per la fiducia! 😊\n\nPastificio Gramsci`;
 
                         // 🚀 SISTEMA AVANZATO DI AUTOMAZIONE COMPLETA
-                        this.advancedCardSender(cardImageDataUrl, messageText, phoneFormatted, customer);
+                        await this.advancedCardSender(cardImageDataUrl, messageText, phoneFormatted, customer);
                     }
+
                     document.body.removeChild(qrContainer);
                 }, 500);
             }
 
+            async generateCouponImage(customer, coupon) {
+                return new Promise((resolve) => {
+                    // Dati QR Code
+                    const qrData = JSON.stringify({
+                        app: 'coupon',
+                        couponId: coupon.id,
+                        customerId: customer.id,
+                        code: coupon.code
+                    });
+
+                    // Container temporaneo per QR
+                    const qrContainer = document.createElement('div');
+                    qrContainer.style.display = 'none';
+                    document.body.appendChild(qrContainer);
+
+                    new QRCode(qrContainer, {
+                        text: qrData,
+                        width: 350,
+                        height: 350,
+                        colorDark: "#7C3AED",  // Viola per coupon
+                        colorLight: "#ffffff"
+                    });
+
+                    setTimeout(() => {
+                        const qrImg = qrContainer.querySelector('img');
+                        if (qrImg) {
+                            const canvas = document.createElement('canvas');
+                            const ctx = canvas.getContext('2d');
+
+                            // Dimensioni card coupon
+                            canvas.width = 1200;
+                            canvas.height = 800;
+
+                            // Gradiente viola/fucsia per coupon
+                            const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+                            gradient.addColorStop(0, '#F3E8FF');  // Viola chiaro
+                            gradient.addColorStop(1, '#E9D5FF');  // Viola più scuro
+                            ctx.fillStyle = gradient;
+                            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                            // Texture leggera
+                            ctx.globalAlpha = 0.03;
+                            for (let i = 0; i < 2000; i++) {
+                                ctx.fillStyle = '#7C3AED';
+                                ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 2, 2);
+                            }
+                            ctx.globalAlpha = 1;
+
+                            // Badge "COUPON" in alto
+                            ctx.fillStyle = '#7C3AED';
+                            ctx.fillRect(0, 0, canvas.width, 80);
+                            ctx.fillStyle = '#FFFFFF';
+                            ctx.font = 'bold 48px Arial';
+                            ctx.textAlign = 'center';
+                            ctx.fillText('🎁 COUPON SCONTO', canvas.width / 2, 55);
+
+                            // Nome campagna
+                            ctx.fillStyle = '#7C3AED';
+                            ctx.font = 'bold 44px Georgia';
+                            ctx.textAlign = 'center';
+                            ctx.fillText(coupon.campaignName.toUpperCase(), canvas.width / 2, 150);
+
+                            // Importo sconto (grande e centrale)
+                            ctx.fillStyle = '#7C3AED';
+                            ctx.font = 'bold 72px Arial';
+                            ctx.textAlign = 'center';
+                            let discountText = `€${coupon.amount}`;
+                            if (coupon.discountType === 'percentage') {
+                                discountText = `€${coupon.amount} (${coupon.percentage}%)`;
+                            }
+                            ctx.fillText(discountText, canvas.width / 2, 240);
+
+                            // Sottotitolo
+                            ctx.font = 'italic 28px Georgia';
+                            ctx.fillStyle = '#7C3AED';
+                            ctx.fillText('DI SCONTO', canvas.width / 2, 285);
+
+                            // QR Code centrato
+                            const qrSize = 350;
+                            const qrX = canvas.width / 2 - qrSize / 2;
+                            const qrY = 320;
+
+                            // Ombra QR
+                            ctx.shadowColor = 'rgba(124, 58, 237, 0.3)';
+                            ctx.shadowBlur = 25;
+                            ctx.shadowOffsetX = 0;
+                            ctx.shadowOffsetY = 10;
+
+                            // Cornice viola QR
+                            ctx.fillStyle = '#7C3AED';
+                            ctx.fillRect(qrX - 15, qrY - 15, qrSize + 30, qrSize + 30);
+
+                            ctx.shadowColor = 'transparent';
+
+                            // Sfondo bianco QR
+                            ctx.fillStyle = '#ffffff';
+                            ctx.fillRect(qrX - 8, qrY - 8, qrSize + 16, qrSize + 16);
+
+                            // Disegna QR
+                            ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
+
+                            // Codice alfanumerico sotto QR
+                            ctx.fillStyle = '#7C3AED';
+                            ctx.font = 'bold 32px Courier New';
+                            ctx.textAlign = 'center';
+                            ctx.fillText(coupon.code, canvas.width / 2, qrY + qrSize + 50);
+
+                            // Footer con scadenza e nome cliente
+                            ctx.fillStyle = '#7C3AED';
+                            ctx.font = 'italic 24px Georgia';
+                            ctx.textAlign = 'center';
+
+                            const expiryText = coupon.expiryDate
+                                ? `Valido fino al ${new Date(coupon.expiryDate).toLocaleDateString('it-IT')}`
+                                : 'Senza scadenza';
+                            ctx.fillText(expiryText, canvas.width / 2, canvas.height - 60);
+
+                            ctx.font = 'bold 26px Georgia';
+                            ctx.fillText(`${customer.firstName} ${customer.lastName}`, canvas.width / 2, canvas.height - 25);
+
+                            // Converti in immagine
+                            const imageDataUrl = canvas.toDataURL('image/png', 1.0);
+                            document.body.removeChild(qrContainer);
+
+                            resolve(imageDataUrl);
+                        } else {
+                            document.body.removeChild(qrContainer);
+                            resolve(null);
+                        }
+                    }, 500);
+                });
+            }
+
             async advancedCardSender(imageDataUrl, messageText, phoneFormatted, customer) {
-                // Strategia 1: Web Share API - Condivisione nativa del sistema (solo su mobile)
-                const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                try {
+                    // Converti data URL in Blob
+                    const response = await fetch(imageDataUrl);
+                    const blob = await response.blob();
+                    const fileName = `Tessera_Fidelity_${customer.firstName}_${customer.lastName}.jpg`;
+                    const file = new File([blob], fileName, { type: 'image/jpeg' });
 
-                if (isMobile) {
-                    const shareSuccess = await this.tryWebShare(imageDataUrl, messageText, customer);
-                    if (shareSuccess) {
-                        // Se Web Share funziona, non serve altro
-                        this.markCardAsSent(customer);
-                        return;
+                    // Controlla se Web Share API è supportata E se siamo su mobile
+                    const isMobile = /Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+                    if (isMobile && navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+                        try {
+                            await navigator.share({
+                                title: 'Tessera Fidelity',
+                                text: messageText,
+                                files: [file]
+                            });
+
+                            this.showToast('✅ Tessera condivisa! Seleziona WhatsApp e invia', 'success');
+
+                            // Segna card come inviata
+                            if (customer.fidelity) {
+                                customer.fidelity.cardSent = true;
+                                this.saveData();
+                            }
+                            return;
+                        } catch (shareError) {
+                            if (shareError.name === 'AbortError') {
+                                this.showToast('❌ Condivisione annullata', 'error');
+                                return;
+                            }
+                            console.log('Share API fallita, uso fallback:', shareError);
+                        }
                     }
+
+                    // ⬇️ FALLBACK: Scarica + apri WhatsApp
+                    const link = document.createElement('a');
+                    link.href = imageDataUrl;
+                    link.download = fileName;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+
+                    // Apri WhatsApp dopo il download
+                    setTimeout(() => {
+                        const whatsappUrl = `https://wa.me/${phoneFormatted}?text=${encodeURIComponent(messageText)}`;
+                        window.open(whatsappUrl, '_blank');
+                        this.showToast('📱 WhatsApp aperto! Allega l\'immagine scaricata');
+                    }, 500);
+
+                    // Segna card come inviata
+                    if (customer.fidelity) {
+                        customer.fidelity.cardSent = true;
+                        this.saveData();
+                    }
+
+                } catch (error) {
+                    console.error('Errore invio tessera:', error);
+                    this.showToast('❌ Errore durante l\'invio della tessera', 'error');
                 }
-
-                // Strategia di backup: Download singolo + WhatsApp
-                // Download UN SOLO FILE invece di 4 duplicati
-                const fileName = `tessera-fidelity-${customer.lastName}-${customer.firstName}.jpg`;
-                const link = document.createElement('a');
-                link.href = imageDataUrl;
-                link.download = fileName;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-
-                console.log('✅ Download singolo creato:', fileName);
-
-                // Crea URL temporaneo per drag&drop (solo desktop)
-                let shareUrl = null;
-                if (!isMobile) {
-                    shareUrl = await this.createShareableUrl(imageDataUrl, customer);
-                }
-
-                // Mostra istruzioni PRIMA di aprire WhatsApp per evitare che vengano coperte
-                this.showPreWhatsAppInstructions(customer.firstName, !isMobile);
-
-                // Apre WhatsApp dopo un delay per permettere di leggere le istruzioni
-                setTimeout(() => {
-                    this.openWhatsAppWithMessage(messageText, phoneFormatted, shareUrl, !isMobile);
-                }, 3000); // 3 secondi di delay
-
-                this.markCardAsSent(customer);
             }
 
             markCardAsSent(customer) {
@@ -4393,6 +5527,46 @@
                 const whatsappUrl = `https://wa.me/${phoneFormatted}?text=${encodeURIComponent(message)}`;
                 window.open(whatsappUrl, '_blank');
                 this.showToast('✅ Messaggio aggiornamento pronto su WhatsApp');
+            }
+
+            async sendCouponWhatsApp(customerId, coupon) {
+                const customer = this.db.customers.find(c => c.id === customerId);
+                if (!customer || !customer.phone) return;
+
+                // Genera immagine coupon con QR
+                const couponImageUrl = await this.generateCouponImage(customer, coupon);
+
+                if (!couponImageUrl) {
+                    this.showToast('❌ Errore generazione coupon', 'error');
+                    return;
+                }
+
+                const expiryText = coupon.expiryDate ? `\nValido fino al: ${new Date(coupon.expiryDate).toLocaleDateString('it-IT')}` : '';
+                const deliveryText = coupon.deliveryDate ? `\n📅 Per l'ordine del: ${coupon.deliveryDate.split('-').reverse().join('/')}` : '';
+
+                let discountText;
+                if (coupon.discountType === 'percentage') {
+                    discountText = `un coupon sconto di *€${coupon.amount}* (${coupon.percentage}% di sconto)`;
+                } else {
+                    discountText = `un coupon sconto di *€${coupon.amount}*`;
+                }
+
+                const messageText = `🎁 *COUPON PROMOZIONALE RICEVUTO!*\n\n` +
+                    `Ciao ${customer.firstName}! 🎉\n\n` +
+                    `Hai ricevuto ${discountText}!\n\n` +
+                    `📝 ${coupon.description}${expiryText}${deliveryText}\n\n` +
+                    `🎫 *CODICE SCONTO: ${coupon.code}*\n\n` +
+                    `📱 SALVA l'immagine del coupon sul telefono!\n` +
+                    `🔍 In negozio, mostracelo o fai scansionare il QR code!\n\n` +
+                    `Grazie per la tua fedeltà! ❤️`;
+
+                const phoneFormatted = customer.phone.replace(/[^0-9]/g, '');
+                const phoneWithPrefix = phoneFormatted.startsWith('39') ? phoneFormatted : '39' + phoneFormatted;
+
+                // Usa advancedCardSender per inviare con immagine
+                await this.advancedCardSender(couponImageUrl, messageText, phoneWithPrefix, customer);
+
+                this.showToast('🎁 Coupon con QR inviato!');
             }
 
             showWhatsAppInstructions(customer, imageUrl, isCard = false) {
@@ -5060,6 +6234,12 @@
                     document.getElementById('prep-date-filter').value = tomorrow.toISOString().split('T')[0];
                     this.renderPreparation();
                 }
+
+                // Aggiorna tab fidelity quando si apre
+                if (tabName === 'fidelity') {
+                    this.renderFidelityDashboard();
+                    this.renderFidelityCustomers();
+                }
             }
 
             openModal(modalId) {
@@ -5253,6 +6433,7 @@
                 document.getElementById('edit-customer-marketing').checked = false;
                 document.getElementById('btn-delete-customer').classList.add('hidden');
                 document.getElementById('customer-stamps-section').classList.add('hidden');
+                document.getElementById('customer-coupons-section').classList.add('hidden'); // ← NUOVO
 
                 if (id) {
                     const cust = this.db.customers.find(c => c.id === id);
@@ -5270,9 +6451,141 @@
                         const rewards = cust.fidelity?.rewards || 0;
                         document.getElementById('customer-stamps-count').textContent = stamps;
                         document.getElementById('customer-rewards-count').textContent = rewards;
+
+                        // ⬇️⬇️⬇️ NUOVA GESTIONE COUPON ⬇️⬇️⬇️
+
+                        // Mostra sezione coupon se il cliente ha coupon
+                        const coupons = cust.fidelity?.coupons || [];
+                        if (coupons.length > 0) {
+                            document.getElementById('customer-coupons-section').classList.remove('hidden');
+                            this.renderCustomerCoupons(cust);
+                        }
+
+                        // ⬆️⬆️⬆️ FINE GESTIONE COUPON ⬆️⬆️⬆️
                     }
                 }
                 this.openModal('customer-modal');
+            }
+
+            markCouponAsUsed(customerId, couponId) {
+                const customer = this.db.customers.find(c => c.id === customerId);
+                if (!customer || !customer.fidelity?.coupons) return;
+
+                const coupon = customer.fidelity.coupons.find(c => c.id === couponId);
+                if (!coupon) return;
+
+                coupon.used = true;
+                coupon.usedDate = new Date().toISOString();
+
+                this.saveData();
+                this.renderCustomerCoupons(customer);
+                this.showToast(`✅ Coupon di €${coupon.amount} segnato come utilizzato`);
+            }
+
+            sendCouponReminderFromModal() {
+                if (!this.editingId) return;
+
+                const customer = this.db.customers.find(c => c.id === this.editingId);
+                if (!customer || !customer.phone) {
+                    this.showToast('❌ Cliente senza numero di telefono', 'error');
+                    return;
+                }
+
+                const availableCoupons = customer.fidelity?.coupons?.filter(c => !c.used) || [];
+                if (availableCoupons.length === 0) {
+                    this.showToast('❌ Nessun coupon disponibile', 'error');
+                    return;
+                }
+
+                const couponsList = availableCoupons.map(c => {
+                    const expiry = c.expiryDate ? ` (valido fino al ${new Date(c.expiryDate).toLocaleDateString('it-IT')})` : '';
+                    return `• €${c.amount} - ${c.campaignName}: ${c.code}${expiry}`;  // ← CORRETTO
+                }).join('\n');
+
+                const message = `🎁 *PROMEMORIA COUPON DISPONIBILI*\n\n` +
+                    `Ciao ${customer.firstName}! 👋\n\n` +
+                    `Hai ${availableCoupons.length} coupon disponibile/i:\n\n${couponsList}\n\n` +
+                    `Non dimenticare di utilizzarli! ⏰\n\n` +
+                    `Grazie per la tua fedeltà! ❤️`;
+
+                const phoneNumber = customer.phone.replace(/\D/g, '');
+                const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+                window.open(whatsappUrl, '_blank');
+                this.showToast('📱 Promemoria coupon pronto su WhatsApp');
+            }
+
+            renderCustomerCoupons(customer) {
+                const coupons = customer.fidelity?.coupons || [];
+
+                // Separa coupon disponibili e usati
+                const available = coupons.filter(c => !c.used);
+                const used = coupons.filter(c => c.used);
+
+                // Lista coupon disponibili
+                const listAvailable = document.getElementById('coupons-list-available');
+                const noAvailable = document.getElementById('no-coupons-available');
+
+                if (available.length > 0) {
+                    listAvailable.innerHTML = available.map(coupon => {
+                        const expiryText = coupon.expiryDate
+                            ? `<div class="text-xs text-gray-600">Valido fino al: ${new Date(coupon.expiryDate).toLocaleDateString('it-IT')}</div>`
+                            : '';
+
+                        const isExpired = coupon.expiryDate && new Date(coupon.expiryDate) < new Date();
+                        const expiredClass = isExpired ? 'opacity-50 bg-gray-100' : 'bg-green-50';
+
+                        return `
+                <div class="p-3 ${expiredClass} border-l-4 border-green-500 rounded">
+                    <div class="flex items-center justify-between">
+                        <div class="flex-1">
+                            <div class="font-bold text-green-700 text-lg">€${coupon.amount} di sconto</div>
+                            <div class="text-sm text-gray-700 mb-1">${coupon.description}</div>
+                            <div class="text-xs text-gray-500 mb-1">Campagna: ${coupon.campaignName}</div>
+                            <div class="bg-white border-2 border-green-500 rounded px-3 py-2 inline-block font-mono font-bold text-green-700 text-base">
+                                ${coupon.code}
+                            </div>
+                            ${expiryText}
+                            ${isExpired ? '<div class="text-xs text-red-600 font-semibold mt-1">⚠️ SCADUTO</div>' : ''}
+                        </div>
+                        <button onclick="app.markCouponAsUsed('${customer.id}', ${coupon.id})"
+                            class="ml-3 bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 ${isExpired ? 'hidden' : ''}">
+                            ✓ Usa
+                        </button>
+                    </div>
+                </div>
+            `;
+                    }).join('');
+                    noAvailable.classList.add('hidden');
+                    listAvailable.classList.remove('hidden');
+                } else {
+                    noAvailable.classList.remove('hidden');
+                    listAvailable.classList.add('hidden');
+                }
+
+                // Lista coupon usati
+                const listUsed = document.getElementById('coupons-list-used');
+                if (used.length > 0) {
+                    listUsed.innerHTML = used.map(coupon => {
+                        const usedDate = coupon.usedDate
+                            ? new Date(coupon.usedDate).toLocaleDateString('it-IT')
+                            : 'Data non disponibile';
+
+                        return `
+                <div class="p-2 bg-gray-50 border-l-4 border-gray-400 rounded text-sm">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <span class="font-semibold text-gray-600">€${coupon.amount}</span>
+                            <span class="text-gray-500 ml-2">• ${coupon.campaignName}</span>
+                            <span class="text-gray-400 ml-2">• Usato il ${usedDate}</span>
+                        </div>
+                        <span class="text-gray-400">✓</span>
+                    </div>
+                </div>
+            `;
+                    }).join('');
+                } else {
+                    listUsed.innerHTML = '<div class="text-center py-2 text-gray-400 text-sm">Nessun coupon usato</div>';
+                }
             }
 
             saveCustomer() {
@@ -5325,8 +6638,6 @@
                 this.closeModal('customer-modal');
                 this.showToast('Cliente salvato');
 
-                /* ⚠️ FIDELITY DISABILITATA
-                // Invio automatico tessera per nuovi clienti con telefono
                 if (isNewCustomer) {
                     const newCustomer = this.db.customers[this.db.customers.length - 1];
                     if (newCustomer.phone) {
@@ -5334,9 +6645,8 @@
                             this.sendFidelityCardWhatsApp(newCustomer.id);
                             this.showToast(`📱 Tessera fedeltà inviata a ${newCustomer.firstName}!`);
                         }, 1000);
-                    }           
+                    }
                 }
-                */
             }
 
             deleteCustomer() {
@@ -7544,6 +8854,176 @@
             </div>
         </div>
     </div>
+    <!-- Modal Campagna Promozionale -->
+    <div id="campaign-modal" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <h2 class="text-2xl font-bold mb-4" id="campaign-modal-title">🎁 Nuova Campagna Promozionale</h2>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Nome Campagna *</label>
+                    <input type="text" id="campaign-name"
+                        class="w-full px-3 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
+                        placeholder="Es. Natale 2025, Pasqua 2026, Festa della Mamma">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Prefisso Codice *</label>
+                    <input type="text" id="campaign-code-prefix"
+                        class="w-full px-3 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
+                        placeholder="NATALE2025" maxlength="15">
+                    <p class="text-xs text-gray-500 mt-1">Solo lettere e numeri</p>
+                </div>
+
+                <!-- Tipo Sconto -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Tipo Sconto *</label>
+                    <div class="flex gap-4 mb-3">
+                        <label class="flex items-center cursor-pointer">
+                            <input type="radio" name="discount-type" value="fixed" id="discount-type-fixed" checked
+                                onchange="app.toggleDiscountType()" class="w-4 h-4 text-blue-600">
+                            <span class="ml-2">Importo Fisso (€)</span>
+                        </label>
+                        <label class="flex items-center cursor-pointer">
+                            <input type="radio" name="discount-type" value="percentage" id="discount-type-percentage"
+                                onchange="app.toggleDiscountType()" class="w-4 h-4 text-blue-600">
+                            <span class="ml-2">Percentuale (%)</span>
+                        </label>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div id="discount-fixed-input">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Importo Sconto (€) *</label>
+                            <input type="number" id="campaign-discount-fixed"
+                                class="w-full px-3 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
+                                value="10" min="1" step="1">
+                        </div>
+
+                        <div id="discount-percentage-input" class="hidden">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Percentuale Sconto (%) *</label>
+                            <input type="number" id="campaign-discount-percentage"
+                                class="w-full px-3 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
+                                value="15" min="1" max="100" step="1">
+                        </div>
+
+                        <div id="min-spend-input" class="hidden">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Spesa Minima (€) *</label>
+                            <input type="number" id="campaign-min-spend"
+                                class="w-full px-3 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
+                                value="20" min="1" step="1">
+                        </div>
+                    </div>
+
+                    <!-- Date Valide per Coupon -->
+                    <!-- Date Valide per Coupon -->
+                    <div class="bg-green-50 border-l-4 border-green-500 rounded-lg p-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            📅 Date Valide per Coupon (opzionale)
+                        </label>
+
+                        <!-- Container date selezionate -->
+                        <div id="selected-dates-container"
+                            class="mb-3 flex flex-wrap gap-2 min-h-[40px] p-2 bg-white rounded border">
+                            <div id="no-dates-selected" class="text-gray-400 text-sm">Nessuna data selezionata</div>
+                        </div>
+
+                        <!-- Selettore data -->
+                        <div class="flex gap-2">
+                            <input type="date" id="date-picker-input"
+                                class="flex-1 px-3 py-2 border rounded-lg focus:border-blue-500 focus:outline-none">
+                            <button type="button" onclick="app.addValidDate()"
+                                class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 font-medium whitespace-nowrap">
+                                ➕ Aggiungi Data
+                            </button>
+                        </div>
+
+                        <!-- Campo hidden per salvare le date -->
+                        <input type="hidden" id="campaign-valid-dates" value="">
+
+                        <p class="text-xs text-gray-600 mt-2">
+                            💡 <strong>Seleziona le date di consegna valide</strong> per questa campagna.<br>
+                            Se non selezioni date, il coupon viene dato per <strong>TUTTI gli ordini</strong> nel
+                            periodo.<br>
+                            Se selezioni date, il coupon viene dato <strong>SOLO per ordini con queste date di
+                                consegna</strong>.
+                        </p>
+                        <div class="text-xs text-green-700 mt-2 space-y-1">
+                            <div>✅ Esempio Natale: Seleziona 22/12, 23/12, 24/12</div>
+                            <div>✅ Esempio Capodanno: Seleziona 30/12, 31/12, 05/01</div>
+                        </div>
+                    </div>
+
+                    <div class="bg-blue-50 border-l-4 border-blue-500 p-3 text-xs mt-3">
+                        <span id="discount-example">
+                            💡 <strong>Esempio:</strong> Cliente riceve coupon da €10
+                        </span>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Descrizione Coupon *</label>
+                    <input type="text" id="campaign-description"
+                        class="w-full px-3 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
+                        placeholder="Buono sconto valido a gennaio 2026">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Data Inizio</label>
+                        <input type="date" id="campaign-start-date"
+                            class="w-full px-3 py-2 border rounded-lg focus:border-blue-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Data Scadenza Coupon</label>
+                        <input type="date" id="campaign-expiry-date"
+                            class="w-full px-3 py-2 border rounded-lg focus:border-blue-500 focus:outline-none">
+                    </div>
+                </div>
+
+                <!-- Opzione per sospendere bollini -->
+                <div class="bg-gradient-to-r from-orange-50 to-yellow-50 border-l-4 border-orange-500 rounded-lg p-4">
+                    <label class="flex items-start cursor-pointer">
+                        <input type="checkbox" id="campaign-suspend-stamps"
+                            class="mt-1 w-5 h-5 text-orange-600 rounded focus:ring-orange-500">
+                        <div class="ml-3">
+                            <div class="font-semibold text-gray-800">⏸️ Sospendi bollini per gli ordini di questa
+                                campagna</div>
+                            <div class="text-sm text-gray-600 mt-1">
+                                <strong>Se hai selezionato date specifiche:</strong><br>
+                                • Attivo = Bollini sospesi <strong>SOLO per ordini con quelle date di
+                                    consegna</strong><br>
+                                • Disattivo = Bollini attivi anche per ordini con quelle date<br><br>
+                                <strong>Se NON hai selezionato date:</strong><br>
+                                • Attivo = Bollini sospesi per <strong>TUTTI gli ordini</strong> mentre la campagna è
+                                attiva<br>
+                                • Disattivo = Bollini sempre attivi
+                            </div>
+                        </div>
+                    </label>
+                </div>
+
+                <div class="bg-blue-50 border-l-4 border-blue-500 p-3 text-sm">
+                    <p class="text-blue-800">
+                        💡 <strong>Esempi d'uso:</strong><br>
+                        • <strong>Natale:</strong> Sospendi bollini ✓ (solo coupon)<br>
+                        • <strong>Festa della Mamma:</strong> Sospendi bollini ✗ (coupon + bollini)
+                    </p>
+                </div>
+            </div>
+
+            <div class="flex gap-3 mt-6">
+                <button onclick="app.closeCampaignModal()"
+                    class="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300">
+                    Annulla
+                </button>
+                <button onclick="app.saveCampaign()"
+                    class="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                    Salva Campagna
+                </button>
+            </div>
+        </div>
+    </div>
+
 </body>
 
 </html>
