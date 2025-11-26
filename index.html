@@ -11,6 +11,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
 
     <!-- ⚠️ CONFIGURAZIONE DROPBOX - AUTOMATICA ⚠️ -->
     <script>
@@ -367,22 +369,25 @@
                 <div class="flex justify-around overflow-x-auto">
                     <button onclick="app.switchTab('dashboard')"
                         class="tab-btn flex-1 p-4 border-b-2 border-transparent text-gray-500 whitespace-nowrap"
-                        data-tab="dashboard">Dashboard</button>
+                        data-tab="dashboard">📊 Dashboard</button>
                     <button onclick="app.switchTab('ordini')"
                         class="tab-btn flex-1 p-4 border-b-2 border-blue-600 text-blue-600 font-semibold whitespace-nowrap"
-                        data-tab="ordini">Ordini</button>
+                        data-tab="ordini">📝 Ordini</button>
                     <button onclick="app.switchTab('preparazione')"
                         class="tab-btn flex-1 p-4 border-b-2 border-transparent text-gray-500 whitespace-nowrap"
-                        data-tab="preparazione">Preparazione</button>
+                        data-tab="preparazione">📋 Preparazione</button>
                     <button onclick="app.switchTab('prodotti')"
                         class="tab-btn flex-1 p-4 border-b-2 border-transparent text-gray-500 whitespace-nowrap"
-                        data-tab="prodotti">Prodotti</button>
+                        data-tab="prodotti">📦 Prodotti</button>
                     <button onclick="app.switchTab('clienti')"
                         class="tab-btn flex-1 p-4 border-b-2 border-transparent text-gray-500 whitespace-nowrap"
-                        data-tab="clienti">Clienti</button>
+                        data-tab="clienti">👥 Clienti</button>
+                    <button onclick="app.switchTab('fidelity')"
+                        class="tab-btn flex-1 p-4 border-b-2 border-transparent text-gray-500 whitespace-nowrap"
+                        data-tab="fidelity">🎁 Fidelity</button>
                     <button onclick="app.switchTab('impostazioni')"
                         class="tab-btn flex-1 p-4 border-b-2 border-transparent text-gray-500 whitespace-nowrap"
-                        data-tab="impostazioni">Impostazioni</button>
+                        data-tab="impostazioni">⚙️ Impostazioni</button>
                 </div>
             </nav>
         </header>
@@ -414,40 +419,103 @@
                     </div>
                 </div>
 
-                <!-- Scanner QR Code nella Dashboard -->
-                <!-- TEMPORANEAMENTE DISABILITATO - Fidelity Card in sviluppo -->
-                <div class="bg-white rounded-lg shadow-lg p-6" style="display: none !important;">
+                <!-- Scanner QR Universale -->
+                <div
+                    class="bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg shadow-lg p-6 border-2 border-blue-200">
                     <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-xl font-bold">📷 Scanner Tessere Fidelity</h3>
-                        <button id="dashboard-scanner-toggle" onclick="app.toggleDashboardScanner()"
-                            class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 font-medium">
-                            Avvia Scanner
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-800">📷 Scanner QR Veloce</h3>
+                            <p class="text-sm text-gray-600">Scansiona tessere fidelity e coupon</p>
+                        </div>
+                        <button onclick="app.openUniversalQRScanner()"
+                            class="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-lg hover:from-blue-700 hover:to-purple-700 font-bold shadow-lg transition">
+                            🎯 Avvia Scanner
                         </button>
                     </div>
+                </div>
 
-                    <div id="dashboard-scanner-container" class="hidden">
-                        <!-- Area Video Scanner -->
-                        <div class="relative mb-4">
-                            <video id="dashboard-scanner-video" class="w-full rounded-lg border-4 border-green-500"
-                                autoplay playsinline style="max-height: 400px; display: none;"></video>
-                            <canvas id="dashboard-scanner-canvas" class="hidden"></canvas>
+                <!-- Statistiche Complete -->
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <h3 class="text-xl font-bold mb-4 text-gray-800">📈 Panoramica Completa</h3>
 
-                            <!-- Overlay di mira -->
-                            <div id="dashboard-scanner-overlay"
-                                class="absolute inset-0 pointer-events-none items-center justify-center hidden">
-                                <div class="w-48 h-48 border-4 border-green-400 rounded-lg shadow-lg"
-                                    style="box-shadow: 0 0 0 9999px rgba(0,0,0,0.5);"></div>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <!-- Card Totale Ordini -->
+                        <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border-2 border-blue-200 cursor-pointer hover:shadow-lg transition"
+                            onclick="app.switchTab('ordini')">
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="text-3xl">📝</div>
+                                <div class="text-2xl font-bold text-blue-600" id="stat-total-orders">0</div>
                             </div>
+                            <div class="text-sm font-semibold text-gray-700">Ordini Totali</div>
+                            <div class="text-xs text-gray-500 mt-1">👆 Clicca per gestire</div>
                         </div>
 
-                        <!-- Stato Scanner -->
-                        <div id="dashboard-scanner-status" class="text-center text-lg font-semibold mb-4"></div>
+                        <!-- Card Totale Clienti -->
+                        <div class="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-4 border-2 border-purple-200 cursor-pointer hover:shadow-lg transition"
+                            onclick="app.switchTab('clienti')">
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="text-3xl">👥</div>
+                                <div class="text-2xl font-bold text-purple-600" id="stat-total-customers">0</div>
+                            </div>
+                            <div class="text-sm font-semibold text-gray-700">Clienti Registrati</div>
+                            <div class="text-xs text-gray-500 mt-1">👆 Clicca per gestire</div>
+                        </div>
 
-                        <!-- Opzione carica immagine -->
-                        <div class="text-center mb-4">
-                            <p class="text-sm text-gray-600 mb-2">Oppure carica un'immagine:</p>
-                            <input type="file" id="dashboard-scanner-file" accept="image/*" class="mx-auto"
-                                onchange="app.scanFromFileDashboard(event)">
+                        <!-- Card Totale Prodotti -->
+                        <div class="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-4 border-2 border-orange-200 cursor-pointer hover:shadow-lg transition"
+                            onclick="app.switchTab('prodotti')">
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="text-3xl">📦</div>
+                                <div class="text-2xl font-bold text-orange-600" id="stat-total-products">0</div>
+                            </div>
+                            <div class="text-sm font-semibold text-gray-700">Prodotti Attivi</div>
+                            <div class="text-xs text-gray-500 mt-1">👆 Clicca per gestire</div>
+                        </div>
+
+                        <!-- Card Clienti Fidelity -->
+                        <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4 border-2 border-green-200 cursor-pointer hover:shadow-lg transition"
+                            onclick="app.switchTab('fidelity')">
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="text-3xl">🎁</div>
+                                <div class="text-2xl font-bold text-green-600" id="stat-fidelity-customers">0</div>
+                            </div>
+                            <div class="text-sm font-semibold text-gray-700">Clienti Fidelity</div>
+                            <div class="text-xs text-gray-500 mt-1">👆 Clicca per gestire</div>
+                        </div>
+                    </div>
+
+                    <!-- Riga 2: Statistiche Preparazione -->
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mt-4">
+                        <!-- Card Ordini da Preparare -->
+                        <div class="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-lg p-4 border-2 border-yellow-200 cursor-pointer hover:shadow-lg transition"
+                            onclick="app.switchTab('preparazione')">
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="text-3xl">📋</div>
+                                <div class="text-2xl font-bold text-yellow-600" id="stat-orders-to-prepare">0</div>
+                            </div>
+                            <div class="text-sm font-semibold text-gray-700">Da Preparare Oggi</div>
+                            <div class="text-xs text-gray-500 mt-1">👆 Vai a preparazione</div>
+                        </div>
+
+                        <!-- Card Categorie Prodotti -->
+                        <div class="bg-gradient-to-br from-pink-50 to-pink-100 rounded-lg p-4 border-2 border-pink-200 cursor-pointer hover:shadow-lg transition"
+                            onclick="app.switchTab('prodotti')">
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="text-3xl">🗂️</div>
+                                <div class="text-2xl font-bold text-pink-600" id="stat-total-categories">0</div>
+                            </div>
+                            <div class="text-sm font-semibold text-gray-700">Categorie</div>
+                            <div class="text-xs text-gray-500 mt-1">👆 Gestisci categorie</div>
+                        </div>
+
+                        <!-- Card Fatturato Totale -->
+                        <div class="bg-gradient-to-br from-teal-50 to-teal-100 rounded-lg p-4 border-2 border-teal-200">
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="text-3xl">💰</div>
+                                <div class="text-xl font-bold text-teal-600" id="stat-total-revenue">€0</div>
+                            </div>
+                            <div class="text-sm font-semibold text-gray-700">Fatturato Totale</div>
+                            <div class="text-xs text-gray-500 mt-1">Tutti gli ordini</div>
                         </div>
                     </div>
                 </div>
@@ -637,6 +705,138 @@
             <div class="bg-white p-6 rounded-lg shadow">
                 <h2 class="text-xl font-bold mb-4">💳 Tutti i Clienti</h2>
                 <div id="customers-list" class="space-y-3"></div>
+            </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- TAB FIDELITY -->
+        <!-- ========================================== -->
+        <div id="tab-fidelity" class="tab-content hidden">
+            <!-- Dashboard Stats Fidelity -->
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+                <!-- Card 1: Clienti Fidelity (solo statistica, NON cliccabile) -->
+                <div class="bg-white rounded-lg shadow p-4">
+                    <div class="flex items-center">
+                        <div class="bg-purple-100 rounded-full p-3">
+                            <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                            </svg>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-gray-500 text-sm">Clienti Fidelity</p>
+                            <p class="text-2xl font-bold" id="fidelity-total-customers">0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 2: Premi Disponibili (cliccabile) -->
+                <div class="bg-white rounded-lg shadow p-4 cursor-pointer hover:shadow-lg transition"
+                    onclick="app.showAvailableRewardsModal()">
+                    <div class="flex items-center">
+                        <div class="bg-green-100 rounded-full p-3">
+                            <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+                            </svg>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-gray-500 text-sm">🎁 Premi Disponibili</p>
+                            <p class="text-2xl font-bold text-green-600" id="fidelity-available-rewards">0</p>
+                            <p class="text-xs text-gray-400 mt-1">👆 Clicca per vedere</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 3: Premi Riscattati (cliccabile) -->
+                <div class="bg-white rounded-lg shadow p-4 cursor-pointer hover:shadow-lg transition"
+                    onclick="app.showRedeemedRewardsModal()">
+                    <div class="flex items-center">
+                        <div class="bg-blue-100 rounded-full p-3">
+                            <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-gray-500 text-sm">✅ Premi Riscattati</p>
+                            <p class="text-2xl font-bold text-blue-600" id="fidelity-redeemed-rewards">0</p>
+                            <p class="text-xs text-gray-400 mt-1">👆 Clicca per vedere</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 4: Coupon Attivi (cliccabile) -->
+                <div class="bg-white rounded-lg shadow p-4 cursor-pointer hover:shadow-lg transition"
+                    onclick="app.showActiveCouponsModal()">
+                    <div class="flex items-center">
+                        <div class="bg-pink-100 rounded-full p-3">
+                            <svg class="w-6 h-6 text-pink-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                            </svg>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-gray-500 text-sm">🎟️ Coupon Attivi</p>
+                            <p class="text-2xl font-bold text-pink-600" id="fidelity-active-coupons">0</p>
+                            <p class="text-xs text-gray-400 mt-1">👆 Clicca per vedere</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 5: Coupon Usati (cliccabile) -->
+                <div class="bg-white rounded-lg shadow p-4 cursor-pointer hover:shadow-lg transition"
+                    onclick="app.showUsedCouponsModal()">
+                    <div class="flex items-center">
+                        <div class="bg-orange-100 rounded-full p-3">
+                            <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                            </svg>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-gray-500 text-sm">✔️ Coupon Usati</p>
+                            <p class="text-2xl font-bold text-orange-600" id="fidelity-used-coupons">0</p>
+                            <p class="text-xs text-gray-400 mt-1">👆 Clicca per vedere</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scanner QR -->
+            <div
+                class="bg-gradient-to-br from-amber-50 to-orange-50 border-2 border-amber-300 rounded-lg shadow mb-6 p-6">
+                <h2 class="text-xl font-bold text-amber-900 mb-4">📷 Scanner QR Fidelity Card</h2>
+                <button onclick="app.openFidelityQRScanner()"
+                    class="w-full bg-amber-600 text-white px-6 py-4 rounded-lg hover:bg-amber-700 font-bold">
+                    Apri Scanner QR
+                </button>
+            </div>
+
+            <!-- Gestione Campagne Coupon -->
+            <div class="bg-white rounded-lg shadow mb-6">
+                <div class="p-4 border-b">
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-xl font-bold">🎫 Campagne Coupon</h2>
+                        <button onclick="app.openNewCampaignModal()"
+                            class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700">
+                            ➕ Nuova Campagna
+                        </button>
+                    </div>
+                </div>
+                <div class="p-4">
+                    <div id="campaigns-list"></div>
+                </div>
+            </div>
+
+            <!-- Lista Clienti Fidelity -->
+            <div class="bg-white rounded-lg shadow">
+                <div class="p-4 border-b">
+                    <h2 class="text-xl font-bold">👥 Gestione Clienti Fidelity</h2>
+                </div>
+                <div class="p-4">
+                    <div id="fidelity-customers-list"></div>
+                </div>
             </div>
         </div>
 
@@ -1665,7 +1865,17 @@
         // ============================================
         class OrderManager {
             constructor() {
-                this.db = { products: [], customers: [], orders: [], categories: [] };
+                this.db = {
+                    products: [],
+                    customers: [],
+                    orders: [],
+                    categories: [],
+                    campaigns: [],
+                    fidelityConfig: {
+                        stampsPerReward: 10,
+                        eurosPerStamp: 20
+                    }
+                };
                 this.currentOrder = { items: [] };
                 this.editingId = null;
                 this.dropboxClient = null;
@@ -1688,8 +1898,9 @@
                 this.savingOrder = false;           // 🛡️ Protezione doppio click
                 this.lastSaveTime = 0;              // 🛡️ Timestamp ultimo salvataggio  
                 this.currentLockSessionId = null;   // 🔒 Session ID del lock corrente
+                this.currentStampsCustomerId = null; // 🎁 Cliente corrente per modal bollini
+                this.editingFidelity = false;        // 🚫 Flag per bloccare auto-sync durante modifiche fidelity
 
-                // Setup debug logger intercept
 
                 // Setup debug logger intercept
                 this.setupDebugLogger();
@@ -2762,8 +2973,21 @@
             }
 
             async checkForRemoteUpdates() {
+                console.log('🔍 checkForRemoteUpdates chiamato');
+                console.log('📊 Stato flags:', {
+                    modalOpen: this.modalOpen,
+                    editingFidelity: this.editingFidelity,
+                    syncInProgress: this.syncInProgress,
+                    dropboxClient: !!this.dropboxClient
+                });
+
                 if (this.modalOpen) {
                     console.log('⏸️ Modal aperto, skip autosync');
+                    return;
+                }
+
+                if (this.editingFidelity) {
+                    console.log('⏸️ Modifica fidelity in corso, skip autosync');
                     return;
                 }
 
@@ -2773,11 +2997,8 @@
                 }
 
                 try {
-                    console.log('🔍 Controllo aggiornamenti remoti...');
-
-                    // Usa sincronizzazione silente che confronta i timestamp
+                    console.log('✅ Procedo con auto-sync');
                     await this.syncFromDropboxSilent();
-
                 } catch (err) {
                     console.log('⚠️ Errore controllo aggiornamenti:', err.message);
                 }
@@ -3050,8 +3271,8 @@
                         if (!remoteCustomer) {
                             mergedCustomers.set(localCustomer.id, { ...localCustomer, source: 'local-only' });
                         } else {
-                            const localTime = new Date(localCustomer.deletedAt || localCustomer.createdAt || 0).getTime();
-                            const remoteTime = new Date(remoteCustomer.deletedAt || remoteCustomer.createdAt || 0).getTime();
+                            const localTime = new Date(localCustomer.lastModified || localCustomer.deletedAt || localCustomer.createdAt || 0).getTime();
+                            const remoteTime = new Date(remoteCustomer.lastModified || remoteCustomer.deletedAt || remoteCustomer.createdAt || 0).getTime();
                             if (localTime >= remoteTime) {
                                 mergedCustomers.set(localCustomer.id, { ...localCustomer, source: 'local-newer' });
                             }
@@ -3285,14 +3506,14 @@
                 const data = localStorage.getItem('orderManagerData');
                 if (!data) {
                     console.log('ℹ️ Nessun dato locale trovato');
-                    this.db = { products: [], customers: [], orders: [], categories: [] };
+                    this.db = { products: [], customers: [], orders: [], categories: [], campaigns: [] };
                     return;
                 }
 
                 // Controlla se la password è disponibile
                 if (!authManager.password) {
                     console.log('⏳ Password non ancora disponibile, attendo login...');
-                    this.db = { products: [], customers: [], orders: [], categories: [] };
+                    this.db = { products: [], customers: [], orders: [], categories: [], campaigns: [] };
                     return;
                 }
 
@@ -3315,7 +3536,7 @@
                     } catch (e) {
                         console.error('❌ Errore caricamento dati:', e);
                         console.error('❌ I dati sembrano criptati ma la password non li decripta');
-                        this.db = { products: [], customers: [], orders: [], categories: [] };
+                        this.db = { products: [], customers: [], orders: [], categories: [], campaigns: [] };
                     }
                 }
 
@@ -3324,11 +3545,32 @@
                     this.db.categories = [];
                 }
 
-                // Inizializza fidelity per clienti esistenti
+                // Inizializza campaigns se mancano
+                if (!this.db.campaigns) {
+                    this.db.campaigns = [];
+                }
+
+                // Inizializza fidelityConfig se manca
+                if (!this.db.fidelityConfig) {
+                    this.db.fidelityConfig = {
+                        stampsPerReward: 10,
+                        eurosPerStamp: 20
+                    };
+                }
+
+                // Inizializza fidelity e coupons per clienti esistenti
                 if (this.db.customers) {
                     this.db.customers.forEach(c => {
                         if (!c.fidelity) {
-                            c.fidelity = { stamps: 0, totalSpent: 0, rewards: 0, history: [] };
+                            c.fidelity = { stamps: 0, totalSpent: 0, rewards: 0, history: [], rewardsList: [] };
+                        }
+                        // Aggiungi rewardsList se manca
+                        if (c.fidelity && !c.fidelity.rewardsList) {
+                            c.fidelity.rewardsList = [];
+                        }
+                        // Inizializza coupons se manca
+                        if (!c.coupons) {
+                            c.coupons = [];
                         }
                     });
                 }
@@ -4358,41 +4600,87 @@
 
 
             sendStampsUpdateWhatsApp(customerId, stampsAdded) {
+                console.log('📞 sendStampsUpdateWhatsApp chiamato:', { customerId, stampsAdded });
+
                 const customer = this.db.customers.find(c => c.id === customerId);
-                if (!customer || !customer.phone) return;
+                console.log('👤 Cliente trovato:', customer ? customer.firstName : 'NESSUNO');
+                console.log('📱 Telefono cliente:', customer?.phone);
+
+                if (!customer || !customer.phone) {
+                    console.error('❌ Cliente senza telefono, impossibile aprire WhatsApp');
+                    this.showToast('⚠️ Cliente senza numero di telefono', 'warning');
+                    return;
+                }
 
                 const phone = customer.phone.replace(/[^0-9]/g, '');
                 const phoneFormatted = phone.startsWith('39') ? phone : '39' + phone;
+                console.log('📞 Telefono formattato:', phoneFormatted);
 
                 const currentStamps = customer.fidelity.stamps;
                 const totalNeeded = this.fidelityConfig.stampsPerReward;
-                const stampsToNext = totalNeeded - currentStamps;
+                const availableRewards = Math.floor(currentStamps / totalNeeded);
+                const stampsToNext = totalNeeded - (currentStamps % totalNeeded);
 
                 let message = `🎉 Ciao ${customer.firstName}!\n\n`;
 
                 // Cambia il messaggio in base a se sono stati aggiunti bollini o è solo un aggiornamento
                 if (stampsAdded > 0) {
-                    message += `📍 Hai appena guadagnato ${stampsAdded} bollino${stampsAdded > 1 ? 'i' : ''}!\n\n`;
+                    message += `📍 Hai appena guadagnato ${stampsAdded} bollin${stampsAdded === 1 ? 'o' : 'i'}!\n\n`;
                 } else {
                     message += `💳 Ecco la situazione aggiornata della tua tessera fedeltà!\n\n`;
                 }
 
                 message += `🏷️ Bollini totali: ${currentStamps}/${totalNeeded}\n`;
 
-                if (customer.fidelity.rewards > 0) {
-                    message += `🎁 Hai ${customer.fidelity.rewards} premio${customer.fidelity.rewards > 1 ? 'i' : ''} disponibile${customer.fidelity.rewards > 1 ? 'i' : ''}!\n\n` +
+                if (availableRewards > 0) {
+                    message += `🎁 Hai ${availableRewards} premi${availableRewards === 1 ? 'o' : ''} disponibil${availableRewards === 1 ? 'e' : 'i'}!\n\n` +
                         `🎊 Fantastico! Passa in negozio per riscattare il tuo premio! 🎊\n`;
-                } else if (stampsToNext > 0) {
-                    message += `\n⭐ Ti mancano solo ${stampsToNext} bollino${stampsToNext > 1 ? 'i' : ''} al prossimo premio!\n`;
-                } else {
+                } else if (currentStamps % totalNeeded === 0) {
                     message += `\n🔥 Hai completato la card! Al prossimo acquisto avrai un premio! 🔥\n`;
+                } else if (stampsToNext > 0) {
+                    message += `\n⭐ Ti manc${stampsToNext === 1 ? 'a' : 'ano'} solo ${stampsToNext} bollin${stampsToNext === 1 ? 'o' : 'i'} al prossimo premio!\n`;
                 }
 
                 message += `\nGrazie per la fiducia! 😊\n\nPastificio Gramsci`;
 
+                console.log('💬 Messaggio WhatsApp:', message);
+
+                const whatsappUrl = `https://wa.me/${phoneFormatted}?text=${encodeURIComponent(message)}`;
+                console.log('🔗 URL WhatsApp:', whatsappUrl);
+
+                window.open(whatsappUrl, '_blank');
+                console.log('✅ window.open chiamato');
+
+                this.showToast('✅ Messaggio aggiornamento pronto su WhatsApp');
+            }
+
+            // NUOVA FUNZIONE: Messaggio premio riscattato
+            sendRewardRedeemedWhatsApp(customerId) {
+                const customer = this.db.customers.find(c => c.id === customerId);
+                if (!customer || !customer.phone) {
+                    console.log('⚠️ Cliente senza telefono, skip notifica WhatsApp');
+                    return;
+                }
+
+                const phone = customer.phone.replace(/[^0-9]/g, '');
+                const phoneFormatted = phone.startsWith('39') ? phone : '39' + phone;
+
+                const currentStamps = customer.fidelity?.stamps || 0;
+                const totalRedeemed = customer.fidelity?.rewards || 0;
+                const stampsPerReward = this.fidelityConfig.stampsPerReward;
+                const stampsToNext = stampsPerReward - (currentStamps % stampsPerReward);
+
+                const message = `🎉 Complimenti ${customer.firstName}!\n\n` +
+                    `✅ Il tuo premio è stato riscattato con successo!\n\n` +
+                    `📊 Riepilogo:\n` +
+                    `• Premi riscattati totali: ${totalRedeemed}\n` +
+                    `• Bollini attuali: ${currentStamps}/${stampsPerReward}\n\n` +
+                    `💪 Continua così! Al prossimo premio ti manc${stampsToNext === 1 ? 'a' : 'ano'} ${stampsToNext} bollin${stampsToNext === 1 ? 'o' : 'i'}!\n\n` +
+                    `Grazie per la fiducia! 😊\n\nPastificio Gramsci`;
+
                 const whatsappUrl = `https://wa.me/${phoneFormatted}?text=${encodeURIComponent(message)}`;
                 window.open(whatsappUrl, '_blank');
-                this.showToast('✅ Messaggio aggiornamento pronto su WhatsApp');
+                console.log('📱 Aperto WhatsApp per notifica premio riscattato');
             }
 
             showWhatsAppInstructions(customer, imageUrl, isCard = false) {
@@ -4955,6 +5243,8 @@
             }
 
             saveData() {
+                console.log('💾 saveData chiamato - editingFidelity:', this.editingFidelity);
+
                 // Aggiungi timestamp di ultima modifica
                 this.db.lastModified = new Date().toISOString();
 
@@ -4972,9 +5262,12 @@
                 this.updateLastSyncInfo();
                 this.updateStats();
 
-                // Sync automatico su Dropbox se attivo
-                if (this.autoSyncEnabled && !this.syncInProgress) {
+                // Sync automatico su Dropbox se attivo (MA NON durante editing fidelity)
+                if (this.autoSyncEnabled && !this.syncInProgress && !this.editingFidelity) {
+                    console.log('📤 Avvio upload automatico su Dropbox');
                     this.syncToDropbox(true);
+                } else if (this.editingFidelity) {
+                    console.log('⏸️ Upload Dropbox posticipato (editing fidelity in corso)');
                 }
             }
 
@@ -5050,6 +5343,7 @@
                 // Aggiorna dashboard quando si apre
                 if (tabName === 'dashboard') {
                     this.renderDashboard();
+                    this.updateDashboardStats();
                 }
 
                 // Aggiorna preparazione quando si apre
@@ -5059,6 +5353,11 @@
                     tomorrow.setDate(tomorrow.getDate() + 1);
                     document.getElementById('prep-date-filter').value = tomorrow.toISOString().split('T')[0];
                     this.renderPreparation();
+                }
+
+                // Aggiorna fidelity quando si apre
+                if (tabName === 'fidelity') {
+                    this.renderFidelityDashboard();
                 }
             }
 
@@ -6109,7 +6408,14 @@
                             phone,
                             email: '',
                             marketing: marketing,
-                            fidelity: { stamps: 0, totalSpent: 0, rewards: 0, history: [] }
+                            fidelity: {
+                                stamps: 0,
+                                totalSpent: 0,
+                                rewards: 0,
+                                history: [],
+                                rewardsList: []
+                            },
+                            coupons: []
                         };
                         this.db.customers.push(newCustomer);
                         customerId = newCustomer.id;
@@ -6517,6 +6823,80 @@
                 document.getElementById('stats-customers').textContent = this.db.customers.filter(c => !c.deleted).length;
             }
 
+            updateDashboardStats() {
+                // Ordini totali
+                const totalOrders = this.db.orders.filter(o => !o.deleted).length;
+                const ordersElement = document.getElementById('stat-total-orders');
+                if (ordersElement) ordersElement.textContent = totalOrders;
+
+                // Clienti totali
+                const totalCustomers = this.db.customers.filter(c => !c.deleted).length;
+                const customersElement = document.getElementById('stat-total-customers');
+                if (customersElement) customersElement.textContent = totalCustomers;
+
+                // Prodotti totali
+                const activeProducts = this.db.products.filter(p => !p.deleted).length;
+                const productsElement = document.getElementById('stat-total-products');
+                if (productsElement) productsElement.textContent = activeProducts;
+
+                // Clienti fidelity
+                const fidelityCustomers = this.db.customers.filter(c => c.fidelity && c.fidelity.stamps > 0).length;
+                const fidelityElement = document.getElementById('stat-fidelity-customers');
+                if (fidelityElement) fidelityElement.textContent = fidelityCustomers;
+
+                // Ordini da preparare oggi
+                const today = new Date().toISOString().split('T')[0];
+                const todayOrders = this.db.orders.filter(o => {
+                    if (o.deleted) return false;
+                    const orderDate = new Date(o.deliveryDate).toISOString().split('T')[0];
+                    return orderDate === today;
+                }).length;
+                const prepareElement = document.getElementById('stat-orders-to-prepare');
+                if (prepareElement) prepareElement.textContent = todayOrders;
+
+                // Categorie
+                const categoriesElement = document.getElementById('stat-total-categories');
+                if (categoriesElement) categoriesElement.textContent = this.db.categories.length;
+
+                // Fatturato totale
+                const totalRevenue = this.db.orders
+                    .filter(o => !o.deleted)
+                    .reduce((sum, order) => sum + (parseFloat(order.totalPrice) || 0), 0);
+                const revenueElement = document.getElementById('stat-total-revenue');
+                if (revenueElement) revenueElement.textContent = this.formatPrice(totalRevenue);
+            }
+
+            updateDashboardStats() {
+                // Ordini totali
+                document.getElementById('stat-total-orders').textContent = this.db.orders.length;
+
+                // Clienti totali
+                document.getElementById('stat-total-customers').textContent = this.db.customers.length;
+
+                // Prodotti totali
+                const activeProducts = this.db.products.filter(p => !p.deleted).length;
+                document.getElementById('stat-total-products').textContent = activeProducts;
+
+                // Clienti fidelity
+                const fidelityCustomers = this.db.customers.filter(c => c.fidelity && c.fidelity.stamps > 0).length;
+                document.getElementById('stat-fidelity-customers').textContent = fidelityCustomers;
+
+                // Ordini da preparare oggi
+                const today = new Date().toISOString().split('T')[0];
+                const todayOrders = this.db.orders.filter(o => {
+                    const orderDate = new Date(o.deliveryDate).toISOString().split('T')[0];
+                    return orderDate === today;
+                }).length;
+                document.getElementById('stat-orders-to-prepare').textContent = todayOrders;
+
+                // Categorie
+                document.getElementById('stat-total-categories').textContent = this.db.categories.length;
+
+                // Fatturato totale
+                const totalRevenue = this.db.orders.reduce((sum, order) => sum + (parseFloat(order.totalPrice) || 0), 0);
+                document.getElementById('stat-total-revenue').textContent = this.formatPrice(totalRevenue);
+            }
+
             // CONFERMA ELIMINAZIONE
             confirmDelete() {
                 if (!this.pendingDelete) return;
@@ -6778,6 +7158,1401 @@
         `;
                 }).join('');
             }
+
+            // ==========================================
+            // 🎁 FIDELITY SYSTEM FUNCTIONS
+            // ==========================================
+
+            renderFidelityDashboard() {
+                // Calcola statistiche
+                let totalCustomers = this.db.customers.length;
+                let totalAvailableRewards = 0;
+                let totalRedeemedRewards = 0;
+                let totalActiveCoupons = 0;
+
+                this.db.customers.forEach(customer => {
+                    if (customer.fidelity) {
+                        const availableRewards = Math.floor(customer.fidelity.stamps / this.fidelityConfig.stampsPerReward);
+                        totalAvailableRewards += availableRewards;
+                        totalRedeemedRewards += customer.fidelity.rewards || 0;
+                    }
+                    if (customer.coupons) {
+                        totalActiveCoupons += customer.coupons.filter(c => !c.used).length;
+                    }
+                });
+
+                // Aggiorna UI
+                document.getElementById('fidelity-total-customers').textContent = totalCustomers;
+                document.getElementById('fidelity-available-rewards').textContent = totalAvailableRewards;
+                document.getElementById('fidelity-redeemed-rewards').textContent = totalRedeemedRewards;
+                document.getElementById('fidelity-active-coupons').textContent = totalActiveCoupons;
+
+                // Renderizza lista clienti
+                this.renderFidelityCustomers();
+                this.renderCampaignsList();
+            }
+
+            renderFidelityCustomers() {
+                const container = document.getElementById('fidelity-customers-list');
+                if (!container) return;
+
+                const customers = this.db.customers.map(customer => {
+                    const stamps = customer.fidelity?.stamps || 0;
+                    const availableRewards = Math.floor(stamps / this.fidelityConfig.stampsPerReward);
+
+                    // 🔍 DEBUG
+                    if (customer.firstName === 'Nadia') {
+                        console.log('🔍 DEBUG Nadia nel render:', {
+                            stamps,
+                            stampsPerReward: this.fidelityConfig.stampsPerReward,
+                            availableRewards,
+                            calcolo: stamps + ' / ' + this.fidelityConfig.stampsPerReward + ' = ' + availableRewards
+                        });
+                    }
+
+                    const redeemedRewards = customer.fidelity?.rewards || 0;
+                    const activeCoupons = customer.coupons ? customer.coupons.filter(c => !c.used).length : 0;
+
+                    return { ...customer, stamps, availableRewards, redeemedRewards, activeCoupons };
+                }).sort((a, b) => b.stamps - a.stamps);
+
+                if (customers.length === 0) {
+                    container.innerHTML = '<p class="text-gray-500 text-center">Nessun cliente ancora</p>';
+                    return;
+                }
+
+                container.innerHTML = customers.map(customer => {
+                    const progress = (customer.stamps % this.fidelityConfig.stampsPerReward) / this.fidelityConfig.stampsPerReward * 100;
+                    const stampsNeeded = this.fidelityConfig.stampsPerReward - (customer.stamps % this.fidelityConfig.stampsPerReward);
+
+                    return `
+                        <div class="bg-white border rounded-lg p-4 mb-3 cursor-pointer hover:shadow-lg transition" onclick="app.openCustomerFidelityModal('${customer.id}')">
+                            <div class="flex justify-between items-start mb-3">
+                                <div>
+                                    <h3 class="font-bold text-lg">${customer.lastName} ${customer.firstName}</h3>
+                                    <p class="text-sm text-gray-600">${customer.phone}</p>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-2xl font-bold text-purple-600">${customer.stamps} 🎯</div>
+                                    <p class="text-xs text-gray-500">bollini totali</p>
+                                </div>
+                            </div>
+
+                            <!-- Barra progresso -->
+                            <div class="mb-3">
+                                <div class="flex justify-between text-xs text-gray-600 mb-1">
+                                    <span>Prossimo premio: ${stampsNeeded} bollini</span>
+                                    <span>${customer.stamps % this.fidelityConfig.stampsPerReward}/${this.fidelityConfig.stampsPerReward}</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-gradient-to-r from-purple-500 to-pink-500 h-2 rounded-full" style="width: ${progress}%"></div>
+                                </div>
+                            </div>
+
+                            <!-- Statistiche -->
+                            <div class="grid grid-cols-3 gap-2 mb-3">
+                                <div class="bg-green-50 rounded p-2 text-center">
+                                    <div class="text-lg font-bold text-green-600">${customer.availableRewards}</div>
+                                    <div class="text-xs text-gray-600">Premi disponibili</div>
+                                </div>
+                                <div class="bg-blue-50 rounded p-2 text-center">
+                                    <div class="text-lg font-bold text-blue-600">${customer.redeemedRewards}</div>
+                                    <div class="text-xs text-gray-600">Premi riscattati</div>
+                                </div>
+                                <div class="bg-pink-50 rounded p-2 text-center">
+                                    <div class="text-lg font-bold text-pink-600">${customer.activeCoupons}</div>
+                                    <div class="text-xs text-gray-600">Coupon attivi</div>
+                                </div>
+                            </div>
+
+                            <!-- Azioni -->
+                            <div class="flex gap-2" onclick="event.stopPropagation()">
+                                <button onclick="app.openAddStampsModal('${customer.id}')" 
+                                    class="flex-1 bg-purple-600 text-white px-3 py-2 rounded text-sm hover:bg-purple-700">
+                                    ➕ Aggiungi Bollini
+                                </button>
+                                ${customer.availableRewards > 0 ? `
+                                    <button onclick="app.redeemReward('${customer.id}')" 
+                                        class="flex-1 bg-green-600 text-white px-3 py-2 rounded text-sm hover:bg-green-700">
+                                        🎁 Riscatta Premio
+                                    </button>
+                                ` : ''}
+                                <button onclick="app.showCustomerFidelityHistory('${customer.id}')" 
+                                    class="bg-gray-200 text-gray-700 px-3 py-2 rounded text-sm hover:bg-gray-300">
+                                    📋
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            async addStamps(customerId, amount) {
+                console.log('➕ addStamps chiamato:', { customerId, amount });
+
+                const customer = this.db.customers.find(c => c.id === customerId);
+                if (!customer) {
+                    console.error('❌ Cliente non trovato');
+                    return;
+                }
+
+                console.log('👤 Cliente trovato:', customer.firstName, customer.lastName);
+
+                if (!customer.fidelity) {
+                    console.log('⚠️ Inizializzo fidelity da zero');
+                    customer.fidelity = { stamps: 0, rewards: 0, history: [], rewardsList: [] };
+                }
+
+                const stampsBefore = customer.fidelity.stamps;
+                const stampsToAdd = Math.floor(amount / this.fidelityConfig.eurosPerStamp);
+
+                console.log('🎯 Calcolo bollini:', {
+                    amount,
+                    eurosPerStamp: this.fidelityConfig.eurosPerStamp,
+                    stampsToAdd,
+                    stampsBefore,
+                    stampsAfter: stampsBefore + stampsToAdd
+                });
+
+                customer.fidelity.stamps += stampsToAdd;
+                customer.lastModified = new Date().toISOString();
+
+                customer.fidelity.history.push({
+                    date: new Date().toISOString(),
+                    type: 'add',
+                    stamps: stampsToAdd,
+                    amount: amount
+                });
+
+                console.log('✅ Bollini aggiornati:', customer.fidelity.stamps);
+
+                // Blocca auto-sync PRIMA di salvare
+                this.editingFidelity = true;
+
+                this.saveData();
+
+                this.renderFidelityDashboard();
+
+                // Notifica se ha guadagnato un nuovo premio
+                const rewardsBefore = Math.floor(stampsBefore / this.fidelityConfig.stampsPerReward);
+                const rewardsAfter = Math.floor(customer.fidelity.stamps / this.fidelityConfig.stampsPerReward);
+                const newRewardsEarned = rewardsAfter - rewardsBefore;
+
+                console.log('🔍 CHECK PREMIO:', {
+                    stampsBefore,
+                    stampsAfter: customer.fidelity.stamps,
+                    rewardsBefore,
+                    rewardsAfter,
+                    newRewardsEarned,
+                    calculation: `${rewardsAfter} - ${rewardsBefore} = ${newRewardsEarned} nuovi premi`
+                });
+
+                if (newRewardsEarned > 0) {
+                    console.log(`🎁 ✅ ${newRewardsEarned} NUOVO/I PREMIO/I! Invio notifica WhatsApp...`);
+                    this.showToast(`🎉 ${customer.firstName} ha guadagnato ${newRewardsEarned} premio${newRewardsEarned > 1 ? 'i' : ''}!`);
+
+                    setTimeout(() => {
+                        console.log('📱 Apertura WhatsApp per:', customer.firstName);
+                        this.sendStampsUpdateWhatsApp(customerId, stampsToAdd);
+                    }, 1000);
+                } else {
+                    console.log('ℹ️ Nessun nuovo premio guadagnato');
+                }
+
+                // Sblocca auto-sync dopo 5 secondi
+                setTimeout(() => {
+                    this.editingFidelity = false;
+                    console.log('✅ Sblocco auto-sync');
+                }, 5000);
+
+                return stampsToAdd;
+            }
+
+            async redeemReward(customerId) {
+                console.log('🎁 redeemReward chiamato con ID:', customerId);
+
+                const customer = this.db.customers.find(c => c.id === customerId);
+
+                if (!customer) {
+                    console.error('❌ Cliente non trovato:', customerId);
+                    this.showToast('❌ Cliente non trovato', 'error');
+                    return;
+                }
+
+                console.log('👤 Cliente trovato:', customer.firstName, customer.lastName);
+                console.log('📊 Fidelity data:', customer.fidelity);
+
+                if (!customer.fidelity) {
+                    console.error('❌ Dati fidelity mancanti');
+                    this.showToast('❌ Dati fidelity non trovati', 'error');
+                    return;
+                }
+
+                const stamps = customer.fidelity.stamps || 0;
+                console.log('🎯 Bollini attuali:', stamps);
+                console.log('⚙️ Bollini per premio:', this.fidelityConfig.stampsPerReward);
+
+                const availableRewards = Math.floor(stamps / this.fidelityConfig.stampsPerReward);
+                console.log('🎁 Premi disponibili calcolati:', availableRewards);
+
+                if (availableRewards < 1) {
+                    console.error('❌ Premi disponibili < 1');
+                    this.showToast('❌ Nessun premio disponibile', 'error');
+                    return;
+                }
+
+                if (!confirm(`Riscattare 1 premio per ${customer.firstName} ${customer.lastName}?\n\nBollini attuali: ${stamps}\nVerranno scalati ${this.fidelityConfig.stampsPerReward} bollini`)) {
+                    return;
+                }
+
+                customer.fidelity.stamps -= this.fidelityConfig.stampsPerReward;
+                customer.fidelity.rewards = (customer.fidelity.rewards || 0) + 1;
+                customer.lastModified = new Date().toISOString();
+
+                customer.fidelity.rewardsList = customer.fidelity.rewardsList || [];
+                customer.fidelity.rewardsList.push({
+                    date: new Date().toISOString(),
+                    redeemed: true
+                });
+
+                customer.fidelity.history.push({
+                    date: new Date().toISOString(),
+                    type: 'reward',
+                    stamps: this.fidelityConfig.stampsPerReward,
+                    amount: 0
+                });
+
+                console.log('✅ Premio riscattato! Nuovi bollini:', customer.fidelity.stamps);
+
+                // Blocca auto-sync PRIMA di salvare
+                this.editingFidelity = true;
+
+                this.saveData();
+
+                // Refresh del modal se aperto
+                const modal = document.getElementById('customer-fidelity-modal');
+                if (modal && !modal.classList.contains('hidden')) {
+                    this.openCustomerFidelityModal(customerId);
+                }
+
+                this.renderFidelityDashboard();
+                this.showToast(`✅ Premio riscattato per ${customer.firstName}!`);
+
+                // 📱 INVIA NOTIFICA WHATSAPP AUTOMATICA
+                console.log('🎁 Premio riscattato! Invio notifica WhatsApp automatica...');
+                setTimeout(() => {
+                    this.sendRewardRedeemedWhatsApp(customerId);
+                }, 1000);
+
+                // Sblocca auto-sync dopo 5 secondi
+                setTimeout(() => {
+                    this.editingFidelity = false;
+                    console.log('✅ Sblocco auto-sync');
+                }, 5000);
+            }
+
+            // Modal Aggiungi Bollini
+            openAddStampsModal(customerId) {
+                const customer = this.db.customers.find(c => c.id === customerId);
+                if (!customer) return;
+
+                document.getElementById('stamps-customer-name').textContent = `${customer.firstName} ${customer.lastName}`;
+                document.getElementById('stamps-customer-current').textContent = customer.fidelity?.stamps || 0;
+                document.getElementById('stamps-count').value = '';
+
+                this.currentStampsCustomerId = customerId;
+
+                const modal = document.getElementById('add-stamps-modal');
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            }
+
+            closeAddStampsModal() {
+                const modal = document.getElementById('add-stamps-modal');
+                modal.classList.remove('flex');
+                modal.classList.add('hidden');
+                this.currentStampsCustomerId = null;
+            }
+
+            calculateStampsPreview() {
+                const amount = parseFloat(document.getElementById('stamps-amount').value) || 0;
+                const stamps = Math.floor(amount / this.fidelityConfig.eurosPerStamp);
+
+                const preview = document.getElementById('stamps-preview');
+                const count = document.getElementById('stamps-preview-count');
+
+                if (amount > 0 && stamps > 0) {
+                    count.textContent = stamps;
+                    preview.classList.remove('hidden');
+                } else {
+                    preview.classList.add('hidden');
+                }
+            }
+
+            async confirmAddStamps() {
+                console.log('🔵 confirmAddStamps chiamato');
+                console.log('🆔 currentStampsCustomerId:', this.currentStampsCustomerId);
+
+                const stampsCount = parseInt(document.getElementById('stamps-count').value);
+                console.log('📝 Valore input:', stampsCount);
+
+                if (!stampsCount || stampsCount <= 0) {
+                    this.showToast('⚠️ Inserisci un numero di bollini valido', 'error');
+                    return;
+                }
+
+                const customer = this.db.customers.find(c => c.id === this.currentStampsCustomerId);
+                const customerId = this.currentStampsCustomerId; // ← SALVA PRIMA CHE VENGA RESETTATO
+
+                console.log('👤 Cliente trovato:', customer ? `${customer.firstName} ${customer.lastName}` : 'NESSUNO');
+
+                if (!customer || !customer.fidelity) {
+                    this.showToast('❌ Cliente non trovato', 'error');
+                    return;
+                }
+
+                const stampsBefore = customer.fidelity.stamps;
+                console.log('📊 Bollini PRIMA:', stampsBefore);
+
+                customer.fidelity.stamps += stampsCount;
+                console.log('📊 Bollini DOPO:', customer.fidelity.stamps);
+
+                customer.lastModified = new Date().toISOString();
+
+                customer.fidelity.history.push({
+                    date: new Date().toISOString(),
+                    type: 'add',
+                    stamps: stampsCount,
+                    amount: stampsCount * this.fidelityConfig.eurosPerStamp
+                });
+
+                console.log('💾 Salvataggio dati...');
+
+                // Blocca auto-sync PRIMA di salvare
+                this.editingFidelity = true;
+
+                this.saveData();
+
+                console.log('✅ Dati salvati');
+
+                this.closeAddStampsModal();
+
+                console.log('🔄 Rendering dashboard...');
+                this.renderFidelityDashboard();
+
+                this.showToast(`✅ Aggiunti ${stampsCount} bollini!`);
+
+                // Notifica se ha guadagnato un nuovo premio
+                const rewardsBefore = Math.floor(stampsBefore / this.fidelityConfig.stampsPerReward);
+                const rewardsAfter = Math.floor(customer.fidelity.stamps / this.fidelityConfig.stampsPerReward);
+                const newRewardsEarned = rewardsAfter - rewardsBefore;
+
+                console.log('🔍 CHECK PREMIO:', {
+                    stampsBefore,
+                    stampsAfter: customer.fidelity.stamps,
+                    rewardsBefore,
+                    rewardsAfter,
+                    newRewardsEarned,
+                    calculation: `${rewardsAfter} - ${rewardsBefore} = ${newRewardsEarned} nuovi premi`
+                });
+
+                if (newRewardsEarned > 0) {
+                    console.log(`🎁 ✅ ${newRewardsEarned} NUOVO/I PREMIO/I! Invio notifica WhatsApp...`);
+                    this.showToast(`🎉 ${customer.firstName} ha guadagnato ${newRewardsEarned} premio${newRewardsEarned > 1 ? 'i' : ''}!`);
+
+                    setTimeout(() => {
+                        console.log('📱 Apertura WhatsApp per:', customer.firstName);
+                        this.sendStampsUpdateWhatsApp(customerId, stampsCount); // ← USA customerId salvato
+                    }, 1000);
+                } else {
+                    console.log('ℹ️ Nessun nuovo premio guadagnato');
+                }
+
+                // Sblocca auto-sync dopo 5 secondi
+                setTimeout(() => {
+                    this.editingFidelity = false;
+                    console.log('✅ Sblocco auto-sync');
+                }, 5000);
+            }
+
+            // Campagne Coupon
+            renderCampaignsList() {
+                const container = document.getElementById('campaigns-list');
+                if (!container) return;
+
+                if (!this.db.campaigns || this.db.campaigns.length === 0) {
+                    container.innerHTML = '<p class="text-gray-500 text-center text-sm">Nessuna campagna attiva</p>';
+                    return;
+                }
+
+                container.innerHTML = this.db.campaigns.map(campaign => {
+                    const isActive = !campaign.expiryDate || new Date(campaign.expiryDate) >= new Date();
+                    const statusColor = isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800';
+                    const statusText = isActive ? 'Attiva' : 'Scaduta';
+
+                    const discountText = campaign.discountType === 'percentage'
+                        ? `${campaign.discountValue}%`
+                        : `€${campaign.discountValue}`;
+
+                    return `
+                        <div class="border rounded-lg p-4 mb-3 ${!isActive ? 'opacity-50' : ''}">
+                            <div class="flex justify-between items-start mb-2">
+                                <div>
+                                    <h3 class="font-bold text-lg">${campaign.name}</h3>
+                                    <p class="text-sm text-gray-600">${campaign.description || ''}</p>
+                                </div>
+                                <span class="px-2 py-1 rounded text-xs font-semibold ${statusColor}">${statusText}</span>
+                            </div>
+                            
+                            <div class="flex gap-4 text-sm mb-2">
+                                <div class="bg-purple-50 px-3 py-1 rounded">
+                                    <span class="font-bold text-purple-600">${discountText}</span> di sconto
+                                </div>
+                                ${campaign.expiryDate ? `
+                                    <div class="text-gray-600">
+                                        Scade: ${new Date(campaign.expiryDate).toLocaleDateString('it-IT')}
+                                    </div>
+                                ` : ''}
+                            </div>
+
+                            ${campaign.deliveryDates && campaign.deliveryDates.length > 0 ? `
+                                <div class="text-xs text-gray-600 mt-2">
+                                    📅 Date valide: ${campaign.deliveryDates.map(d => new Date(d).toLocaleDateString('it-IT')).join(', ')}
+                                </div>
+                            ` : ''}
+
+                            <div class="flex gap-2 mt-3">
+                                <button onclick="app.generateCouponsForCampaign('${campaign.id}')" 
+                                    class="flex-1 bg-purple-600 text-white px-3 py-2 rounded text-sm hover:bg-purple-700">
+                                    🎫 Genera Coupon
+                                </button>
+                                <button onclick="app.deleteCampaign('${campaign.id}')" 
+                                    class="bg-red-600 text-white px-3 py-2 rounded text-sm hover:bg-red-700">
+                                    🗑️
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            openNewCampaignModal() {
+                document.getElementById('campaign-name').value = '';
+                document.getElementById('campaign-description').value = '';
+                document.getElementById('campaign-discount-type').value = 'percentage';
+                document.getElementById('campaign-discount-value').value = '';
+                document.getElementById('campaign-expiry').value = '';
+                document.getElementById('campaign-dates-container').innerHTML = '';
+
+                this.addCampaignDateInput();
+                this.updateCampaignDiscountLabel();
+
+                const modal = document.getElementById('campaign-modal');
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            }
+
+            closeCampaignModal() {
+                const modal = document.getElementById('campaign-modal');
+                modal.classList.remove('flex');
+                modal.classList.add('hidden');
+            }
+
+            updateCampaignDiscountLabel() {
+                const type = document.getElementById('campaign-discount-type').value;
+                const label = document.getElementById('campaign-discount-label');
+                label.textContent = type === 'percentage' ? '(% da 1 a 100)' : '(€)';
+            }
+
+            addCampaignDateInput() {
+                const container = document.getElementById('campaign-dates-container');
+                const index = container.children.length;
+
+                const dateDiv = document.createElement('div');
+                dateDiv.className = 'flex gap-2';
+                dateDiv.innerHTML = `
+                    <input type="date" class="campaign-date flex-1 px-3 py-2 border rounded-lg" />
+                    <button type="button" onclick="this.parentElement.remove()" 
+                        class="bg-red-500 text-white px-3 py-2 rounded-lg hover:bg-red-600">×</button>
+                `;
+                container.appendChild(dateDiv);
+            }
+
+            async saveCampaign() {
+                const name = document.getElementById('campaign-name').value.trim();
+                const description = document.getElementById('campaign-description').value.trim();
+                const discountType = document.getElementById('campaign-discount-type').value;
+                const discountValue = parseFloat(document.getElementById('campaign-discount-value').value);
+                const expiryDate = document.getElementById('campaign-expiry').value;
+
+                if (!name) {
+                    this.showToast('⚠️ Inserisci il nome della campagna', 'error');
+                    return;
+                }
+
+                if (!discountValue || discountValue <= 0) {
+                    this.showToast('⚠️ Inserisci un valore sconto valido', 'error');
+                    return;
+                }
+
+                const dateInputs = document.querySelectorAll('.campaign-date');
+                const deliveryDates = Array.from(dateInputs)
+                    .map(input => input.value)
+                    .filter(date => date);
+
+                const campaign = {
+                    id: this.generateId(),
+                    name,
+                    description,
+                    discountType,
+                    discountValue,
+                    deliveryDates,
+                    expiryDate: expiryDate || null,
+                    createdAt: new Date().toISOString()
+                };
+
+                this.db.campaigns.push(campaign);
+                await this.saveData();
+
+                this.closeCampaignModal();
+                this.renderCampaignsList();
+                this.showToast('✅ Campagna creata!');
+            }
+
+            async deleteCampaign(campaignId) {
+                if (!confirm('Eliminare questa campagna?')) return;
+
+                this.db.campaigns = this.db.campaigns.filter(c => c.id !== campaignId);
+                await this.saveData();
+                this.renderCampaignsList();
+                this.showToast('✅ Campagna eliminata');
+            }
+
+            async generateCouponsForCampaign(campaignId) {
+                const campaign = this.db.campaigns.find(c => c.id === campaignId);
+                if (!campaign) return;
+
+                let count = 0;
+                this.db.customers.forEach(customer => {
+                    if (!customer.coupons) customer.coupons = [];
+
+                    const couponCode = `${campaign.name.substring(0, 3).toUpperCase()}${Date.now().toString().slice(-4)}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+
+                    customer.coupons.push({
+                        id: this.generateId(),
+                        code: couponCode,
+                        campaignId: campaign.id,
+                        campaignName: campaign.name,
+                        description: campaign.description,
+                        discountType: campaign.discountType,
+                        discountValue: campaign.discountValue,
+                        deliveryDates: campaign.deliveryDates,
+                        expiryDate: campaign.expiryDate,
+                        used: false,
+                        createdAt: new Date().toISOString()
+                    });
+                    count++;
+                });
+
+                await this.saveData();
+                this.renderFidelityDashboard();
+                this.showToast(`✅ ${count} coupon generati e inviati ai clienti!`);
+            }
+
+            // Scanner QR Universale (Dashboard e altre sezioni)
+            openUniversalQRScanner() {
+                // Riutilizza il modal fidelity scanner che riconosce sia fidelity card che coupon
+                this.openFidelityQRScanner();
+            }
+
+            // Scanner QR Fidelity
+            openFidelityQRScanner() {
+                const modal = document.getElementById('fidelity-qr-scanner-modal');
+                const video = document.getElementById('fidelity-qr-video');
+
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+
+                navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+                    .then(stream => {
+                        video.srcObject = stream;
+                        this.scanFidelityQRCode(video);
+                    })
+                    .catch(err => {
+                        this.showToast('❌ Impossibile accedere alla fotocamera', 'error');
+                        this.closeFidelityQRScanner();
+                    });
+            }
+
+            closeFidelityQRScanner() {
+                const modal = document.getElementById('fidelity-qr-scanner-modal');
+                const video = document.getElementById('fidelity-qr-video');
+
+                if (video.srcObject) {
+                    video.srcObject.getTracks().forEach(track => track.stop());
+                }
+
+                modal.classList.remove('flex');
+                modal.classList.add('hidden');
+            }
+
+            scanFidelityQRCode(video) {
+                const canvas = document.getElementById('fidelity-qr-canvas');
+                const context = canvas.getContext('2d');
+                let lastScan = 0;
+                let scanCount = 0;
+
+                const scan = () => {
+                    const now = Date.now();
+
+                    // Scansiona solo ogni 300ms per evitare letture parziali
+                    if (now - lastScan < 300) {
+                        requestAnimationFrame(scan);
+                        return;
+                    }
+
+                    lastScan = now;
+
+                    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                        canvas.width = video.videoWidth;
+                        canvas.height = video.videoHeight;
+                        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                        const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                        const code = jsQR(imageData.data, imageData.width, imageData.height);
+
+                        if (code && code.data && code.data.length > 10) {
+                            scanCount++;
+                            console.log(`📷 Scansione #${scanCount}:`, code.data.substring(0, 50) + '...');
+
+                            // Prova a parsare e processare
+                            this.handleFidelityQRCode(code.data);
+
+                            // Se il parsing ha successo, handleFidelityQRCode chiuderà lo scanner
+                            // Se fallisce, continua a scansionare
+                        }
+                    }
+                    requestAnimationFrame(scan);
+                };
+
+                scan();
+            }
+
+            async handleFidelityQRCode(qrData) {
+                // Ignora letture vuote o troppo corte
+                if (!qrData || qrData.length < 10) {
+                    console.log('⏭️ QR troppo corto, ignorato');
+                    return;
+                }
+
+                try {
+                    const data = JSON.parse(qrData);
+                    console.log('🔍 QR scansionato:', data);
+
+                    // ============ FIDELITY CARD ============
+                    const isFidelityCard = data.type === 'fidelity-card' || data.app === 'fidelity-card';
+                    const customerId = data.customerId || data.id;
+
+                    if (isFidelityCard && customerId) {
+                        // Cerca prima per ID
+                        let customer = this.db.customers.find(c => c.id === customerId);
+
+                        // Se non trovato per ID, cerca per nome (fallback)
+                        if (!customer && data.name) {
+                            const nameParts = data.name.split(' ');
+                            customer = this.db.customers.find(c =>
+                                nameParts.some(part => c.firstName === part || c.lastName === part)
+                            );
+
+                            if (customer) {
+                                console.log('✅ Cliente trovato per nome (ID cambiato):', customer);
+                            }
+                        }
+
+                        if (customer) {
+                            this.closeFidelityQRScanner();
+                            this.showToast(`✅ Cliente: ${customer.firstName} ${customer.lastName}`);
+                            this.switchTab('fidelity');
+
+                            setTimeout(() => {
+                                this.openCustomerFidelityModal(customer.id);
+                            }, 300);
+                            return;
+                        } else {
+                            console.error('❌ Cliente non trovato con ID:', customerId);
+                            this.showToast('❌ Cliente non trovato. Rigenera il QR dalla tessera.', 'error');
+                            return;
+                        }
+                    }
+
+                    // ============ COUPON ============
+                    if (data.type === 'coupon' && data.couponCode) {
+                        this.closeFidelityQRScanner();
+                        this.handleCouponQRCode(data);
+                        return;
+                    }
+
+                    // ============ QR NON RICONOSCIUTO ============
+                    console.error('❌ QR non riconosciuto:', data);
+                    this.showToast('❌ QR code non riconosciuto', 'error');
+
+                } catch (e) {
+                    // Ignora errori di parsing parziale, continua a scansionare
+                    console.log('⚠️ Lettura QR parziale, riprovo...');
+                }
+            }
+
+            // Gestione QR Coupon
+            handleCouponQRCode(data) {
+                // Cerca il coupon nel database
+                let foundCustomer = null;
+                let foundCoupon = null;
+
+                for (const customer of this.db.customers) {
+                    if (customer.coupons) {
+                        const coupon = customer.coupons.find(c => c.code === data.couponCode);
+                        if (coupon) {
+                            foundCustomer = customer;
+                            foundCoupon = coupon;
+                            break;
+                        }
+                    }
+                }
+
+                if (!foundCoupon) {
+                    this.showToast('❌ Coupon non trovato o già usato', 'error');
+                    return;
+                }
+
+                if (foundCoupon.used) {
+                    this.showToast('❌ Coupon già utilizzato', 'error');
+                    return;
+                }
+
+                // Mostra dettagli coupon
+                const discountText = foundCoupon.discountType === 'percentage'
+                    ? `${foundCoupon.discountValue}%`
+                    : `€${foundCoupon.discountValue}`;
+
+                const expiryText = foundCoupon.expiryDate
+                    ? `Scade: ${new Date(foundCoupon.expiryDate).toLocaleDateString('it-IT')}`
+                    : 'Senza scadenza';
+
+                const message = `🎟️ COUPON VALIDO!\n\n` +
+                    `Cliente: ${foundCustomer.firstName} ${foundCustomer.lastName}\n` +
+                    `Campagna: ${foundCoupon.campaignName}\n` +
+                    `Sconto: ${discountText}\n` +
+                    `${expiryText}\n\n` +
+                    `Vuoi applicare questo coupon a un ordine?`;
+
+                if (confirm(message)) {
+                    // Vai alla tab ordini per applicare il coupon
+                    this.switchTab('ordini');
+                    this.showToast(`✅ Coupon pronto! Seleziona l'ordine dove applicarlo.`, 'success');
+                    // Qui potresti aggiungere logica per pre-selezionare il coupon
+                } else {
+                    this.showToast('ℹ️ Coupon scansionato ma non applicato', 'info');
+                }
+            }
+
+            // Storia Fidelity Cliente
+            showCustomerFidelityHistory(customerId) {
+                const customer = this.db.customers.find(c => c.id === customerId);
+                if (!customer) return;
+
+                document.getElementById('history-customer-name').textContent = `${customer.firstName} ${customer.lastName}`;
+                document.getElementById('history-customer-stamps').textContent = customer.fidelity?.stamps || 0;
+
+                const history = customer.fidelity?.history || [];
+                const container = document.getElementById('fidelity-history-list');
+
+                if (history.length === 0) {
+                    container.innerHTML = '<p class="text-gray-500 text-center">Nessuna attività</p>';
+                } else {
+                    container.innerHTML = history.slice().reverse().map(entry => {
+                        const date = new Date(entry.date).toLocaleDateString('it-IT', {
+                            day: '2-digit', month: '2-digit', year: 'numeric',
+                            hour: '2-digit', minute: '2-digit'
+                        });
+
+                        let icon = '📝';
+                        let text = '';
+                        let bgColor = 'bg-gray-50';
+
+                        if (entry.type === 'add') {
+                            icon = '➕';
+                            text = `Aggiunti ${entry.stamps} bollini (Spesa: €${entry.amount.toFixed(2)})`;
+                            bgColor = 'bg-green-50';
+                        } else if (entry.type === 'reward') {
+                            icon = '🎁';
+                            text = `Premio riscattato (-${entry.stamps} bollini)`;
+                            bgColor = 'bg-blue-50';
+                        } else if (entry.type === 'remove') {
+                            icon = '➖';
+                            text = `Rimossi ${entry.stamps} bollini`;
+                            bgColor = 'bg-red-50';
+                        }
+
+                        return `
+                            <div class="${bgColor} border rounded p-3">
+                                <div class="flex justify-between items-center">
+                                    <div>
+                                        <span class="text-lg">${icon}</span>
+                                        <span class="ml-2 font-medium">${text}</span>
+                                    </div>
+                                    <span class="text-xs text-gray-500">${date}</span>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+
+                const modal = document.getElementById('customer-fidelity-history-modal');
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            }
+
+            closeCustomerFidelityHistory() {
+                const modal = document.getElementById('customer-fidelity-history-modal');
+                modal.classList.remove('flex');
+                modal.classList.add('hidden');
+            }
+
+            // Modal Dettagli Cliente Fidelity (cliccabile)
+            openCustomerFidelityModal(customerId) {
+                const customer = this.db.customers.find(c => c.id === customerId);
+                if (!customer) return;
+
+                const stamps = customer.fidelity?.stamps || 0;
+                const rewards = customer.fidelity?.rewards || 0;
+                const availableRewards = Math.floor(stamps / this.fidelityConfig.stampsPerReward);
+
+                // 🔍 DEBUG MODAL
+                console.log('🔍 DEBUG openCustomerFidelityModal:', {
+                    customerName: customer.firstName + ' ' + customer.lastName,
+                    stamps,
+                    stampsPerReward: this.fidelityConfig.stampsPerReward,
+                    availableRewards,
+                    fidelityConfig: this.fidelityConfig
+                });
+
+                const stampsTowardNext = stamps % this.fidelityConfig.stampsPerReward; const progress = (stampsTowardNext / this.fidelityConfig.stampsPerReward) * 100;
+                const remainingForNext = this.fidelityConfig.stampsPerReward - stampsTowardNext;
+                const activeCoupons = customer.coupons ? customer.coupons.filter(c => !c.used).length : 0;
+
+                const content = document.getElementById('customer-fidelity-modal-content');
+                content.innerHTML = `
+                    <div class="p-6">
+                        <div class="flex justify-between items-start mb-6">
+                            <div>
+                                <h2 class="text-2xl font-bold">${customer.firstName} ${customer.lastName}</h2>
+                                <p class="text-gray-500">${customer.phone || ''}</p>
+                            </div>
+                            <button onclick="app.closeCustomerFidelityModal()" class="text-gray-400 hover:text-gray-600">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
+                            </button>
+                        </div>
+
+                        <!-- Stats -->
+                        <div class="grid grid-cols-3 gap-4 mb-6">
+                            <div class="bg-blue-50 rounded-lg p-4 text-center">
+                                <p class="text-3xl font-bold text-blue-600">${stamps}</p>
+                                <p class="text-sm text-gray-600">Bollini Totali</p>
+                            </div>
+                            <div class="bg-purple-50 rounded-lg p-4 text-center">
+                                <p class="text-3xl font-bold text-purple-600">${availableRewards}</p>
+                                <p class="text-sm text-gray-600">Premi Disponibili</p>
+                            </div>
+                            <div class="bg-green-50 rounded-lg p-4 text-center">
+                                <p class="text-3xl font-bold text-green-600">${rewards}</p>
+                                <p class="text-sm text-gray-600">Premi Riscattati</p>
+                            </div>
+                        </div>
+
+                        <!-- Progress -->
+                        <div class="mb-6">
+                            <div class="flex justify-between items-center mb-2">
+                                <p class="text-sm font-semibold text-gray-700">Progresso verso prossimo premio</p>
+                                <p class="text-sm text-gray-600">${stampsTowardNext}/${this.fidelityConfig.stampsPerReward}</p>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-3">
+                                <div class="bg-blue-600 h-3 rounded-full transition-all" style="width: ${progress}%"></div>
+                            </div>
+                            <p class="text-sm text-gray-600 mt-2 text-center">
+                                ${stampsTowardNext === 0 && stamps > 0 ?
+                        '🎉 Premio completo! Riscattalo qui sotto' :
+                        `Mancano ${remainingForNext} bollini al prossimo premio`}
+                            </p>
+                        </div>
+
+                        <!-- Riscatta Premio -->
+                        ${availableRewards > 0 ? `
+                            <div class="mb-6">
+                                <button onclick="app.redeemReward('${customer.id}'); app.closeCustomerFidelityModal();" 
+                                        class="w-full bg-gradient-to-r from-green-600 to-green-700 text-white py-4 rounded-lg hover:from-green-700 hover:to-green-800 font-bold text-lg shadow-lg">
+                                    🎁 Riscatta Premio (${availableRewards} disponibile${availableRewards > 1 ? 'i' : ''})
+                                </button>
+                            </div>
+                        ` : ''}
+
+                        <!-- Azioni Bollini -->
+                        <div class="mb-4">
+                            <p class="text-sm font-semibold text-gray-700 mb-2">➕ Aggiungi Bollini</p>
+                            <div class="grid grid-cols-4 gap-2">
+                                <button onclick="app.quickAddStamps('${customer.id}', 1)" 
+                                        class="bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 font-bold">+1</button>
+                                <button onclick="app.quickAddStamps('${customer.id}', 2)" 
+                                        class="bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 font-bold">+2</button>
+                                <button onclick="app.quickAddStamps('${customer.id}', 3)" 
+                                        class="bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 font-bold">+3</button>
+                                <button onclick="app.openAddStampsModal('${customer.id}')" 
+                                        class="bg-blue-700 text-white py-3 rounded-lg hover:bg-blue-800 font-bold">+N</button>
+                            </div>
+                        </div>
+
+                        <!-- Coupon -->
+                        ${activeCoupons > 0 ? `
+                            <div class="border-t pt-4 mb-4">
+                                <h3 class="font-bold mb-2">🎫 Coupon Attivi (${activeCoupons})</h3>
+                                ${customer.coupons.filter(c => !c.used).map(coupon => `
+                                    <div class="bg-purple-50 border border-purple-200 rounded p-3 mb-2">
+                                        <div class="font-bold">${coupon.campaignName}</div>
+                                        <div class="text-sm text-gray-600">${coupon.code}</div>
+                                        <div class="text-sm text-purple-600">
+                                            ${coupon.discountType === 'percentage' ? `${coupon.discountValue}%` : `€${coupon.discountValue}`} di sconto
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+
+                        <!-- Cronologia -->
+                        <div class="border-t pt-4">
+                            <button onclick="app.showCustomerFidelityHistory('${customer.id}')" 
+                                    class="w-full bg-gray-200 text-gray-700 py-3 rounded-lg hover:bg-gray-300 font-bold">
+                                📋 Vedi Cronologia Completa
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+                const modal = document.getElementById('customer-fidelity-modal');
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            }
+
+            closeCustomerFidelityModal() {
+                const modal = document.getElementById('customer-fidelity-modal');
+                modal.classList.remove('flex');
+                modal.classList.add('hidden');
+            }
+
+            async quickAddStamps(customerId, stampCount) {
+                console.log('⚡ quickAddStamps chiamato:', { customerId, stampCount });
+
+                const customer = this.db.customers.find(c => c.id === customerId);
+                if (!customer) {
+                    console.error('❌ Cliente non trovato');
+                    return;
+                }
+
+                if (!customer.fidelity) {
+                    console.error('❌ Fidelity non inizializzato');
+                    return;
+                }
+
+                const stampsBefore = customer.fidelity.stamps;
+                console.log('📊 Bollini prima:', stampsBefore);
+
+                customer.fidelity.stamps += stampCount;
+                customer.lastModified = new Date().toISOString();
+
+                console.log('📊 Bollini dopo:', customer.fidelity.stamps);
+                console.log('➕ Aggiunti:', stampCount);
+
+                customer.fidelity.history.push({
+                    date: new Date().toISOString(),
+                    type: 'add',
+                    stamps: stampCount,
+                    amount: stampCount * this.fidelityConfig.eurosPerStamp
+                });
+
+                // Blocca auto-sync PRIMA di salvare
+                this.editingFidelity = true;
+
+                this.saveData();
+
+                console.log('💾 Dati salvati');
+                console.log('🔄 Refresh modal...');
+
+                this.openCustomerFidelityModal(customerId);
+                this.renderFidelityDashboard();
+                this.showToast(`✅ +${stampCount} bollini!`);
+
+                // Notifica se ha guadagnato un nuovo premio
+                const rewardsBefore = Math.floor(stampsBefore / this.fidelityConfig.stampsPerReward);
+                const rewardsAfter = Math.floor(customer.fidelity.stamps / this.fidelityConfig.stampsPerReward);
+                const newRewardsEarned = rewardsAfter - rewardsBefore;
+
+                console.log('🔍 CHECK PREMIO:', {
+                    stampsBefore,
+                    stampsAfter: customer.fidelity.stamps,
+                    rewardsBefore,
+                    rewardsAfter,
+                    newRewardsEarned,
+                    calculation: `${rewardsAfter} - ${rewardsBefore} = ${newRewardsEarned} nuovi premi`
+                });
+
+                if (newRewardsEarned > 0) {
+                    console.log(`🎁 ✅ ${newRewardsEarned} NUOVO/I PREMIO/I! Invio notifica WhatsApp...`);
+                    this.showToast(`🎉 ${customer.firstName} ha guadagnato ${newRewardsEarned} premio${newRewardsEarned > 1 ? 'i' : ''}!`);
+
+                    setTimeout(() => {
+                        console.log('📱 Apertura WhatsApp per:', customer.firstName);
+                        this.sendStampsUpdateWhatsApp(customerId, stampCount);
+                    }, 1000);
+                } else {
+                    console.log('ℹ️ Nessun nuovo premio guadagnato');
+                }
+
+                // Sblocca auto-sync dopo 5 secondi
+                setTimeout(() => {
+                    this.editingFidelity = false;
+                    console.log('✅ Sblocco auto-sync');
+                }, 5000);
+            }
+            showCustomersWithRewards() {
+                this.switchTab('fidelity');
+                setTimeout(() => {
+                    const container = document.getElementById('fidelity-customers-list');
+                    if (container) container.scrollIntoView({ behavior: 'smooth' });
+                }, 100);
+            }
+
+            showCustomersWithCoupons() {
+                this.switchTab('fidelity');
+                setTimeout(() => {
+                    const container = document.getElementById('fidelity-customers-list');
+                    if (container) container.scrollIntoView({ behavior: 'smooth' });
+                }, 100);
+            }
+
+            showCustomersWithRedeemedRewards() {
+                // Ora apre il modal invece di scrollare
+                this.showRedeemedRewardsModal();
+            }
+
+            showAvailableRewardsModal() {
+                const customersWithRewards = this.db.customers.filter(c => {
+                    const stamps = c.fidelity?.stamps || 0;
+                    const availableRewards = Math.floor(stamps / this.fidelityConfig.stampsPerReward);
+                    return availableRewards > 0;
+                });
+
+                const container = document.getElementById('available-rewards-list');
+
+                if (customersWithRewards.length === 0) {
+                    container.innerHTML = '<p class="text-gray-500 text-center">Nessun cliente ha premi disponibili al momento.</p>';
+                } else {
+                    // Ordina per numero di premi disponibili (decrescente)
+                    customersWithRewards.sort((a, b) => {
+                        const aRewards = Math.floor((a.fidelity?.stamps || 0) / this.fidelityConfig.stampsPerReward);
+                        const bRewards = Math.floor((b.fidelity?.stamps || 0) / this.fidelityConfig.stampsPerReward);
+                        return bRewards - aRewards;
+                    });
+
+                    container.innerHTML = customersWithRewards.map(customer => {
+                        const stamps = customer.fidelity?.stamps || 0;
+                        const stampsPerReward = this.fidelityConfig.stampsPerReward;
+                        const availableRewards = Math.floor(stamps / stampsPerReward);
+                        const remainingStamps = stamps % stampsPerReward;
+
+                        return `
+                <div class="bg-gradient-to-r from-green-50 to-green-100 border-2 border-green-300 rounded-lg p-4 mb-3">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex-1">
+                            <h3 class="text-xl font-bold text-gray-800">${customer.lastName} ${customer.firstName}</h3>
+                            <p class="text-sm text-gray-600">${customer.phone}</p>
+                        </div>
+                        <div class="text-right">
+                            <div class="bg-gradient-to-r from-green-500 to-green-600 text-white px-4 py-2 rounded-full shadow-lg">
+                                <p class="text-3xl font-bold">🎁 ${availableRewards}</p>
+                                <p class="text-xs">Premio${availableRewards > 1 ? 'i' : ''} disponibile${availableRewards > 1 ? 'i' : ''}</p>
+                            </div>
+                            <p class="text-sm text-gray-600 mt-2">${stamps} bollini totali</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-lg p-3 mb-3">
+                        <p class="text-sm font-semibold text-gray-700 mb-2">ℹ️ Info premio:</p>
+                        <div class="text-xs text-gray-600 space-y-1">
+                            <div>• Ha ${stamps} bollin${stamps === 1 ? 'o' : 'i'} totali</div>
+                            <div>• Può riscattare ${availableRewards} premi${availableRewards === 1 ? 'o' : ''}</div>
+                            <div>• Dopo il riscatto avrà ${remainingStamps} bollin${remainingStamps === 1 ? 'o' : 'i'}</div>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-2">
+                        <button onclick="app.closeAvailableRewardsModal(); app.redeemReward('${customer.id}')"
+                                class="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 font-bold">
+                            🎁 Riscatta Ora
+                        </button>
+                        <button onclick="app.closeAvailableRewardsModal(); app.openCustomerFidelityModal('${customer.id}')"
+                                class="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 font-bold">
+                            👤 Dettagli
+                        </button>
+                    </div>
+                </div>
+            `;
+                    }).join('');
+                }
+
+                const modal = document.getElementById('available-rewards-modal');
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            }
+
+            closeAvailableRewardsModal() {
+                const modal = document.getElementById('available-rewards-modal');
+                modal.classList.remove('flex');
+                modal.classList.add('hidden');
+            }
+
+            showRedeemedRewardsModal() {
+                const customersWithRedeemed = this.db.customers.filter(c => {
+                    return c.fidelity && (c.fidelity.rewards || 0) > 0;
+                });
+
+                const container = document.getElementById('redeemed-rewards-list');
+
+                if (customersWithRedeemed.length === 0) {
+                    container.innerHTML = '<p class="text-gray-500 text-center">Nessun cliente ha ancora riscattato premi.</p>';
+                } else {
+                    // Ordina per numero di premi riscattati (decrescente)
+                    customersWithRedeemed.sort((a, b) => {
+                        const aRewards = a.fidelity?.rewards || 0;
+                        const bRewards = b.fidelity?.rewards || 0;
+                        return bRewards - aRewards;
+                    });
+
+                    container.innerHTML = customersWithRedeemed.map(customer => {
+                        const redeemedRewards = customer.fidelity?.rewards || 0;
+                        const stamps = customer.fidelity?.stamps || 0;
+                        const lastReward = customer.fidelity?.rewardsList?.[customer.fidelity.rewardsList.length - 1];
+                        const lastRewardDate = lastReward ? new Date(lastReward.date).toLocaleDateString('it-IT') : 'N/A';
+
+                        const rewardHistory = customer.fidelity?.rewardsList || [];
+                        const rewardHistoryHTML = rewardHistory.length > 0 ?
+                            rewardHistory.slice().reverse().slice(0, 3).map(reward => {
+                                const date = new Date(reward.date).toLocaleDateString('it-IT', {
+                                    day: '2-digit',
+                                    month: '2-digit',
+                                    year: 'numeric'
+                                });
+                                return `<div class="text-xs text-gray-600">✅ ${date}</div>`;
+                            }).join('') :
+                            '<div class="text-xs text-gray-500">Nessuna cronologia</div>';
+
+                        return `
+                <div class="bg-gradient-to-r from-blue-50 to-blue-100 border-2 border-blue-300 rounded-lg p-4 mb-3">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex-1">
+                            <h3 class="text-xl font-bold text-gray-800">${customer.lastName} ${customer.firstName}</h3>
+                            <p class="text-sm text-gray-600">${customer.phone}</p>
+                        </div>
+                        <div class="text-right">
+                            <div class="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-2 rounded-full shadow-lg">
+                                <p class="text-3xl font-bold">✅ ${redeemedRewards}</p>
+                                <p class="text-xs">Premio${redeemedRewards > 1 ? 'i' : ''} riscattato${redeemedRewards > 1 ? 'i' : ''}</p>
+                            </div>
+                            <p class="text-sm text-gray-600 mt-2">${stamps} bollini attuali</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-lg p-3 mb-3">
+                        <p class="text-sm font-semibold text-gray-700 mb-2">📅 Ultimi premi riscattati:</p>
+                        ${rewardHistoryHTML}
+                        ${rewardHistory.length > 3 ? '<div class="text-xs text-gray-500 mt-1">...e altri</div>' : ''}
+                    </div>
+
+                    <div class="flex gap-2">
+                        <button onclick="app.closeRedeemedRewardsModal(); app.showCustomerFidelityHistory('${customer.id}')"
+                                class="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 font-bold">
+                            📋 Cronologia Completa
+                        </button>
+                        <button onclick="app.closeRedeemedRewardsModal(); app.openCustomerFidelityModal('${customer.id}')"
+                                class="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 font-bold">
+                            👤 Dettagli
+                        </button>
+                    </div>
+                </div>
+            `;
+                    }).join('');
+                }
+
+                const modal = document.getElementById('redeemed-rewards-modal');
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            }
+
+            closeRedeemedRewardsModal() {
+                const modal = document.getElementById('redeemed-rewards-modal');
+                modal.classList.remove('flex');
+                modal.classList.add('hidden');
+            }
+
+            showActiveCouponsModal() {
+                const customersWithActiveCoupons = this.db.customers.filter(c => {
+                    return c.coupons && c.coupons.some(coupon => !coupon.used);
+                });
+
+                const container = document.getElementById('active-coupons-list');
+
+                if (customersWithActiveCoupons.length === 0) {
+                    container.innerHTML = '<p class="text-gray-500 text-center">Nessun cliente ha coupon attivi al momento.</p>';
+                } else {
+                    container.innerHTML = customersWithActiveCoupons.map(customer => {
+                        const activeCoupons = customer.coupons.filter(c => !c.used);
+
+                        const couponsHTML = activeCoupons.map(coupon => {
+                            const expiryDate = coupon.expiryDate ? new Date(coupon.expiryDate).toLocaleDateString('it-IT') : 'Senza scadenza';
+                            const discountText = coupon.discountType === 'percentage'
+                                ? `${coupon.discountValue}%`
+                                : `€${coupon.discountValue}`;
+
+                            return `
+                    <div class="bg-pink-50 border border-pink-200 rounded-lg p-3 mb-2">
+                        <div class="flex justify-between items-start">
+                            <div class="flex-1">
+                                <p class="font-bold text-gray-800">${coupon.campaignName}</p>
+                                <p class="text-sm text-gray-600">${coupon.description || ''}</p>
+                                <p class="text-xs text-gray-500 mt-1">Codice: <span class="font-mono font-bold">${coupon.code}</span></p>
+                            </div>
+                            <div class="bg-pink-600 text-white px-3 py-1 rounded-full text-sm font-bold">
+                                ${discountText}
+                            </div>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-2">📅 Scadenza: ${expiryDate}</p>
+                    </div>
+                `;
+                        }).join('');
+
+                        return `
+                <div class="bg-gradient-to-r from-pink-50 to-pink-100 border-2 border-pink-300 rounded-lg p-4 mb-3">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex-1">
+                            <h3 class="text-xl font-bold text-gray-800">${customer.lastName} ${customer.firstName}</h3>
+                            <p class="text-sm text-gray-600">${customer.phone}</p>
+                        </div>
+                        <div class="bg-gradient-to-r from-pink-500 to-pink-600 text-white px-4 py-2 rounded-full shadow-lg">
+                            <p class="text-2xl font-bold">${activeCoupons.length}</p>
+                            <p class="text-xs">Coupon attiv${activeCoupons.length === 1 ? 'o' : 'i'}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-2">
+                        ${couponsHTML}
+                    </div>
+                    
+                    <div class="mt-3">
+                        <button onclick="app.closeActiveCouponsModal(); app.openCustomerFidelityModal('${customer.id}')"
+                                class="w-full bg-pink-600 text-white px-4 py-2 rounded-lg hover:bg-pink-700 font-bold">
+                            👤 Vedi Dettagli Cliente
+                        </button>
+                    </div>
+                </div>
+            `;
+                    }).join('');
+                }
+
+                const modal = document.getElementById('active-coupons-modal');
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            }
+
+            closeActiveCouponsModal() {
+                const modal = document.getElementById('active-coupons-modal');
+                modal.classList.remove('flex');
+                modal.classList.add('hidden');
+            }
+
+            showUsedCouponsModal() {
+                const customersWithUsedCoupons = this.db.customers.filter(c => {
+                    return c.coupons && c.coupons.some(coupon => coupon.used);
+                });
+
+                const container = document.getElementById('used-coupons-list');
+
+                if (customersWithUsedCoupons.length === 0) {
+                    container.innerHTML = '<p class="text-gray-500 text-center">Nessun cliente ha ancora usato coupon.</p>';
+                } else {
+                    container.innerHTML = customersWithUsedCoupons.map(customer => {
+                        const usedCoupons = customer.coupons.filter(c => c.used);
+
+                        const couponsHTML = usedCoupons.map(coupon => {
+                            const usedDate = coupon.usedAt ? new Date(coupon.usedAt).toLocaleDateString('it-IT') : 'N/A';
+                            const discountText = coupon.discountType === 'percentage'
+                                ? `${coupon.discountValue}%`
+                                : `€${coupon.discountValue}`;
+
+                            return `
+                    <div class="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-2">
+                        <div class="flex justify-between items-start">
+                            <div class="flex-1">
+                                <p class="font-bold text-gray-800">${coupon.campaignName}</p>
+                                <p class="text-sm text-gray-600">${coupon.description || ''}</p>
+                                <p class="text-xs text-gray-500 mt-1">Codice: <span class="font-mono font-bold">${coupon.code}</span></p>
+                            </div>
+                            <div class="bg-orange-600 text-white px-3 py-1 rounded-full text-sm font-bold">
+                                ${discountText}
+                            </div>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-2">✔️ Usato il: ${usedDate}</p>
+                    </div>
+                `;
+                        }).join('');
+
+                        return `
+                <div class="bg-gradient-to-r from-orange-50 to-orange-100 border-2 border-orange-300 rounded-lg p-4 mb-3">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex-1">
+                            <h3 class="text-xl font-bold text-gray-800">${customer.lastName} ${customer.firstName}</h3>
+                            <p class="text-sm text-gray-600">${customer.phone}</p>
+                        </div>
+                        <div class="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-4 py-2 rounded-full shadow-lg">
+                            <p class="text-2xl font-bold">${usedCoupons.length}</p>
+                            <p class="text-xs">Coupon usat${usedCoupons.length === 1 ? 'o' : 'i'}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-2">
+                        ${couponsHTML}
+                    </div>
+                    
+                    <div class="mt-3">
+                        <button onclick="app.closeUsedCouponsModal(); app.openCustomerFidelityModal('${customer.id}')"
+                                class="w-full bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 font-bold">
+                            👤 Vedi Dettagli Cliente
+                        </button>
+                    </div>
+                </div>
+            `;
+                    }).join('');
+                }
+
+                const modal = document.getElementById('used-coupons-modal');
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            }
+
+            closeUsedCouponsModal() {
+                const modal = document.getElementById('used-coupons-modal');
+                modal.classList.remove('flex');
+                modal.classList.add('hidden');
+            }
+
             // EXPORT CSV
             exportOrders() {
                 if (this.db.orders.filter(o => !o.deleted).length === 0) {
@@ -7545,6 +9320,304 @@
             </div>
         </div>
     </div>
+
+    <!-- ========================================== -->
+    <!-- MODAL FIDELITY -->
+    <!-- ========================================== -->
+
+    <!-- Modal Aggiungi Bollini -->
+    <div id="add-stamps-modal"
+        class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4 z-[100]">
+        <div class="bg-white rounded-lg shadow-2xl w-full max-w-md">
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-purple-600 to-purple-700 text-white p-6 rounded-t-lg">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-2xl font-bold">➕ Aggiungi Bollini</h2>
+                    <button onclick="app.closeAddStampsModal()" class="text-white hover:text-gray-200">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Body -->
+            <div class="p-6">
+                <!-- Info Cliente -->
+                <div class="bg-purple-50 border-l-4 border-purple-600 p-4 mb-6">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <p class="text-sm text-gray-600">Cliente</p>
+                            <p class="text-lg font-bold text-gray-800" id="stamps-customer-name">-</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-sm text-gray-600">Bollini attuali</p>
+                            <p class="text-2xl font-bold text-purple-600" id="stamps-customer-current">0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Input Bollini -->
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Quanti bollini vuoi aggiungere?
+                    </label>
+                    <input type="number" id="stamps-count" step="1" min="1"
+                        class="w-full px-4 py-3 text-lg border-2 border-gray-300 rounded-lg focus:border-purple-600 focus:outline-none"
+                        placeholder="Es. 5" autofocus>
+                </div>
+
+                <!-- Info Box -->
+                <div class="bg-blue-50 rounded-lg p-4 mb-6">
+                    <div class="flex items-start space-x-3">
+                        <svg class="w-5 h-5 text-blue-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd"
+                                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                                clip-rule="evenodd" />
+                        </svg>
+                        <div class="flex-1 text-sm text-blue-800">
+                            <p class="font-semibold mb-1">💡 Promemoria</p>
+                            <p>• Ogni €20 di spesa = 1 bollino</p>
+                            <p>• 10 bollini = 1 premio 🎁</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Buttons -->
+                <div class="flex gap-3">
+                    <button onclick="app.closeAddStampsModal()"
+                        class="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-semibold transition">
+                        Annulla
+                    </button>
+                    <button onclick="app.confirmAddStamps()"
+                        class="flex-1 px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:from-purple-700 hover:to-purple-800 font-semibold shadow-lg transition">
+                        Aggiungi Bollini
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Nuova Campagna Coupon -->
+    <div id="campaign-modal" class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4 z-[100]">
+        <div class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <h2 class="text-2xl font-bold mb-4">🎫 Nuova Campagna Coupon</h2>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Nome Campagna</label>
+                    <input type="text" id="campaign-name"
+                        class="w-full px-3 py-2 border rounded-lg focus:border-purple-500 focus:outline-none"
+                        placeholder="Es. Natale 2024">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Descrizione</label>
+                    <input type="text" id="campaign-description"
+                        class="w-full px-3 py-2 border rounded-lg focus:border-purple-500 focus:outline-none"
+                        placeholder="Es. Sconto natalizio speciale">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Tipo Sconto</label>
+                    <select id="campaign-discount-type" onchange="app.updateCampaignDiscountLabel()"
+                        class="w-full px-3 py-2 border rounded-lg focus:border-purple-500 focus:outline-none">
+                        <option value="percentage">Percentuale (%)</option>
+                        <option value="fixed">Importo Fisso (€)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Valore Sconto <span id="campaign-discount-label">(% da 1 a 100)</span>
+                    </label>
+                    <input type="number" id="campaign-discount-value" step="1" min="0"
+                        class="w-full px-3 py-2 border rounded-lg focus:border-purple-500 focus:outline-none"
+                        placeholder="Es. 10">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Date di Ritiro Valide</label>
+                    <div class="text-sm text-gray-600 mb-2">Seleziona le date in cui il coupon è valido:</div>
+                    <div id="campaign-dates-container" class="space-y-2 mb-2">
+                        <!-- Date inputs dinamici -->
+                    </div>
+                    <button type="button" onclick="app.addCampaignDateInput()"
+                        class="w-full bg-gray-200 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-300 text-sm">
+                        + Aggiungi Data
+                    </button>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Scadenza Coupon (Opzionale)</label>
+                    <input type="date" id="campaign-expiry"
+                        class="w-full px-3 py-2 border rounded-lg focus:border-purple-500 focus:outline-none">
+                    <p class="text-xs text-gray-500 mt-1">Lascia vuoto per nessuna scadenza</p>
+                </div>
+            </div>
+
+            <div class="flex gap-3 mt-6">
+                <button onclick="app.closeCampaignModal()"
+                    class="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300">
+                    Annulla
+                </button>
+                <button onclick="app.saveCampaign()"
+                    class="flex-1 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700">
+                    Crea Campagna
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Scanner QR Fidelity -->
+    <div id="fidelity-qr-scanner-modal"
+        class="modal fixed inset-0 bg-black bg-opacity-90 items-center justify-center p-4 z-[100]">
+        <div class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-lg">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold">📷 Scanner QR Fidelity</h2>
+                <button onclick="app.closeFidelityQRScanner()"
+                    class="text-gray-500 hover:text-gray-700 text-3xl leading-none">
+                    ×
+                </button>
+            </div>
+
+            <div class="relative">
+                <video id="fidelity-qr-video" class="w-full rounded-lg" autoplay playsinline></video>
+                <canvas id="fidelity-qr-canvas" class="hidden"></canvas>
+            </div>
+
+            <div id="fidelity-qr-result" class="mt-4"></div>
+
+            <div class="mt-4 text-center text-sm text-gray-600">
+                <p>Inquadra il QR code della tessera fidelity del cliente</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Storia Fidelity Cliente -->
+    <div id="customer-fidelity-history-modal"
+        class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4 z-[100]">
+        <div class="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+
+            <!-- Header Fisso -->
+            <div
+                class="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 rounded-t-lg flex justify-between items-center">
+                <div>
+                    <h2 class="text-2xl font-bold">📋 Cronologia Fidelity</h2>
+                    <p class="text-sm text-blue-100 mt-1">
+                        Cliente: <span id="history-customer-name" class="font-semibold"></span>
+                    </p>
+                </div>
+                <button onclick="app.closeCustomerFidelityHistory()" class="text-white hover:text-blue-200 transition">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Info Bollini -->
+            <div class="bg-blue-50 px-6 py-3 border-b">
+                <p class="text-sm text-gray-700">
+                    Bollini totali: <span id="history-customer-stamps" class="font-bold text-blue-600"></span>
+                </p>
+            </div>
+
+            <!-- Contenuto Scrollabile -->
+            <div class="flex-1 overflow-y-auto p-6">
+                <div id="fidelity-history-list" class="space-y-2"></div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Modal Dettagli Cliente Fidelity -->
+    <div id="customer-fidelity-modal"
+        class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div id="customer-fidelity-modal-content"></div>
+        </div>
+    </div>
+
+    <!-- Modal Premi Disponibili -->
+    <div id="available-rewards-modal"
+        class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4 z-[9999] hidden">
+        <div class="bg-white rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div class="p-6 border-b flex justify-between items-center">
+                <h2 class="text-2xl font-bold">🎁 Clienti con Premi Disponibili</h2>
+                <button onclick="app.closeAvailableRewardsModal()" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="overflow-y-auto flex-1 p-6">
+                <div id="available-rewards-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Premi Riscattati -->
+    <div id="redeemed-rewards-modal"
+        class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4 z-[9999] hidden">
+        <div class="bg-white rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div class="p-6 border-b flex justify-between items-center">
+                <h2 class="text-2xl font-bold">✅ Clienti con Premi Riscattati</h2>
+                <button onclick="app.closeRedeemedRewardsModal()" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="overflow-y-auto flex-1 p-6">
+                <div id="redeemed-rewards-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Coupon Attivi -->
+    <div id="active-coupons-modal"
+        class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4 z-[9999] hidden">
+        <div class="bg-white rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div
+                class="bg-gradient-to-r from-pink-600 to-pink-700 text-white p-6 rounded-t-lg flex justify-between items-center">
+                <h2 class="text-2xl font-bold">🎟️ Clienti con Coupon Attivi</h2>
+                <button onclick="app.closeActiveCouponsModal()" class="text-white hover:text-pink-200">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="overflow-y-auto flex-1 p-6">
+                <div id="active-coupons-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Coupon Usati -->
+    <div id="used-coupons-modal"
+        class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4 z-[9999] hidden">
+        <div class="bg-white rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div
+                class="bg-gradient-to-r from-orange-600 to-orange-700 text-white p-6 rounded-t-lg flex justify-between items-center">
+                <h2 class="text-2xl font-bold">✔️ Clienti con Coupon Usati</h2>
+                <button onclick="app.closeUsedCouponsModal()" class="text-white hover:text-orange-200">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="overflow-y-auto flex-1 p-6">
+                <div id="used-coupons-list"></div>
+            </div>
+        </div>
+    </div>
+
 </body>
 
 </html>
