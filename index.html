@@ -3,7 +3,8 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <meta name="theme-color" content="#3b82f6">
     <title>Gestionale Ordini</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/dropbox@10.34.0/dist/Dropbox-sdk.min.js"></script>
@@ -149,8 +150,23 @@
         /* Responsive mobile */
         @media (max-width: 768px) {
             .tab-btn {
-                font-size: 0.75rem;
-                padding: 0.75rem 0.5rem !important;
+                font-size: 0.7rem;
+                padding: 0.5rem 0.3rem !important;
+                min-width: 60px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            /* Container tabs scrollabile */
+            nav.flex {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+            }
+
+            nav.flex::-webkit-scrollbar {
+                display: none;
             }
 
             .stat-card {
@@ -188,6 +204,134 @@
 
             .grid.md\\:grid-cols-2 {
                 grid-template-columns: 1fr;
+            }
+        }
+
+        /* ========================================
+   📱 OTTIMIZZAZIONI MOBILE
+   ======================================== */
+
+        /* Touch feedback */
+        @media (hover: none) and (pointer: coarse) {
+
+            button:active,
+            .stat-card:active,
+            [onclick]:active {
+                opacity: 0.7;
+                transform: scale(0.98);
+                transition: all 0.1s ease;
+            }
+        }
+
+        /* Previeni zoom iOS */
+        button,
+        a,
+        input,
+        select,
+        textarea {
+            touch-action: manipulation;
+        }
+
+        /* Area touch minima */
+        @media (max-width: 768px) {
+
+            button,
+            .btn {
+                min-height: 44px;
+                min-width: 44px;
+                padding: 12px 16px;
+            }
+
+            input[type="text"],
+            input[type="number"],
+            input[type="email"],
+            input[type="tel"],
+            input[type="date"],
+            select,
+            textarea {
+                font-size: 16px !important;
+                min-height: 44px;
+                padding: 12px;
+            }
+        }
+
+        /* Modal fullscreen mobile */
+        @media (max-width: 768px) {
+            .modal.open {
+                padding: 0 !important;
+            }
+
+            .modal.open>div {
+                max-width: 100% !important;
+                max-height: 100vh !important;
+                margin: 0 !important;
+                border-radius: 0 !important;
+            }
+        }
+
+        /* QR Scanner video */
+        @media (max-width: 768px) {
+
+            #fidelity-qr-video,
+            #dashboard-qr-video {
+                width: 100% !important;
+                max-height: 60vh;
+                object-fit: cover;
+            }
+        }
+
+        /* Scroll smooth iOS */
+        * {
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* Toast mobile */
+        @media (max-width: 768px) {
+            .toast {
+                bottom: 10px !important;
+                right: 10px !important;
+                left: 10px !important;
+            }
+
+            .toast>div {
+                min-width: auto !important;
+                width: 100% !important;
+            }
+        }
+
+        /* Keyboard spazio */
+        @media (max-width: 768px) {
+
+            form,
+            .modal form {
+                padding-bottom: 300px;
+            }
+        }
+
+        /* GPU acceleration */
+        .transition-all,
+        .stat-card,
+        .toast,
+        .modal {
+            will-change: transform, opacity;
+            transform: translateZ(0);
+        }
+
+        /* Floating buttons responsive */
+        @media (max-width: 768px) {
+            #floating-buttons {
+                bottom: 1rem !important;
+                padding: 0 1rem;
+            }
+
+            #floating-buttons button {
+                width: 3.5rem !important;
+                height: 3.5rem !important;
+            }
+
+            #floating-buttons button svg {
+                width: 1.5rem !important;
+                height: 1.5rem !important;
             }
         }
     </style>
@@ -335,48 +479,6 @@
     </div>
 
     <div class="max-w-4xl mx-auto p-4">
-        <!-- Schermata Scanner QR (quando si apre da URL con parametro scan) -->
-        <!-- TEMPORANEAMENTE DISABILITATO - Fidelity Card in sviluppo -->
-        <div id="qr-scanner-page" class="hidden" style="display: none !important;">
-            <div class="bg-white rounded-lg shadow-lg p-6">
-                <h1 class="text-3xl font-bold text-center mb-6">📷 Scanner Fidelity Card</h1>
-
-                <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6">
-                    <p class="text-sm text-blue-800">
-                        <strong>Inquadra il QR code</strong> sulla tessera del cliente per visualizzare i suoi bollini e
-                        premi
-                    </p>
-                </div>
-
-                <!-- Video scanner -->
-                <div class="relative mb-4">
-                    <video id="scanner-page-video" class="w-full rounded-lg border-4 border-purple-500" autoplay
-                        playsinline></video>
-                    <canvas id="scanner-page-canvas" class="hidden"></canvas>
-
-                    <!-- Overlay di mira -->
-                    <div class="absolute inset-0 pointer-events-none flex items-center justify-center">
-                        <div class="w-64 h-64 border-4 border-green-400 rounded-lg shadow-lg"
-                            style="box-shadow: 0 0 0 9999px rgba(0,0,0,0.5);"></div>
-                    </div>
-                </div>
-
-                <div id="scanner-status" class="text-center text-lg font-semibold mb-4"></div>
-
-                <!-- Carica immagine alternativa -->
-                <div class="text-center mb-4">
-                    <p class="text-sm text-gray-600 mb-2">Oppure carica un'immagine:</p>
-                    <input type="file" id="scanner-page-file" accept="image/*" class="mx-auto"
-                        onchange="app.scanFromFilePage(event)">
-                </div>
-
-                <button onclick="app.closeQRScannerPage()"
-                    class="w-full bg-gray-200 text-gray-700 py-3 px-4 rounded-lg hover:bg-gray-300 font-medium">
-                    ← Torna al Gestionale
-                </button>
-            </div>
-        </div>
-
         <header class="bg-white shadow-md rounded-lg mb-4 sticky top-4 z-10" id="main-header">
             <h1 class="text-2xl font-bold text-gray-800 p-4 text-center">📋 Gestionale Ordini</h1>
             <nav class="border-t border-gray-200">
@@ -428,11 +530,10 @@
                             <span class="text-2xl">📋</span>
                             <span class="text-sm font-medium">Preparazione</span>
                         </button>
-                        <button onclick="app.openUniversalQRScanner()"
-                            class="bg-gradient-to-br from-green-500 to-green-600 text-white py-4 px-4 rounded-lg hover:shadow-lg transition-all duration-200 flex flex-col items-center gap-2 active:scale-95">
-                            <span class="text-2xl">📷</span>
-                            <span class="text-sm font-medium">Scanner QR</span>
-                        </button>
+                        <button onclick="app.switchTab('modifiche')"
+                            class="bg-gradient-to-br from-yellow-500 to-orange-600 text-white py-4 px-4 rounded-lg hover:shadow-lg transition-all duration-200 flex flex-col items-center gap-2 active:scale-95">
+                            <span class="text-2xl">⚠️</span>
+                            <span class="text-sm font-medium">Modifiche</span>
                     </div>
                 </div>
 
@@ -640,22 +741,6 @@
                     <h3 class="text-xl font-bold mb-4">⭐ Top 5 Clienti</h3>
                     <div id="top-customers" class="space-y-3"></div>
                 </div>
-
-                <!-- Azioni Rapide Bottom -->
-                <div class="grid md:grid-cols-3 gap-4">
-                    <button onclick="app.switchTab('clienti'); app.openCustomerModal();"
-                        class="bg-purple-600 text-white font-bold py-3 px-4 rounded-lg shadow-lg hover:bg-purple-700 transition active:scale-95">
-                        👥 Nuovo Cliente
-                    </button>
-                    <button onclick="app.exportOrders()"
-                        class="bg-green-600 text-white font-bold py-3 px-4 rounded-lg shadow-lg hover:bg-green-700 transition active:scale-95">
-                        📥 Esporta Ordini (CSV)
-                    </button>
-                    <button onclick="app.backupData()"
-                        class="bg-blue-600 text-white font-bold py-3 px-4 rounded-lg shadow-lg hover:bg-blue-700 transition active:scale-95">
-                        💾 Backup Locale
-                    </button>
-                </div>
             </div>
         </div>
 
@@ -796,6 +881,33 @@
             <div id="preparation-list" class="space-y-4"></div>
         </div>
 
+        <!-- TAB MODIFICHE -->
+        <div id="tab-modifiche" class="tab-content hidden">
+            <div class="mb-6 bg-white rounded-lg shadow p-4">
+                <h2 class="text-2xl font-bold mb-4">⚠️ Modifiche Ordini</h2>
+
+                <!-- Filtri -->
+                <div class="grid md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">📅 Filtra per data consegna</label>
+                        <input type="date" id="mod-date-filter"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                            onchange="app.renderModifications()">
+                    </div>
+
+                    <div class="flex items-end">
+                        <button onclick="document.getElementById('mod-date-filter').value=''; app.renderModifications()"
+                            class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 w-full">
+                            🔄 Mostra tutte le date
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lista Modifiche -->
+            <div id="modifications-list"></div>
+        </div>
+
         <!-- Tab Prodotti -->
         <div id="tab-prodotti" class="tab-content hidden">
             <button onclick="app.openProductModal()"
@@ -876,18 +988,6 @@
                     <button onclick="app.openChangePasswordModal()"
                         class="w-full bg-purple-600 text-white font-bold py-3 px-4 rounded-lg shadow-lg hover:bg-purple-700 transition">
                         🔑 Cambia Password
-                    </button>
-                </div>
-
-                <!-- Configurazione Fidelity -->
-                <div class="bg-white rounded-xl shadow-lg p-6">
-                    <h2 class="text-2xl font-bold mb-4 flex items-center gap-2">
-                        <span>🎁</span>
-                        <span>Configurazione Fidelity</span>
-                    </h2>
-                    <button onclick="app.openFidelityConfig()"
-                        class="w-full bg-pink-600 text-white font-bold py-3 px-4 rounded-lg shadow-lg hover:bg-pink-700 transition">
-                        ⚙️ Configura Fidelity
                     </button>
                 </div>
 
@@ -1038,10 +1138,6 @@
             <div
                 class="bg-gradient-to-br from-amber-50 to-orange-50 border-2 border-amber-300 rounded-lg shadow mb-6 p-6">
                 <h2 class="text-xl font-bold text-amber-900 mb-4">📷 Scanner QR Fidelity Card</h2>
-                <button onclick="app.openFidelityQRScanner()"
-                    class="w-full bg-amber-600 text-white px-6 py-4 rounded-lg hover:bg-amber-700 font-bold">
-                    Apri Scanner QR
-                </button>
             </div>
 
             <!-- Gestione Campagne Coupon -->
@@ -1628,101 +1724,8 @@
                 </div>
             </div>
         </div>
-
-        <!-- Modal Aggiungi Cliente Rapido -->
-        <!-- TEMPORANEAMENTE DISABILITATO - Fidelity Card in sviluppo -->
-        <div id="quick-customer-modal"
-            class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4 z-50"
-            style="display: none !important;">
-            <div class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
-                <h2 class="text-2xl font-bold mb-4">⚡ Cliente in Negozio</h2>
-
-                <div class="space-y-4">
-                    <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-4">
-                        <p class="text-sm text-blue-800">
-                            <strong>Flusso rapido:</strong> Inserisci nome e telefono del cliente, e il numero di
-                            bollini da
-                            aggiungere!
-                        </p>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Nome *</label>
-                            <input type="text" id="quick-firstname" class="w-full px-3 py-2 border rounded-lg"
-                                oninput="app.checkQuickCustomerExists()" required>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Cognome *</label>
-                            <input type="text" id="quick-lastname" class="w-full px-3 py-2 border rounded-lg"
-                                oninput="app.checkQuickCustomerExists()" required>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Telefono *</label>
-                        <input type="tel" id="quick-phone" class="w-full px-3 py-2 border rounded-lg"
-                            placeholder="es. 3331234567" oninput="app.checkQuickCustomerExists()" required>
-                    </div>
-
-                    <!-- Status cliente esistente - SPOSTATO QUI -->
-                    <div id="quick-customer-status" class="hidden"></div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Email (opzionale)</label>
-                        <input type="email" id="quick-email" class="w-full px-3 py-2 border rounded-lg"
-                            placeholder="es. mario@email.com">
-                    </div>
-
-                    <!-- Consenso Marketing -->
-                    <div class="bg-purple-50 border-2 border-purple-200 rounded-lg p-4">
-                        <div class="flex items-start">
-                            <input type="checkbox" id="quick-marketing" class="mt-1 mr-3 w-5 h-5 text-purple-600">
-                            <div class="flex-1">
-                                <label class="font-medium text-gray-900 cursor-pointer" for="quick-marketing">
-                                    📢 Consenso Marketing
-                                </label>
-                                <p class="text-sm text-gray-600 mt-1">
-                                    Il cliente autorizza l'invio di promozioni, offerte e aggiornamenti via
-                                    WhatsApp/SMS/Email
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Numero Bollini da Aggiungere
-                            *</label>
-                        <input type="number" id="quick-stamps" class="w-full px-3 py-2 border rounded-lg"
-                            placeholder="es. 2" min="1" step="1" oninput="app.updateQuickStampsPreview()" required>
-                        <p class="text-xs text-gray-500 mt-1">Inserisci direttamente quanti bollini vuoi aggiungere al
-                            cliente</p>
-                    </div>
-
-                    <div id="quick-stamps-preview"
-                        class="bg-purple-50 border-2 border-purple-200 rounded-lg p-4 hidden">
-                        <p class="text-center">
-                            <span class="text-3xl font-bold text-purple-600" id="preview-stamps">0</span>
-                            <span class="text-sm text-gray-600 block mt-1">bollini verranno aggiunti</span>
-                        </p>
-                    </div>
-
-                    <input type="hidden" id="quick-existing-customer-id">
-                </div>
-
-                <div class="flex justify-end gap-3 mt-6">
-                    <button onclick="app.closeModal('quick-customer-modal')"
-                        class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300">Annulla</button>
-                    <button onclick="app.saveQuickCustomer()"
-                        class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700">
-                        <span id="quick-save-btn-text">Salva & Invia Tessera</span>
-                    </button>
-                </div>
-            </div>
-        </div>
-
-
         <script>
+            
             // Fix per Dropbox SDK - Wrapper fetch
             const originalFetch = window.fetch;
             const boundFetch = function (...args) {
@@ -1786,6 +1789,42 @@
 
                     // Mostra form login
                     this.showLogin();
+
+                    // Auto-hide floating buttons on scroll
+                    this.initFloatingButtonsAutoHide();
+                }
+
+                initFloatingButtonsAutoHide() {
+                    let lastScrollTop = 0;
+                    let scrollTimeout;
+                    const floatingButtons = document.getElementById('floating-buttons');
+
+                    if (!floatingButtons) return;
+
+                    window.addEventListener('scroll', () => {
+                        // Clear timeout se esiste
+                        clearTimeout(scrollTimeout);
+
+                        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+
+                        if (scrollTop > lastScrollTop && scrollTop > 100) {
+                            // Scroll DOWN - Nascondi
+                            floatingButtons.style.transform = 'translateY(120px)';
+                            floatingButtons.style.opacity = '0';
+                        } else {
+                            // Scroll UP - Mostra
+                            floatingButtons.style.transform = 'translateY(0)';
+                            floatingButtons.style.opacity = '1';
+                        }
+
+                        lastScrollTop = scrollTop <= 0 ? 0 : scrollTop;
+
+                        // Rimostra dopo 2 secondi di inattività
+                        scrollTimeout = setTimeout(() => {
+                            floatingButtons.style.transform = 'translateY(0)';
+                            floatingButtons.style.opacity = '1';
+                        }, 2000);
+                    }, { passive: true });
                 }
 
                 showSetup() {
@@ -4504,7 +4543,8 @@
                     qrContainer.style.display = 'none';
                     document.body.appendChild(qrContainer);
 
-                    new QRCode(qrContainer, {
+                    // Genera QR con callback per assicurarsi che sia pronto
+                    const qrCode = new QRCode(qrContainer, {
                         text: qrData,
                         width: 400,
                         height: 400,
@@ -4512,166 +4552,179 @@
                         colorLight: "#ffffff"
                     });
 
-                    setTimeout(() => {
-                        const qrImg = qrContainer.querySelector('img');
-                        if (qrImg) {
-                            const canvas = document.createElement('canvas');
-                            const ctx = canvas.getContext('2d');
-
-                            // Formato card elegante (stessa dimensione della tessera WhatsApp)
-                            canvas.width = 1200;
-                            canvas.height = 750;
-
-                            // Gradiente elegante beige simile al logo
-                            const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-                            gradient.addColorStop(0, '#F8E3C4'); // Beige chiaro
-                            gradient.addColorStop(1, '#F2D4A4'); // Beige più caldo
-                            ctx.fillStyle = gradient;
-                            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-                            // Texture leggera
-                            ctx.globalAlpha = 0.03;
-                            for (let i = 0; i < 2000; i++) {
-                                ctx.fillStyle = '#5D3F24'; // Marrone più scuro
-                                ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 2, 2);
-                            }
-                            ctx.globalAlpha = 1;
-
-                            // Intestazione Pastificio Gramsci (nome attività più evidente)
-                            ctx.fillStyle = '#5D3F24'; // Marrone del logo
-                            ctx.font = 'bold 60px Georgia';
-                            ctx.textAlign = 'center';
-                            ctx.fillText('PASTIFICIO GRAMSCI', canvas.width / 2, 100);
-
-                            // Sottotitolo
-                            ctx.font = 'italic 36px Georgia';
-                            ctx.fillStyle = '#5D3F24';
-                            ctx.fillText('TESSERA FEDELTÀ', canvas.width / 2, 160);
-
-                            // Linea decorativa ondulata
-                            ctx.strokeStyle = '#5D3F24';
-                            ctx.lineWidth = 3;
-                            ctx.beginPath();
-                            for (let x = 0; x <= canvas.width; x += 10) {
-                                const y = 200 + Math.sin(x * 0.02) * 5;
-                                if (x === 0) ctx.moveTo(x, y);
-                                else ctx.lineTo(x, y);
-                            }
-                            ctx.stroke();
-
-                            // Nome cliente elegante
-                            ctx.fillStyle = '#5D3F24';
-                            ctx.font = 'bold 46px Georgia';
-                            ctx.textAlign = 'center';
-                            ctx.fillText(`${customer.firstName} ${customer.lastName}`, canvas.width / 2, 280);
-
-                            // QR Code con cornice elegante
-                            const qrSize = 300;
-                            const qrX = canvas.width / 2 - qrSize / 2; // Centrato
-                            const qrY = 350; // Sotto il nome
-
-                            // Ombra QR
-                            ctx.shadowColor = 'rgba(0,0,0,0.2)';
-                            ctx.shadowBlur = 20;
-                            ctx.shadowOffsetX = 0;
-                            ctx.shadowOffsetY = 10;
-
-                            // Cornice marrone QR
-                            ctx.fillStyle = '#5D3F24'; // Marrone del logo
-                            ctx.fillRect(qrX - 15, qrY - 15, qrSize + 30, qrSize + 30);
-
-                            ctx.shadowColor = 'transparent';
-
-                            // Sfondo bianco QR
-                            ctx.fillStyle = '#ffffff';
-                            ctx.fillRect(qrX - 8, qrY - 8, qrSize + 16, qrSize + 16);
-
-                            // Disegna QR
-                            ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
-
-                            // Testo sotto QR
-                            ctx.fillStyle = '#5D3F24';
-                            ctx.font = 'italic 20px Georgia';
-                            ctx.textAlign = 'center';
-                            ctx.fillText('Scansiona in negozio', qrX + qrSize / 2, qrY + qrSize + 40);
-
-                            // Footer elegante
-                            ctx.fillStyle = '#5D3F24';
-                            ctx.font = 'italic 22px Georgia';
-                            ctx.textAlign = 'center';
-                            ctx.fillText('Grazie per la tua fedeltà!', canvas.width / 2, canvas.height - 30);
-
-                            // Converti canvas in PNG e scarica/condividi
-                            canvas.toBlob(async (blob) => {
-                                const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-                                const fileName = `tessera-fidelity-${customer.lastName}-${customer.firstName}.png`;
-                                const currentStamps = customer.fidelity?.stamps || 0;
-
-                                const messageText =
-                                    `🎉 Ciao ${customer.firstName}!\n\n` +
-                                    `💳 Ti rimando la tua tessera fedeltà!\n\n` +
-                                    `📊 Stato attuale: ${currentStamps}/${this.fidelityConfig.stampsPerReward || 10} bollini\n` +
-                                    (customer.fidelity?.rewards > 0 ? `🎁 Hai ${customer.fidelity.rewards} premio/i da riscattare!\n\n` : '\n') +
-                                    `📱 SALVA l'immagine sul telefono!\n\n` +
-                                    `Pastificio Gramsci`;
-
-                                // Prova Web Share API su mobile (condivisione diretta con immagine allegata)
-                                if (isMobile && navigator.share && navigator.canShare) {
-                                    try {
-                                        const file = new File([blob], fileName, { type: 'image/png' });
-
-                                        // Verifica se può condividere file
-                                        if (navigator.canShare({ files: [file] })) {
-                                            await navigator.share({
-                                                files: [file],
-                                                title: 'Tessera Fidelity',
-                                                text: messageText
-                                            });
-
-                                            this.showToast('✅ Tessera condivisa! Scegli WhatsApp per inviarla');
-                                            document.body.removeChild(qrContainer);
-                                            return;
-                                        }
-                                    } catch (err) {
-                                        // Se l'utente annulla o c'è un errore, continua con il metodo di fallback
-                                        console.log('Condivisione annullata o non supportata:', err);
-                                    }
+                    // Attendi che il QR sia effettivamente renderizzato
+                    const waitForQR = () => {
+                        return new Promise((resolve) => {
+                            const checkQR = () => {
+                                const qrImg = qrContainer.querySelector('img');
+                                if (qrImg && qrImg.complete && qrImg.naturalHeight !== 0) {
+                                    resolve(qrImg);
+                                } else {
+                                    setTimeout(checkQR, 100);
                                 }
+                            };
+                            checkQR();
+                        });
+                    };
 
-                                // Fallback: Download + apertura WhatsApp (per desktop o se Web Share non funziona)
-                                const url = URL.createObjectURL(blob);
+                    waitForQR().then((qrImg) => {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
 
-                                // Crea link per download
-                                const link = document.createElement('a');
-                                link.href = url;
-                                link.download = fileName;
-                                link.style.display = 'none';
-                                document.body.appendChild(link);
-                                link.click();
+                        // Formato card elegante (stessa dimensione della tessera WhatsApp)
+                        canvas.width = 1200;
+                        canvas.height = 750;
 
-                                // Pulizia
-                                setTimeout(() => {
-                                    document.body.removeChild(link);
-                                    URL.revokeObjectURL(url);
-                                }, 100);
+                        // Gradiente elegante beige simile al logo
+                        const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+                        gradient.addColorStop(0, '#F8E3C4'); // Beige chiaro
+                        gradient.addColorStop(1, '#F2D4A4'); // Beige più caldo
+                        ctx.fillStyle = gradient;
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-                                this.showToast('✅ Tessera scaricata! Apertura WhatsApp...');
-
-                                // Apri WhatsApp dopo il download
-                                setTimeout(() => {
-                                    if (customer.phone) {
-                                        const phone = customer.phone.replace(/[^0-9]/g, '');
-                                        const phoneFormatted = phone.startsWith('39') ? phone : '39' + phone;
-                                        const whatsappUrl = `https://wa.me/${phoneFormatted}?text=${encodeURIComponent(messageText)}`;
-                                        window.open(whatsappUrl, '_blank');
-                                    } else {
-                                        this.showToast('⚠️ Numero di telefono mancante per aprire WhatsApp', 'warning');
-                                    }
-                                }, 800);
-                            }, 'image/png', 1.0);
+                        // Texture leggera
+                        ctx.globalAlpha = 0.03;
+                        for (let i = 0; i < 2000; i++) {
+                            ctx.fillStyle = '#5D3F24'; // Marrone più scuro
+                            ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 2, 2);
                         }
+                        ctx.globalAlpha = 1;
+
+                        // Intestazione Pastificio Gramsci (nome attività più evidente)
+                        ctx.fillStyle = '#5D3F24'; // Marrone del logo
+                        ctx.font = 'bold 60px Georgia';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('PASTIFICIO GRAMSCI', canvas.width / 2, 100);
+
+                        // Sottotitolo
+                        ctx.font = 'italic 36px Georgia';
+                        ctx.fillStyle = '#5D3F24';
+                        ctx.fillText('TESSERA FEDELTÀ', canvas.width / 2, 160);
+
+                        // Linea decorativa ondulata
+                        ctx.strokeStyle = '#5D3F24';
+                        ctx.lineWidth = 3;
+                        ctx.beginPath();
+                        for (let x = 0; x <= canvas.width; x += 10) {
+                            const y = 200 + Math.sin(x * 0.02) * 5;
+                            if (x === 0) ctx.moveTo(x, y);
+                            else ctx.lineTo(x, y);
+                        }
+                        ctx.stroke();
+
+                        // Nome cliente elegante
+                        ctx.fillStyle = '#5D3F24';
+                        ctx.font = 'bold 46px Georgia';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(`${customer.firstName} ${customer.lastName}`, canvas.width / 2, 280);
+
+                        // QR Code con cornice elegante
+                        const qrSize = 300;
+                        const qrX = canvas.width / 2 - qrSize / 2; // Centrato
+                        const qrY = 350; // Sotto il nome
+
+                        // Ombra QR
+                        ctx.shadowColor = 'rgba(0,0,0,0.2)';
+                        ctx.shadowBlur = 20;
+                        ctx.shadowOffsetX = 0;
+                        ctx.shadowOffsetY = 10;
+
+                        // Cornice marrone QR
+                        ctx.fillStyle = '#5D3F24'; // Marrone del logo
+                        ctx.fillRect(qrX - 15, qrY - 15, qrSize + 30, qrSize + 30);
+
+                        ctx.shadowColor = 'transparent';
+
+                        // Sfondo bianco QR
+                        ctx.fillStyle = '#ffffff';
+                        ctx.fillRect(qrX - 8, qrY - 8, qrSize + 16, qrSize + 16);
+
+                        // Disegna QR
+                        ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
+
+                        // Testo sotto QR
+                        ctx.fillStyle = '#5D3F24';
+                        ctx.font = 'italic 20px Georgia';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('Scansiona in negozio', qrX + qrSize / 2, qrY + qrSize + 40);
+
+                        // Footer elegante
+                        ctx.fillStyle = '#5D3F24';
+                        ctx.font = 'italic 22px Georgia';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('Grazie per la tua fedeltà!', canvas.width / 2, canvas.height - 30);
+
+                        // Converti canvas in PNG e scarica/condividi
+                        canvas.toBlob(async (blob) => {
+                            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+                            const fileName = `tessera-fidelity-${customer.lastName}-${customer.firstName}.png`;
+                            const currentStamps = customer.fidelity?.stamps || 0;
+
+                            const messageText =
+                                `🎉 Ciao ${customer.firstName}!\n\n` +
+                                `💳 Ti rimando la tua tessera fedeltà!\n\n` +
+                                `📊 Stato attuale: ${currentStamps}/${this.fidelityConfig.stampsPerReward || 10} bollini\n` +
+                                (customer.fidelity?.rewards > 0 ? `🎁 Hai ${customer.fidelity.rewards} premio/i da riscattare!\n\n` : '\n') +
+                                `📱 SALVA l'immagine sul telefono!\n\n` +
+                                `Pastificio Gramsci`;
+
+                            // Prova Web Share API su mobile (condivisione diretta con immagine allegata)
+                            if (isMobile && navigator.share && navigator.canShare) {
+                                try {
+                                    const file = new File([blob], fileName, { type: 'image/png' });
+
+                                    // Verifica se può condividere file
+                                    if (navigator.canShare({ files: [file] })) {
+                                        await navigator.share({
+                                            files: [file],
+                                            title: 'Tessera Fidelity',
+                                            text: messageText
+                                        });
+
+                                        this.showToast('✅ Tessera condivisa! Scegli WhatsApp per inviarla');
+                                        document.body.removeChild(qrContainer);
+                                        return;
+                                    }
+                                } catch (err) {
+                                    // Se l'utente annulla o c'è un errore, continua con il metodo di fallback
+                                    console.log('Condivisione annullata o non supportata:', err);
+                                }
+                            }
+
+                            // Fallback: Download + apertura WhatsApp (per desktop o se Web Share non funziona)
+                            const url = URL.createObjectURL(blob);
+
+                            // Crea link per download
+                            const link = document.createElement('a');
+                            link.href = url;
+                            link.download = fileName;
+                            link.style.display = 'none';
+                            document.body.appendChild(link);
+                            link.click();
+
+                            // Pulizia
+                            setTimeout(() => {
+                                document.body.removeChild(link);
+                                URL.revokeObjectURL(url);
+                            }, 100);
+
+                            this.showToast('✅ Tessera scaricata! Apertura WhatsApp...');
+
+                            // Apri WhatsApp dopo il download
+                            setTimeout(() => {
+                                if (customer.phone) {
+                                    const phone = customer.phone.replace(/[^0-9]/g, '');
+                                    const phoneFormatted = phone.startsWith('39') ? phone : '39' + phone;
+                                    const whatsappUrl = `https://wa.me/${phoneFormatted}?text=${encodeURIComponent(messageText)}`;
+                                    window.open(whatsappUrl, '_blank');
+                                } else {
+                                    this.showToast('⚠️ Numero di telefono mancante per aprire WhatsApp', 'warning');
+                                }
+                            }, 800);
+                        }, 'image/png', 1.0);
+
                         document.body.removeChild(qrContainer);
-                    }, 500);
+                    });
                 }
 
                 sendFidelityCardWhatsApp(customerId) {
@@ -4691,7 +4744,8 @@
                     qrContainer.style.display = 'none';
                     document.body.appendChild(qrContainer);
 
-                    new QRCode(qrContainer, {
+                    // Genera QR con callback per assicurarsi che sia pronto
+                    const qrCode = new QRCode(qrContainer, {
                         text: qrData,
                         width: 400,
                         height: 400,
@@ -4699,119 +4753,556 @@
                         colorLight: "#ffffff"
                     });
 
-                    setTimeout(() => {
-                        const qrImg = qrContainer.querySelector('img');
-                        if (qrImg) {
-                            const canvas = document.createElement('canvas');
-                            const ctx = canvas.getContext('2d');
+                    // Attendi che il QR sia effettivamente renderizzato
+                    const waitForQR = () => {
+                        return new Promise((resolve) => {
+                            const checkQR = () => {
+                                const qrImg = qrContainer.querySelector('img');
+                                if (qrImg && qrImg.complete && qrImg.naturalHeight !== 0) {
+                                    resolve(qrImg);
+                                } else {
+                                    setTimeout(checkQR, 100);
+                                }
+                            };
+                            checkQR();
+                        });
+                    };
 
-                            // Formato card elegante
-                            canvas.width = 1200;
-                            canvas.height = 750;
+                    waitForQR().then((qrImg) => {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
 
-                            // Gradiente elegante beige simile al logo
-                            const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-                            gradient.addColorStop(0, '#F8E3C4'); // Beige chiaro
-                            gradient.addColorStop(1, '#F2D4A4'); // Beige più caldo
-                            ctx.fillStyle = gradient;
-                            ctx.fillRect(0, 0, canvas.width, canvas.height);
+                        // Formato card elegante
+                        canvas.width = 1200;
+                        canvas.height = 750;
 
-                            // Texture leggera
-                            ctx.globalAlpha = 0.03;
-                            for (let i = 0; i < 2000; i++) {
-                                ctx.fillStyle = '#5D3F24'; // Marrone più scuro
-                                ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 2, 2);
-                            }
-                            ctx.globalAlpha = 1;
+                        // Gradiente elegante beige simile al logo
+                        const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+                        gradient.addColorStop(0, '#F8E3C4'); // Beige chiaro
+                        gradient.addColorStop(1, '#F2D4A4'); // Beige più caldo
+                        ctx.fillStyle = gradient;
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-                            // Intestazione Pastificio Gramsci (nome attività più evidente)
-                            ctx.fillStyle = '#5D3F24'; // Marrone del logo
-                            ctx.font = 'bold 60px Georgia';
-                            ctx.textAlign = 'center';
-                            ctx.fillText('PASTIFICIO GRAMSCI', canvas.width / 2, 100);
+                        // Texture leggera
+                        ctx.globalAlpha = 0.03;
+                        for (let i = 0; i < 2000; i++) {
+                            ctx.fillStyle = '#5D3F24'; // Marrone più scuro
+                            ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 2, 2);
+                        }
+                        ctx.globalAlpha = 1;
 
-                            // Sottotitolo
-                            ctx.font = 'italic 36px Georgia';
-                            ctx.fillStyle = '#5D3F24';
-                            ctx.fillText('TESSERA FEDELTÀ', canvas.width / 2, 160);
+                        // Intestazione Pastificio Gramsci (nome attività più evidente)
+                        ctx.fillStyle = '#5D3F24'; // Marrone del logo
+                        ctx.font = 'bold 60px Georgia';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('PASTIFICIO GRAMSCI', canvas.width / 2, 100);
 
-                            // Linea decorativa ondulata
-                            ctx.strokeStyle = '#5D3F24';
-                            ctx.lineWidth = 3;
-                            ctx.beginPath();
-                            for (let x = 0; x <= canvas.width; x += 10) {
-                                const y = 200 + Math.sin(x * 0.02) * 5;
-                                if (x === 0) ctx.moveTo(x, y);
-                                else ctx.lineTo(x, y);
-                            }
-                            ctx.stroke();
+                        // Sottotitolo
+                        ctx.font = 'italic 36px Georgia';
+                        ctx.fillStyle = '#5D3F24';
+                        ctx.fillText('TESSERA FEDELTÀ', canvas.width / 2, 160);
 
-                            // Nome cliente elegante
-                            ctx.fillStyle = '#5D3F24';
-                            ctx.font = 'bold 46px Georgia';
-                            ctx.textAlign = 'center';
-                            ctx.fillText(`${customer.firstName} ${customer.lastName}`, canvas.width / 2, 280);
+                        // Linea decorativa ondulata
+                        ctx.strokeStyle = '#5D3F24';
+                        ctx.lineWidth = 3;
+                        ctx.beginPath();
+                        for (let x = 0; x <= canvas.width; x += 10) {
+                            const y = 200 + Math.sin(x * 0.02) * 5;
+                            if (x === 0) ctx.moveTo(x, y);
+                            else ctx.lineTo(x, y);
+                        }
+                        ctx.stroke();
 
-                            // QR Code con cornice elegante
-                            const qrSize = 300;
-                            const qrX = canvas.width / 2 - qrSize / 2; // Centrato
-                            const qrY = 350; // Sotto il nome
+                        // Nome cliente elegante
+                        ctx.fillStyle = '#5D3F24';
+                        ctx.font = 'bold 46px Georgia';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(`${customer.firstName} ${customer.lastName}`, canvas.width / 2, 280);
 
-                            // Ombra QR
-                            ctx.shadowColor = 'rgba(0,0,0,0.2)';
-                            ctx.shadowBlur = 20;
-                            ctx.shadowOffsetX = 0;
-                            ctx.shadowOffsetY = 10;
+                        // QR Code con cornice elegante
+                        const qrSize = 300;
+                        const qrX = canvas.width / 2 - qrSize / 2; // Centrato
+                        const qrY = 350; // Sotto il nome
 
-                            // Cornice marrone QR
-                            ctx.fillStyle = '#5D3F24'; // Marrone del logo
-                            ctx.fillRect(qrX - 15, qrY - 15, qrSize + 30, qrSize + 30);
+                        // Ombra QR
+                        ctx.shadowColor = 'rgba(0,0,0,0.2)';
+                        ctx.shadowBlur = 20;
+                        ctx.shadowOffsetX = 0;
+                        ctx.shadowOffsetY = 10;
 
-                            ctx.shadowColor = 'transparent';
+                        // Cornice marrone QR
+                        ctx.fillStyle = '#5D3F24'; // Marrone del logo
+                        ctx.fillRect(qrX - 15, qrY - 15, qrSize + 30, qrSize + 30);
 
-                            // Sfondo bianco QR
-                            ctx.fillStyle = '#ffffff';
-                            ctx.fillRect(qrX - 8, qrY - 8, qrSize + 16, qrSize + 16);
+                        ctx.shadowColor = 'transparent';
 
-                            // Disegna QR
-                            ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
+                        // Sfondo bianco QR
+                        ctx.fillStyle = '#ffffff';
+                        ctx.fillRect(qrX - 8, qrY - 8, qrSize + 16, qrSize + 16);
 
-                            // Testo sotto QR
-                            ctx.fillStyle = '#5D3F24';
-                            ctx.font = 'italic 20px Georgia';
-                            ctx.textAlign = 'center';
-                            ctx.fillText('Scansiona in negozio', qrX + qrSize / 2, qrY + qrSize + 40);
+                        // Disegna QR
+                        ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
 
-                            // Footer elegante
-                            ctx.fillStyle = '#5D3F24';
-                            ctx.font = 'italic 22px Georgia';
-                            ctx.textAlign = 'center';
-                            ctx.fillText('Grazie per la tua fedeltà!', canvas.width / 2, canvas.height - 30);
+                        // Testo sotto QR
+                        ctx.fillStyle = '#5D3F24';
+                        ctx.font = 'italic 20px Georgia';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('Scansiona in negozio', qrX + qrSize / 2, qrY + qrSize + 40);
 
-                            // Esporta l'immagine come data URL
-                            const cardImageDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                        // Footer elegante
+                        ctx.fillStyle = '#5D3F24';
+                        ctx.font = 'italic 22px Georgia';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('Grazie per la tua fedeltà!', canvas.width / 2, canvas.height - 30);
 
-                            // Prepara il messaggio WhatsApp
-                            const phone = customer.phone.replace(/[^0-9]/g, '');
-                            const phoneFormatted = phone.startsWith('39') ? phone : '39' + phone;
-                            const currentStamps = customer.fidelity?.stamps || 0;
+                        // Esporta l'immagine come data URL
+                        const cardImageDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+
+                        // Prepara il messaggio WhatsApp
+                        const phone = customer.phone.replace(/[^0-9]/g, '');
+                        const phoneFormatted = phone.startsWith('39') ? phone : '39' + phone;
+                        const currentStamps = customer.fidelity?.stamps || 0;
+
+                        const messageText =
+                            `🎉 Ciao ${customer.firstName}! Benvenuto nel programma Fedeltà!\n\n` +
+                            `💳 Ecco la tua tessera digitale personale!\n\n` +
+                            `📊 Come funziona:\n` +
+                            `📍 Ogni ${this.fidelityConfig.eurosPerStamp || 20}€ = 1 bollino ✓\n` +
+                            `🏷️ Accumula ${this.fidelityConfig.stampsPerReward || 10} bollini = 1 PREMIO! 🎁\n\n` +
+                            `🎯 Stato attuale: ${currentStamps}/${this.fidelityConfig.stampsPerReward || 10} bollini\n` +
+                            (customer.fidelity?.rewards > 0 ? `🎁 Hai ${customer.fidelity.rewards} premio/i da riscattare!\n\n` : '\n') +
+                            `📱 SALVA QUESTA TESSERA sul telefono!\n\n` +
+                            `Grazie per la fiducia! 😊\n\nPastificio Gramsci`;
+
+                        // 🚀 SISTEMA AVANZATO DI AUTOMAZIONE COMPLETA
+                        this.advancedCardSender(cardImageDataUrl, messageText, phoneFormatted, customer);
+
+                        document.body.removeChild(qrContainer);
+                    });
+                }
+
+                // Genera immagine coupon con QR code
+                generateCouponImage(customerId, couponCode) {
+                    const customer = this.db.customers.find(c => c.id === customerId);
+                    if (!customer || !customer.coupons) return;
+
+                    const coupon = customer.coupons.find(c => c.code === couponCode);
+                    if (!coupon) {
+                        this.showToast('❌ Coupon non trovato', 'error');
+                        return;
+                    }
+
+                    // Dati per il QR code
+                    const qrData = JSON.stringify({
+                        type: 'coupon',
+                        couponCode: coupon.code,
+                        customerId: customer.id,
+                        customerName: `${customer.firstName} ${customer.lastName}`,
+                        campaignName: coupon.campaignName
+                    });
+
+                    const qrContainer = document.createElement('div');
+                    qrContainer.style.display = 'none';
+                    document.body.appendChild(qrContainer);
+
+                    // Genera QR con callback per assicurarsi che sia pronto
+                    const qrCode = new QRCode(qrContainer, {
+                        text: qrData,
+                        width: 400,
+                        height: 400,
+                        colorDark: "#6B21A8", // Viola scuro per coupon
+                        colorLight: "#ffffff"
+                    });
+
+                    // Attendi che il QR sia effettivamente renderizzato
+                    const waitForQR = () => {
+                        return new Promise((resolve) => {
+                            const checkQR = () => {
+                                const qrImg = qrContainer.querySelector('img');
+                                if (qrImg && qrImg.complete && qrImg.naturalHeight !== 0) {
+                                    resolve(qrImg);
+                                } else {
+                                    setTimeout(checkQR, 100);
+                                }
+                            };
+                            checkQR();
+                        });
+                    };
+
+                    waitForQR().then((qrImg) => {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+
+                        // Formato coupon (biglietto)
+                        canvas.width = 1200;
+                        canvas.height = 800;
+
+                        // Gradiente viola/rosa per coupon
+                        const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+                        gradient.addColorStop(0, '#FDF4FF'); // Rosa molto chiaro
+                        gradient.addColorStop(1, '#FAE8FF'); // Rosa chiaro
+                        ctx.fillStyle = gradient;
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                        // Texture leggera
+                        ctx.globalAlpha = 0.03;
+                        for (let i = 0; i < 2000; i++) {
+                            ctx.fillStyle = '#6B21A8'; // Viola
+                            ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 2, 2);
+                        }
+                        ctx.globalAlpha = 1;
+
+                        // Intestazione
+                        ctx.fillStyle = '#6B21A8'; // Viola
+                        ctx.font = 'bold 56px Georgia';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('PASTIFICIO GRAMSCI', canvas.width / 2, 90);
+
+                        // Badge sconto in alto a destra
+                        const discountText = coupon.discountType === 'percentage'
+                            ? `${coupon.discountValue}%`
+                            : `€${coupon.discountValue}`;
+
+                        ctx.fillStyle = '#C026D3'; // Rosa/viola
+                        ctx.beginPath();
+                        ctx.arc(1000, 100, 80, 0, Math.PI * 2);
+                        ctx.fill();
+
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = 'bold 48px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(discountText, 1000, 120);
+
+                        // Tipo coupon
+                        ctx.font = 'italic 32px Georgia';
+                        ctx.fillStyle = '#6B21A8';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('🎟️ COUPON SCONTO', canvas.width / 2, 150);
+
+                        // Linea decorativa
+                        ctx.strokeStyle = '#C026D3';
+                        ctx.lineWidth = 3;
+                        ctx.setLineDash([10, 5]);
+                        ctx.beginPath();
+                        ctx.moveTo(100, 180);
+                        ctx.lineTo(canvas.width - 100, 180);
+                        ctx.stroke();
+                        ctx.setLineDash([]);
+
+                        // Nome campagna
+                        ctx.fillStyle = '#6B21A8';
+                        ctx.font = 'bold 40px Georgia';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(coupon.campaignName, canvas.width / 2, 240);
+
+                        // Descrizione
+                        if (coupon.description) {
+                            ctx.font = 'italic 24px Georgia';
+                            ctx.fillStyle = '#7C3AED';
+                            ctx.fillText(coupon.description, canvas.width / 2, 280);
+                        }
+
+                        // Nome cliente
+                        ctx.fillStyle = '#6B21A8';
+                        ctx.font = 'bold 28px Georgia';
+                        ctx.fillText(`Cliente: ${customer.firstName} ${customer.lastName}`, canvas.width / 2, 330);
+
+                        // QR Code centrato
+                        const qrSize = 280;
+                        const qrX = canvas.width / 2 - qrSize / 2;
+                        const qrY = 370;
+
+                        // Ombra QR
+                        ctx.shadowColor = 'rgba(107, 33, 168, 0.3)';
+                        ctx.shadowBlur = 20;
+                        ctx.shadowOffsetX = 0;
+                        ctx.shadowOffsetY = 10;
+
+                        // Cornice viola QR
+                        ctx.fillStyle = '#6B21A8';
+                        ctx.fillRect(qrX - 15, qrY - 15, qrSize + 30, qrSize + 30);
+
+                        ctx.shadowColor = 'transparent';
+
+                        // Sfondo bianco QR
+                        ctx.fillStyle = '#ffffff';
+                        ctx.fillRect(qrX - 8, qrY - 8, qrSize + 16, qrSize + 16);
+
+                        // Disegna QR
+                        ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
+
+                        // Codice coupon sotto il QR
+                        ctx.fillStyle = '#6B21A8';
+                        ctx.font = 'bold 24px monospace';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(coupon.code, canvas.width / 2, qrY + qrSize + 40);
+
+                        // Scadenza
+                        const expiryText = coupon.expiryDate
+                            ? `Valido fino al ${new Date(coupon.expiryDate).toLocaleDateString('it-IT')}`
+                            : 'Senza scadenza';
+
+                        ctx.font = 'italic 20px Georgia';
+                        ctx.fillStyle = '#7C3AED';
+                        ctx.fillText(expiryText, canvas.width / 2, qrY + qrSize + 75);
+
+                        // Footer
+                        ctx.fillStyle = '#6B21A8';
+                        ctx.font = 'italic 22px Georgia';
+                        ctx.fillText('Mostra questo coupon in negozio!', canvas.width / 2, canvas.height - 30);
+
+                        // Converti canvas in PNG
+                        canvas.toBlob(async (blob) => {
+                            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+                            const fileName = `coupon-${coupon.code}.png`;
 
                             const messageText =
-                                `🎉 Ciao ${customer.firstName}! Benvenuto nel programma Fedeltà!\n\n` +
-                                `💳 Ecco la tua tessera digitale personale!\n\n` +
-                                `📊 Come funziona:\n` +
-                                `📍 Ogni ${this.fidelityConfig.eurosPerStamp || 20}€ = 1 bollino ✓\n` +
-                                `🏷️ Accumula ${this.fidelityConfig.stampsPerReward || 10} bollini = 1 PREMIO! 🎁\n\n` +
-                                `🎯 Stato attuale: ${currentStamps}/${this.fidelityConfig.stampsPerReward || 10} bollini\n` +
-                                (customer.fidelity?.rewards > 0 ? `🎁 Hai ${customer.fidelity.rewards} premio/i da riscattare!\n\n` : '\n') +
-                                `📱 SALVA QUESTA TESSERA sul telefono!\n\n` +
-                                `Grazie per la fiducia! 😊\n\nPastificio Gramsci`;
+                                `🎟️ Ciao ${customer.firstName}!\n\n` +
+                                `🎁 Hai ricevuto un COUPON SCONTO!\n\n` +
+                                `📋 Campagna: ${coupon.campaignName}\n` +
+                                `💰 Sconto: ${discountText}\n` +
+                                `📅 ${expiryText}\n\n` +
+                                `📱 SALVA l'immagine e mostrala in negozio!\n\n` +
+                                `Pastificio Gramsci`;
 
-                            // 🚀 SISTEMA AVANZATO DI AUTOMAZIONE COMPLETA
-                            this.advancedCardSender(cardImageDataUrl, messageText, phoneFormatted, customer);
-                        }
+                            // Prova Web Share API su mobile
+                            if (isMobile && navigator.share && navigator.canShare) {
+                                try {
+                                    const file = new File([blob], fileName, { type: 'image/png' });
+
+                                    if (navigator.canShare({ files: [file] })) {
+                                        await navigator.share({
+                                            files: [file],
+                                            title: 'Coupon Sconto',
+                                            text: messageText
+                                        });
+
+                                        this.showToast('✅ Coupon condiviso!');
+                                        document.body.removeChild(qrContainer);
+                                        return;
+                                    }
+                                } catch (err) {
+                                    console.log('Condivisione annullata:', err);
+                                }
+                            }
+
+                            // Fallback: Download
+                            const url = URL.createObjectURL(blob);
+                            const link = document.createElement('a');
+                            link.href = url;
+                            link.download = fileName;
+                            link.style.display = 'none';
+                            document.body.appendChild(link);
+                            link.click();
+
+                            setTimeout(() => {
+                                document.body.removeChild(link);
+                                URL.revokeObjectURL(url);
+                            }, 100);
+
+                            this.showToast('✅ Coupon scaricato!');
+                        }, 'image/png', 1.0);
+
                         document.body.removeChild(qrContainer);
-                    }, 500);
+                    });
+                }
+
+                // Invia coupon su WhatsApp
+                sendCouponWhatsApp(customerId, couponCode) {
+                    const customer = this.db.customers.find(c => c.id === customerId);
+                    if (!customer || !customer.phone) {
+                        this.showToast('❌ Cliente senza numero di telefono', 'error');
+                        return;
+                    }
+
+                    const coupon = customer.coupons?.find(c => c.code === couponCode);
+                    if (!coupon) {
+                        this.showToast('❌ Coupon non trovato', 'error');
+                        return;
+                    }
+
+                    // Dati per il QR code
+                    const qrData = JSON.stringify({
+                        type: 'coupon',
+                        couponCode: coupon.code,
+                        customerId: customer.id,
+                        customerName: `${customer.firstName} ${customer.lastName}`,
+                        campaignName: coupon.campaignName
+                    });
+
+                    const qrContainer = document.createElement('div');
+                    qrContainer.style.display = 'none';
+                    document.body.appendChild(qrContainer);
+
+                    // Genera QR con callback
+                    const qrCode = new QRCode(qrContainer, {
+                        text: qrData,
+                        width: 400,
+                        height: 400,
+                        colorDark: "#6B21A8",
+                        colorLight: "#ffffff"
+                    });
+
+                    // Attendi che il QR sia pronto
+                    const waitForQR = () => {
+                        return new Promise((resolve) => {
+                            const checkQR = () => {
+                                const qrImg = qrContainer.querySelector('img');
+                                if (qrImg && qrImg.complete && qrImg.naturalHeight !== 0) {
+                                    resolve(qrImg);
+                                } else {
+                                    setTimeout(checkQR, 100);
+                                }
+                            };
+                            checkQR();
+                        });
+                    };
+
+                    waitForQR().then((qrImg) => {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+
+                        // [Stesso codice del canvas di generateCouponImage]
+                        canvas.width = 1200;
+                        canvas.height = 800;
+
+                        const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+                        gradient.addColorStop(0, '#FDF4FF');
+                        gradient.addColorStop(1, '#FAE8FF');
+                        ctx.fillStyle = gradient;
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                        ctx.globalAlpha = 0.03;
+                        for (let i = 0; i < 2000; i++) {
+                            ctx.fillStyle = '#6B21A8';
+                            ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 2, 2);
+                        }
+                        ctx.globalAlpha = 1;
+
+                        ctx.fillStyle = '#6B21A8';
+                        ctx.font = 'bold 56px Georgia';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('PASTIFICIO GRAMSCI', canvas.width / 2, 90);
+
+                        const discountText = coupon.discountType === 'percentage'
+                            ? `${coupon.discountValue}%`
+                            : `€${coupon.discountValue}`;
+
+                        ctx.fillStyle = '#C026D3';
+                        ctx.beginPath();
+                        ctx.arc(1000, 100, 80, 0, Math.PI * 2);
+                        ctx.fill();
+
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = 'bold 48px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(discountText, 1000, 120);
+
+                        ctx.font = 'italic 32px Georgia';
+                        ctx.fillStyle = '#6B21A8';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('🎟️ COUPON SCONTO', canvas.width / 2, 150);
+
+                        ctx.strokeStyle = '#C026D3';
+                        ctx.lineWidth = 3;
+                        ctx.setLineDash([10, 5]);
+                        ctx.beginPath();
+                        ctx.moveTo(100, 180);
+                        ctx.lineTo(canvas.width - 100, 180);
+                        ctx.stroke();
+                        ctx.setLineDash([]);
+
+                        ctx.fillStyle = '#6B21A8';
+                        ctx.font = 'bold 40px Georgia';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(coupon.campaignName, canvas.width / 2, 240);
+
+                        if (coupon.description) {
+                            ctx.font = 'italic 24px Georgia';
+                            ctx.fillStyle = '#7C3AED';
+                            ctx.fillText(coupon.description, canvas.width / 2, 280);
+                        }
+
+                        ctx.fillStyle = '#6B21A8';
+                        ctx.font = 'bold 28px Georgia';
+                        ctx.fillText(`Cliente: ${customer.firstName} ${customer.lastName}`, canvas.width / 2, 330);
+
+                        const qrSize = 280;
+                        const qrX = canvas.width / 2 - qrSize / 2;
+                        const qrY = 370;
+
+                        ctx.shadowColor = 'rgba(107, 33, 168, 0.3)';
+                        ctx.shadowBlur = 20;
+                        ctx.shadowOffsetX = 0;
+                        ctx.shadowOffsetY = 10;
+
+                        ctx.fillStyle = '#6B21A8';
+                        ctx.fillRect(qrX - 15, qrY - 15, qrSize + 30, qrSize + 30);
+
+                        ctx.shadowColor = 'transparent';
+
+                        ctx.fillStyle = '#ffffff';
+                        ctx.fillRect(qrX - 8, qrY - 8, qrSize + 16, qrSize + 16);
+
+                        ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
+
+                        ctx.fillStyle = '#6B21A8';
+                        ctx.font = 'bold 24px monospace';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(coupon.code, canvas.width / 2, qrY + qrSize + 40);
+
+                        const expiryText = coupon.expiryDate
+                            ? `Valido fino al ${new Date(coupon.expiryDate).toLocaleDateString('it-IT')}`
+                            : 'Senza scadenza';
+
+                        ctx.font = 'italic 20px Georgia';
+                        ctx.fillStyle = '#7C3AED';
+                        ctx.fillText(expiryText, canvas.width / 2, qrY + qrSize + 75);
+
+                        ctx.fillStyle = '#6B21A8';
+                        ctx.font = 'italic 22px Georgia';
+                        ctx.fillText('Mostra questo coupon in negozio!', canvas.width / 2, canvas.height - 30);
+
+                        // Converti e invia su WhatsApp
+                        canvas.toBlob(async (blob) => {
+                            const url = URL.createObjectURL(blob);
+                            const fileName = `coupon-${coupon.code}.png`;
+
+                            // Download
+                            const link = document.createElement('a');
+                            link.href = url;
+                            link.download = fileName;
+                            link.style.display = 'none';
+                            document.body.appendChild(link);
+                            link.click();
+
+                            setTimeout(() => {
+                                document.body.removeChild(link);
+                                URL.revokeObjectURL(url);
+                            }, 100);
+
+                            // Messaggio WhatsApp
+                            const messageText =
+                                `🎟️ Ciao ${customer.firstName}!\n\n` +
+                                `🎁 Hai ricevuto un COUPON SCONTO!\n\n` +
+                                `📋 ${coupon.campaignName}\n` +
+                                `💰 Sconto: ${discountText}\n` +
+                                `📅 ${expiryText}\n\n` +
+                                `📱 SALVA l'immagine e mostrala in negozio per ottenere lo sconto!\n\n` +
+                                `Pastificio Gramsci`;
+
+                            this.showToast('✅ Coupon scaricato! Apertura WhatsApp...');
+
+                            setTimeout(() => {
+                                const phone = customer.phone.replace(/[^0-9]/g, '');
+                                const phoneFormatted = phone.startsWith('39') ? phone : '39' + phone;
+                                const whatsappUrl = `https://wa.me/${phoneFormatted}?text=${encodeURIComponent(messageText)}`;
+                                window.open(whatsappUrl, '_blank');
+                            }, 800);
+                        }, 'image/png', 1.0);
+
+                        document.body.removeChild(qrContainer);
+                    });
                 }
 
                 async advancedCardSender(imageDataUrl, messageText, phoneFormatted, customer) {
@@ -5683,6 +6174,27 @@
                     }
                 }
 
+                batchRender(components) {
+                    // 🔒 SAFE: Durante editing/modal/sync, render IMMEDIATO (no ottimizzazione)
+                    if (this.editingFidelity || this.modalOpen || this.syncInProgress) {
+                        if (components.includes('dashboard')) this.renderDashboard();
+                        if (components.includes('fidelity')) this.renderFidelityDashboard();
+                        if (components.includes('customers')) this.renderFidelityCustomers();
+                        if (components.includes('orders')) this.renderOrders();
+                        console.log('🔒 Render immediato (lock attivo - data safe)');
+                        return;
+                    }
+
+                    // ⚡ Altrimenti ottimizza con requestAnimationFrame
+                    requestAnimationFrame(() => {
+                        if (components.includes('dashboard')) this.renderDashboard();
+                        if (components.includes('fidelity')) this.renderFidelityDashboard();
+                        if (components.includes('customers')) this.renderFidelityCustomers();
+                        if (components.includes('orders')) this.renderOrders();
+                        console.log('⚡ Render ottimizzato (nessun lock attivo)');
+                    });
+                }
+
                 generateId() { return Date.now().toString(36) + Math.random().toString(36).substr(2); }
                 formatPrice(price) { return parseFloat(price || 0).toFixed(2).replace('.', ',') + ' €'; }
                 formatDate(dateStr) { if (!dateStr) return ''; const d = new Date(dateStr + 'T00:00:00'); return d.toLocaleDateString('it-IT'); }
@@ -5775,12 +6287,24 @@
                             prepDateFilter.value = tomorrow.toISOString().split('T')[0];
                         }
 
-                        // ✅ Mostra anche ordini "da modificare"
                         if (prepStatusFilter) {
-                            prepStatusFilter.value = ''; // Mostra tutti gli stati
+                            prepStatusFilter.value = '';
                         }
 
                         this.renderPreparation();
+                    }
+
+                    // Aggiorna modifiche quando si apre
+                    if (tabName === 'modifiche') {
+                        const modDateFilter = document.getElementById('mod-date-filter');
+
+                        if (modDateFilter) {
+                            const tomorrow = new Date();
+                            tomorrow.setDate(tomorrow.getDate() + 1);
+                            modDateFilter.value = tomorrow.toISOString().split('T')[0];
+                        }
+
+                        this.renderModifications();
                     }
 
                     // Aggiorna fidelity quando si apre
@@ -5791,12 +6315,32 @@
 
                 openModal(modalId) {
                     this.modalOpen = true;
-                    document.getElementById(modalId).classList.add('open');
+                    const modal = document.getElementById(modalId);
+                    modal.classList.add('open');
+
+                    // 🔧 FIX MOBILE: Blocca scroll body
+                    this._scrollPosition = window.scrollY;
+                    document.body.style.overflow = 'hidden';
+                    document.body.style.position = 'fixed';
+                    document.body.style.width = '100%';
+                    document.body.style.top = `-${this._scrollPosition}px`;
                 }
 
                 closeModal(modalId) {
                     this.modalOpen = false;
-                    document.getElementById(modalId).classList.remove('open');
+                    const modal = document.getElementById(modalId);
+                    modal.classList.remove('open');
+
+                    // 🔧 FIX MOBILE: Ripristina scroll
+                    document.body.style.overflow = '';
+                    document.body.style.position = '';
+                    document.body.style.width = '';
+                    document.body.style.top = '';
+
+                    if (this._scrollPosition !== undefined) {
+                        window.scrollTo(0, this._scrollPosition);
+                        this._scrollPosition = undefined;
+                    }
                 }
 
                 // CATEGORIE
@@ -6864,108 +7408,88 @@
                                 if (hadPreparedItems) {
                                     existingOrder.preparedItems.forEach(preparedIndex => {
                                         const oldItem = oldItems[preparedIndex];
-                                        const newItem = newItems[preparedIndex];
 
-                                        if (newItem && oldItem) {
-                                            if (newItem.productId === oldItem.productId) {
-                                                // ✅ STESSO PRODOTTO: controlla modifiche quantità/peso
-                                                const qtyChanged = newItem.qty !== oldItem.qty;
+                                        if (!oldItem) return; // Skip se l'indice non esiste più
 
-                                                // Controlla peso SOLO se NON è calcolato automaticamente
-                                                let weightChanged = false;
-                                                if (newItem.weight && oldItem.weight) {
-                                                    if (!newItem.calculatedFromAverage && !oldItem.calculatedFromAverage) {
-                                                        weightChanged = newItem.weight !== oldItem.weight;
-                                                    }
-                                                }
+                                        // 🔧 FIX: Trova il prodotto nel nuovo ordine per productId, non per indice
+                                        const newItemIndex = newItems.findIndex(item => item.productId === oldItem.productId);
+                                        const newItem = newItemIndex >= 0 ? newItems[newItemIndex] : null;
 
-                                                if (qtyChanged || weightChanged) {
-                                                    // ⚠️ MODIFICATO: Quantità o peso cambiato
-                                                    if (wasCompleted || hadPreparedItems) {
-                                                        const diff = newItem.qty - oldItem.qty;
-                                                        const action = diff > 0 ? 'aggiungere' : 'togliere';
-                                                        const absDiff = Math.abs(diff);
+                                        if (newItem) {
+                                            // ✅ PRODOTTO ESISTE ANCORA: controlla modifiche quantità/peso
+                                            const qtyChanged = newItem.qty !== oldItem.qty;
 
-                                                        pendingModifications.push({
-                                                            index: preparedIndex,
-                                                            productName: newItem.productName,
-                                                            action: action,
-                                                            oldQty: oldItem.qty,
-                                                            newQty: newItem.qty,
-                                                            diff: absDiff,
-                                                            unit: newItem.unit,
-                                                            description: `${action === 'aggiungere' ? '➕' : '➖'} ${action} ${absDiff} ${newItem.unit} di ${newItem.productName}`
-                                                        });
-
-                                                        console.log(`⚠️ MODIFICA: ${newItem.productName} da ${oldItem.qty} a ${newItem.qty} ${newItem.unit}`);
-                                                    }
-                                                } else {
-                                                    // Nessuna modifica, mantieni come preparato
-                                                    validPreparedItems.push(preparedIndex);
-                                                }
-                                            } else {
-                                                // ⚠️ PRODOTTO SOSTITUITO (productId diverso)
-                                                if (wasCompleted || hadPreparedItems) {
-                                                    // Prima rimuovi il vecchio
-                                                    pendingModifications.push({
-                                                        index: preparedIndex,
-                                                        productName: oldItem.productName,
-                                                        action: 'rimuovere',
-                                                        oldQty: oldItem.qty,
-                                                        unit: oldItem.unit,
-                                                        description: `➖ Rimuovere ${oldItem.productName} (${oldItem.qty} ${oldItem.unit})`
-                                                    });
-
-                                                    // Poi aggiungi il nuovo
-                                                    pendingModifications.push({
-                                                        index: preparedIndex,
-                                                        productName: newItem.productName,
-                                                        action: 'aggiungere',
-                                                        newQty: newItem.qty,
-                                                        unit: newItem.unit,
-                                                        description: `➕ Aggiungere ${newItem.productName} (${newItem.qty} ${newItem.unit})`
-                                                    });
-
-                                                    console.log(`⚠️ SOSTITUZIONE: ${oldItem.productName} → ${newItem.productName}`);
+                                            // Controlla peso SOLO se NON è calcolato automaticamente
+                                            let weightChanged = false;
+                                            if (newItem.weight && oldItem.weight) {
+                                                if (!newItem.calculatedFromAverage && !oldItem.calculatedFromAverage) {
+                                                    weightChanged = newItem.weight !== oldItem.weight;
                                                 }
                                             }
-                                        } else if (!newItem && oldItem) {
-                                            // ⚠️ PRODOTTO RIMOSSO (l'item non esiste più)
+
+                                            if (qtyChanged || weightChanged) {
+                                                // ⚠️ MODIFICATO: Quantità o peso cambiato
+                                                if (wasCompleted || hadPreparedItems) {
+                                                    const diff = newItem.qty - oldItem.qty;
+                                                    const action = diff > 0 ? 'aggiungere' : 'togliere';
+                                                    const absDiff = Math.abs(diff);
+
+                                                    pendingModifications.push({
+                                                        index: newItemIndex, // 🔧 USA IL NUOVO INDICE
+                                                        productName: newItem.productName,
+                                                        action: action,
+                                                        oldQty: oldItem.qty,
+                                                        newQty: newItem.qty,
+                                                        diff: absDiff,
+                                                        unit: newItem.unit,
+                                                        description: `${action === 'aggiungere' ? '➕' : '➖'} ${action} ${absDiff} ${newItem.unit} di ${newItem.productName}`
+                                                    });
+
+                                                    console.log(`⚠️ MODIFICA: ${newItem.productName} da ${oldItem.qty} a ${newItem.qty} ${newItem.unit}`);
+                                                }
+                                            } else {
+                                                // Nessuna modifica, mantieni come preparato con NUOVO INDICE
+                                                validPreparedItems.push(newItemIndex);
+                                            }
+                                        } else {
+                                            // ⚠️ PRODOTTO RIMOSSO (non esiste più nell'ordine)
                                             if (wasCompleted || hadPreparedItems) {
+                                                // 🔧 Usa un ID univoco negativo per rimozioni (non indice)
                                                 pendingModifications.push({
-                                                    index: preparedIndex,
+                                                    index: preparedIndex, // Mantieni vecchio indice per riferimento
                                                     productName: oldItem.productName,
                                                     action: 'rimuovere',
                                                     oldQty: oldItem.qty,
                                                     unit: oldItem.unit,
-                                                    description: `➖ Rimuovere ${oldItem.productName} (${oldItem.qty} ${oldItem.unit})`
+                                                    description: `➖ Rimuovere ${oldItem.productName} (${oldItem.qty} ${oldItem.unit})`,
+                                                    _removedProductId: oldItem.productId // Flag per identificare rimozioni
                                                 });
 
                                                 console.log(`⚠️ RIMOZIONE: ${oldItem.productName} eliminato dall'ordine`);
                                             }
                                         }
-
                                     });
                                 }
 
-                                // ✅ STEP 2: Controlla prodotti aggiunti DOPO quelli già esistenti
-                                if (newItems.length > oldItems.length) {
-                                    for (let index = oldItems.length; index < newItems.length; index++) {
-                                        const newItem = newItems[index];
-                                        if (wasCompleted || hadPreparedItems) {
-                                            pendingModifications.push({
-                                                index: index,
-                                                productName: newItem.productName,
-                                                action: 'aggiungere',
-                                                newQty: newItem.qty,
-                                                unit: newItem.unit,
-                                                description: `➕ Aggiungere ${newItem.productName} (${newItem.qty} ${newItem.unit})`
-                                            });
+                                // ✅ STEP 2: Controlla prodotti NUOVI aggiunti
+                                newItems.forEach((newItem, newIndex) => {
+                                    // Cerca se questo prodotto esisteva nel vecchio ordine
+                                    const existedBefore = oldItems.some(oldItem => oldItem.productId === newItem.productId);
 
-                                            console.log(`⚠️ NUOVO: ${newItem.productName} aggiunto all'ordine`);
-                                        }
+                                    if (!existedBefore && (wasCompleted || hadPreparedItems)) {
+                                        // Prodotto completamente nuovo
+                                        pendingModifications.push({
+                                            index: newIndex,
+                                            productName: newItem.productName,
+                                            action: 'aggiungere',
+                                            newQty: newItem.qty,
+                                            unit: newItem.unit,
+                                            description: `➕ Aggiungere ${newItem.productName} (${newItem.qty} ${newItem.unit})`
+                                        });
+
+                                        console.log(`⚠️ NUOVO: ${newItem.productName} aggiunto all'ordine`);
                                     }
-                                }
+                                });
 
                                 // ✅ STEP 4: Aggiorna ordine con modifiche
                                 order.preparedItems = validPreparedItems;
@@ -7476,9 +8000,7 @@
                     await this.syncToDropbox(true); // ✅ AGGIUNTO await
                     this.filteredOrders = null;
                     this.render();
-                    this.renderDashboard();
-                    this.renderFidelityDashboard(); // ✅ Aggiorna anche fidelity
-                    this.renderFidelityCustomers(); // ✅ Aggiorna lista clienti fidelity
+                    this.batchRender(['dashboard', 'fidelity', 'customers']);
                     this.closeModal('confirm-modal');
                     this.pendingDelete = null;
                 }
@@ -7537,9 +8059,7 @@
                     this.saveData();
                     this.syncToDropbox();
                     this.render();
-                    this.renderDashboard();
-                    this.renderFidelityDashboard();
-                    this.renderFidelityCustomers();
+                    this.batchRender(['dashboard', 'fidelity', 'customers']);
                     this.showToast('✅ Tutti i dati fidelity sono stati azzerati (ordini preservati)', 'success');
                 }
 
@@ -8153,8 +8673,7 @@
                         this.saveData();
                         await this.syncToDropbox(true);
 
-                        this.renderFidelityDashboard();
-                        this.renderFidelityCustomers();
+                        this.batchRender(['fidelity', 'customers']);
 
                         this.showToast(`✅ +${stampsToAdd} bollini aggiunti a ${customer.firstName}!`, 'success');
 
@@ -8265,8 +8784,7 @@
                             this.openCustomerFidelityModal(customerId);
                         }
 
-                        this.renderFidelityDashboard();
-                        this.renderFidelityCustomers();
+                        this.batchRender(['fidelity', 'customers']);
                         this.showToast(`✅ Premio riscattato per ${customer.firstName}!`);
 
                         console.log('🎁 Premio riscattato! Invio notifica WhatsApp automatica...');
@@ -8605,22 +9123,49 @@
                 }
 
                 // Scanner QR Fidelity
-                openFidelityQRScanner() {
+                async openFidelityQRScanner() {
                     const modal = document.getElementById('fidelity-qr-scanner-modal');
                     const video = document.getElementById('fidelity-qr-video');
 
                     modal.classList.remove('hidden');
                     modal.classList.add('flex');
 
-                    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-                        .then(stream => {
-                            video.srcObject = stream;
-                            this.scanFidelityQRCode(video);
-                        })
-                        .catch(err => {
-                            this.showToast('❌ Impossibile accedere alla fotocamera', 'error');
-                            this.closeFidelityQRScanner();
+                    try {
+                        const constraints = {
+                            video: {
+                                facingMode: 'environment',
+                                width: { ideal: 1280, max: 1920 },
+                                height: { ideal: 720, max: 1080 },
+                                frameRate: { ideal: 30, max: 30 }
+                            }
+                        };
+
+                        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                        video.srcObject = stream;
+
+                        await new Promise(resolve => {
+                            video.onloadedmetadata = resolve;
                         });
+                        await video.play();
+
+                        this.scanFidelityQRCode(video);
+
+                    } catch (err) {
+                        console.error('📷 Camera error:', err);
+
+                        let message = '❌ Impossibile accedere alla fotocamera';
+
+                        if (err.name === 'NotAllowedError') {
+                            message = '📷 Permesso camera negato. Abilita nelle impostazioni.';
+                        } else if (err.name === 'NotFoundError') {
+                            message = '📷 Nessuna fotocamera trovata.';
+                        } else if (err.name === 'NotReadableError') {
+                            message = '📷 Fotocamera già in uso.';
+                        }
+
+                        this.showToast(message, 'error');
+                        this.closeFidelityQRScanner();
+                    }
                 }
 
                 closeFidelityQRScanner() {
@@ -9262,20 +9807,31 @@
                                     : `€${coupon.discountValue}`;
 
                                 return `
-                    <div class="bg-pink-50 border border-pink-200 rounded-lg p-3 mb-2">
-                        <div class="flex justify-between items-start">
-                            <div class="flex-1">
-                                <p class="font-bold text-gray-800">${coupon.campaignName}</p>
-                                <p class="text-sm text-gray-600">${coupon.description || ''}</p>
-                                <p class="text-xs text-gray-500 mt-1">Codice: <span class="font-mono font-bold">${coupon.code}</span></p>
-                            </div>
-                            <div class="bg-pink-600 text-white px-3 py-1 rounded-full text-sm font-bold">
-                                ${discountText}
-                            </div>
-                        </div>
-                        <p class="text-xs text-gray-500 mt-2">📅 Scadenza: ${expiryDate}</p>
-                    </div>
-                `;
+                                    <div class="bg-pink-50 border border-pink-200 rounded-lg p-3 mb-2">
+                                        <div class="flex justify-between items-start mb-2">
+                                            <div class="flex-1">
+                                                <p class="font-bold text-gray-800">${coupon.campaignName}</p>
+                                                <p class="text-sm text-gray-600">${coupon.description || ''}</p>
+                                                <p class="text-xs text-gray-500 mt-1">Codice: <span class="font-mono font-bold">${coupon.code}</span></p>
+                                            </div>
+                                            <div class="bg-pink-600 text-white px-3 py-1 rounded-full text-sm font-bold">
+                                                ${discountText}
+                                            </div>
+                                        </div>
+                                        <p class="text-xs text-gray-500 mb-2">📅 Scadenza: ${expiryDate}</p>
+        
+                                        <div class="grid grid-cols-2 gap-2 mt-2">
+                                                <button onclick="app.generateCouponImage('${customer.id}', '${coupon.code}')" 
+                                                        class="bg-purple-600 text-white py-2 px-3 rounded-lg hover:bg-purple-700 text-sm font-medium">
+                                                    📥 Scarica PNG
+                                                </button>
+                                                <button onclick="app.sendCouponWhatsApp('${customer.id}', '${coupon.code}')" 
+                                                        class="bg-green-600 text-white py-2 px-3 rounded-lg hover:bg-green-700 text-sm font-medium">
+                                                    📱 Invia WhatsApp
+                                                </button>
+                                            </div>
+                                        </div>
+                                    `;
                             }).join('');
 
                             return `
@@ -9805,8 +10361,11 @@
 
                     // ✅ Filtra per stato in base alla selezione
                     if (statusFilter === 'notcompleted') {
-                        // Solo da preparare (default)
-                        ordersToShow = ordersToShow.filter(o => o.prepStatus === 'da preparare');
+                        // Solo da preparare E senza modifiche pendenti
+                        ordersToShow = ordersToShow.filter(o =>
+                            o.prepStatus === 'da preparare' &&
+                            (!o.pendingModifications || o.pendingModifications.length === 0)
+                        );
                     } else if (statusFilter === 'tomodify') {
                         // ⚠️ Solo da modificare
                         ordersToShow = ordersToShow.filter(o => o.prepStatus === 'da modificare');
@@ -9821,10 +10380,10 @@
                             o.prepStatus === 'completato'
                         );
                     } else {
-                        // Default: mostra da preparare E da modificare
+                        // Default: mostra solo da preparare SENZA modifiche
                         ordersToShow = ordersToShow.filter(o =>
-                            o.prepStatus === 'da preparare' ||
-                            o.prepStatus === 'da modificare'
+                            o.prepStatus === 'da preparare' &&
+                            (!o.pendingModifications || o.pendingModifications.length === 0)
                         );
                     }
 
@@ -9860,8 +10419,9 @@
                                 );
                             }
 
-                            // ✅ isPrepared è TRUE solo se NON c'è una modifica di aggiunta
-                            const isPrepared = modification ? false : (order.preparedItems && order.preparedItems.includes(index));
+                            // ✅ FIX: isPrepared è FALSE se c'è una modifica pendente di AGGIUNTA
+                            const hasPendingAddition = modification && modification.action === 'aggiungere';
+                            const isPrepared = hasPendingAddition ? false : (order.preparedItems && order.preparedItems.includes(index));
 
                             productGroups[key].orders.push({
                                 orderId: order.id,
@@ -9933,11 +10493,12 @@
                         const progress = (preparedCount / totalOrders) * 100;
 
                         return `
-<div class="bg-white rounded-lg shadow-lg overflow-hidden ${allPrepared && !group.isRemovalOnly ? 'opacity-60' : ''}">
-    <div class="bg-gradient-to-r ${group.isRemovalOnly ? 'from-red-500 to-red-600' : allPrepared ? 'from-green-500 to-green-600' : 'from-orange-500 to-red-500'} text-white p-4">
+<div class="bg-white rounded-lg shadow-lg overflow-hidden ${allPrepared && !group.isRemovalOnly ? 'opacity-60' : ''} mb-4">
+    <!-- Header Prodotto -->
+    <div class="bg-gradient-to-r ${group.isRemovalOnly ? 'from-red-500 to-red-600' : allPrepared ? 'from-green-500 to-green-600' : 'from-orange-500 to-red-500'} text-white p-3">
         <div class="flex justify-between items-center">
             <div>
-                <h3 class="text-xl font-bold">
+                <h3 class="text-lg font-bold">
                     ${group.isRemovalOnly ? '🗑️' : allPrepared ? '✅' : '📦'} ${group.productName}
                     ${group.isRemovalOnly ? ' (DA RIMUOVERE)' : ''}
                 </h3>
@@ -9946,134 +10507,297 @@
                 </p>
             </div>
             <div class="text-right">
-                <div class="text-2xl font-bold">${preparedCount}/${totalOrders}</div>
+                <div class="text-xl font-bold">${preparedCount}/${totalOrders}</div>
                 <div class="text-xs opacity-90">preparati</div>
             </div>
         </div>
-        <div class="mt-3 h-2 bg-white bg-opacity-30 rounded-full overflow-hidden">
+        <div class="mt-2 h-2 bg-white bg-opacity-30 rounded-full overflow-hidden">
             <div class="h-full bg-white transition-all duration-300" style="width: ${progress}%"></div>
         </div>
     </div>
-            
-            <div class="p-4">
-                <div class="flex justify-between items-center mb-3">
-                    <span class="text-sm font-medium text-gray-700">Dettaglio ordini:</span>
-                    ${!allPrepared ? `<button data-product-name="${group.productName}" data-date-filter="${dateFilter}" onclick="app.markAllProductPrepared(this.dataset.productName, this.dataset.dateFilter)" 
-                        class="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 font-medium">
-                        ✓ Segna tutti
-                    </button>` : ''}
-                </div>
-                
-                <div class="space-y-2 max-h-96 overflow-y-auto">
-    ${group.orders.map(order => {
-                            // ✅ Determina il tipo di modifica
+    
+    <div class="p-3">
+        <div class="flex justify-between items-center mb-3">
+            <span class="text-sm font-medium text-gray-700">Dettaglio ordini:</span>
+            ${!allPrepared ? `<button data-product-name="${group.productName}" data-date-filter="${dateFilter}" onclick="app.markAllProductPrepared(this.dataset.productName, this.dataset.dateFilter)" 
+                class="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 font-medium">
+                ✓ Segna tutti
+            </button>` : ''}
+        </div>
+        
+        <!-- 🖥️ DESKTOP/TABLET: Tabella -->
+        <div class="hidden md:block overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="bg-gray-100 text-xs uppercase text-gray-600">
+                    <tr>
+                        <th class="px-3 py-2 text-left">Ordine</th>
+                        <th class="px-3 py-2 text-left">Cliente</th>
+                        <th class="px-3 py-2 text-center">Quantità</th>
+                        <th class="px-3 py-2 text-center hidden lg:table-cell">Stato</th>
+                        <th class="px-3 py-2 text-right">Azione</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y">
+                    ${group.orders.map(order => {
                             const hasMod = order.modification;
                             const isAddition = hasMod && hasMod.action === 'aggiungere';
                             const isRemoval = hasMod && hasMod.action === 'rimuovere';
-                            const isModification = hasMod && (hasMod.action === 'aggiungere' || hasMod.action === 'togliere');
 
-                            // ✅ Colori in base al tipo
-                            let bgColor = 'bg-white border-gray-200';
-                            let borderColor = 'border-2';
+                            let rowBg = 'hover:bg-gray-50';
+                            let borderClass = '';
 
                             if (order.isPrepared) {
-                                bgColor = 'bg-green-50 border-green-200';
+                                rowBg = 'bg-green-50 hover:bg-green-100';
                             } else if (isRemoval) {
-                                bgColor = 'bg-red-50 border-red-500';
-                                borderColor = 'border-4';
-                            } else if (isAddition || isModification) {
-                                bgColor = 'bg-orange-50 border-orange-500';
-                                borderColor = 'border-4';
+                                rowBg = 'bg-red-50 hover:bg-red-100';
+                                borderClass = 'border-l-4 border-red-500';
+                            } else if (isAddition) {
+                                rowBg = 'bg-orange-50 hover:bg-orange-100';
+                                borderClass = 'border-l-4 border-orange-500';
                             }
 
                             return `
-            <div class="flex items-center gap-3 p-4 rounded-lg ${borderColor} ${bgColor} hover:shadow-md transition-all duration-200 ${isRemoval || isAddition || isModification ? 'ring-2 ring-offset-2' : ''} ${isRemoval ? 'ring-red-300' : isAddition || isModification ? 'ring-orange-300' : ''}">
-                ${!isRemoval ? `
-                    <input type="checkbox" 
-                        ${order.isPrepared ? 'checked' : ''} 
-                        onchange="app.toggleItemPrepared('${order.orderId}', ${order.itemIndex})"
-                        class="h-6 w-6 text-green-600 rounded border-gray-300 focus:ring-green-500 flex-shrink-0">
-                ` : `
-                    <div class="h-6 w-6 flex items-center justify-center flex-shrink-0">
-                        <span class="text-2xl">🗑️</span>
-                    </div>
-                `}
-                <div class="flex-1 min-w-0">
-                    <!-- Riga 1: Numero ordine GRANDE + eventuale badge modifica -->
-                    <div class="flex items-center gap-3 mb-2">
-                        <span class="inline-flex items-center justify-center bg-gradient-to-br ${isRemoval ? 'from-red-600 to-red-700' : isAddition || isModification ? 'from-orange-600 to-orange-700' : 'from-blue-600 to-blue-700'} text-white text-xl font-black px-4 py-2 rounded-xl shadow-lg border-2 ${isRemoval ? 'border-red-500' : isAddition || isModification ? 'border-orange-500' : 'border-blue-500'}">
-                            #${order.orderNumber}
-                        </span>
-                        <span class="font-medium text-gray-600 text-sm truncate">
-                            ${order.customerName}
-                        </span>
-                        ${hasMod ? `
-                            <span class="ml-auto inline-flex items-center bg-gradient-to-r ${isRemoval ? 'from-red-600 to-red-700' : 'from-orange-600 to-orange-700'} text-white font-black px-3 py-1.5 rounded-lg shadow-md text-xs uppercase animate-pulse">
-                                ${isRemoval ? '🗑️ DA RIMUOVERE' : isAddition ? '➕ DA AGGIUNGERE' : '⚠️ DA MODIFICARE'}
+                        <tr class="${rowBg} ${borderClass}">
+                            <td class="px-3 py-2">
+                                <div class="flex items-center gap-2">
+                                    <span class="bg-${isRemoval ? 'red' : isAddition ? 'orange' : order.isPrepared ? 'green' : 'blue'}-600 text-white text-xs font-bold px-2 py-1 rounded whitespace-nowrap">
+                                        #${order.orderNumber}
+                                    </span>
+                                    <!-- Badge Stato su Tablet (nascosto su desktop) -->
+                                    ${hasMod ? `
+                                        <span class="lg:hidden bg-${isRemoval ? 'red' : 'orange'}-600 text-white text-xs px-2 py-0.5 rounded font-bold">
+                                            ${isRemoval ? '🗑️' : '➕'}
+                                        </span>
+                                    ` : ''}
+                                </div>
+                            </td>
+                            <td class="px-3 py-2 font-medium">${order.customerName}</td>
+                            <td class="px-3 py-2 text-center font-medium whitespace-nowrap">
+                                ${order.qty % 1 === 0 ? order.qty : order.qty.toFixed(1)} ${group.unit}
+                            </td>
+                            <!-- Colonna Stato (solo Desktop) -->
+                            <td class="px-3 py-2 text-center hidden lg:table-cell">
+                                ${hasMod ? `
+                                    <span class="inline-flex items-center bg-${isRemoval ? 'red' : 'orange'}-600 text-white text-xs px-2 py-1 rounded font-bold">
+                                        ${isRemoval ? '🗑️ RIMUOVI' : '➕ AGGIUNGI'}
+                                    </span>
+                                ` : '<span class="text-gray-400">-</span>'}
+                            </td>
+                            <td class="px-3 py-2 text-right">
+                                ${order.isPrepared ? `
+                                    <span class="inline-flex items-center bg-green-600 text-white font-bold px-3 py-1 rounded-full text-xs shadow">
+                                        ✓ FATTO
+                                    </span>
+                                ` : isRemoval ? `
+                                    <button onclick="app.confirmModificationDone('${order.orderId}', ${order.itemIndex})"
+                                        class="inline-flex items-center bg-red-600 hover:bg-red-700 text-white font-bold px-3 py-1 rounded shadow transition text-xs whitespace-nowrap">
+                                        ✓ Rimuovi
+                                    </button>
+                                ` : isAddition ? `
+                                    <button onclick="app.confirmModificationDone('${order.orderId}', ${order.itemIndex})"
+                                        class="inline-flex items-center bg-orange-600 hover:bg-orange-700 text-white font-bold px-3 py-1 rounded shadow transition text-xs whitespace-nowrap">
+                                        ✓ Aggiunto
+                                    </button>
+                                ` : `
+                                    <button onclick="app.toggleItemPrepared('${order.orderId}', ${order.itemIndex})"
+                                        class="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white font-bold px-3 py-1 rounded shadow transition text-xs whitespace-nowrap">
+                                        ✓ Fatto
+                                    </button>
+                                `}
+                            </td>
+                        </tr>
+                        `;
+                        }).join('')}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- 📱 MOBILE: Card List -->
+        <div class="md:hidden space-y-2">
+            ${group.orders.map(order => {
+                            const hasMod = order.modification;
+                            const isAddition = hasMod && hasMod.action === 'aggiungere';
+                            const isRemoval = hasMod && hasMod.action === 'rimuovere';
+
+                            let cardBg = 'bg-white border-gray-200';
+                            let borderClass = 'border-2';
+
+                            if (order.isPrepared) {
+                                cardBg = 'bg-green-50 border-green-300';
+                            } else if (isRemoval) {
+                                cardBg = 'bg-red-50 border-red-400';
+                                borderClass = 'border-l-4';
+                            } else if (isAddition) {
+                                cardBg = 'bg-orange-50 border-orange-400';
+                                borderClass = 'border-l-4';
+                            }
+
+                            return `
+                <div class="rounded-lg ${borderClass} ${cardBg} p-3">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center gap-2">
+                            <span class="bg-${isRemoval ? 'red' : isAddition ? 'orange' : order.isPrepared ? 'green' : 'blue'}-600 text-white text-sm font-bold px-3 py-1 rounded">
+                                #${order.orderNumber}
                             </span>
-                        ` : ''}
-                    </div>
-                    
-                    <!-- Riga 2: PRODOTTO in evidenza -->
-                    <div class="bg-gradient-to-r ${isRemoval ? 'from-red-50 to-red-100 border-red-500' : isAddition || isModification ? 'from-orange-50 to-orange-100 border-orange-500' : 'from-purple-50 to-purple-100 border-purple-500'} border-l-4 px-3 py-2 rounded mb-2">
-                        <div class="font-bold ${isRemoval ? 'text-red-900' : isAddition || isModification ? 'text-orange-900' : 'text-purple-900'} text-lg">
-                            ${isRemoval ? '🗑️' : '📦'} ${group.productName}
+                            ${hasMod ? `
+                                <span class="bg-${isRemoval ? 'red' : 'orange'}-600 text-white text-xs px-2 py-0.5 rounded font-bold">
+                                    ${isRemoval ? '🗑️' : '➕'}
+                                </span>
+                            ` : ''}
                         </div>
-                        ${hasMod ? `
-                            <div class="text-sm font-semibold ${isRemoval ? 'text-red-800' : 'text-orange-800'} mt-1">
-                                ${order.modification.description}
-                            </div>
-                        ` : ''}
-                    </div>
-                    
-                    <!-- Riga 3: Quantità DA PREPARARE (o da rimuovere) -->
-                    <div class="flex flex-wrap items-center gap-2">
-                        ${group.unit === 'kg' && !order.weight ? `
-                            <span class="inline-flex items-center ${isRemoval ? 'bg-red-500' : isAddition || isModification ? 'bg-orange-500' : 'bg-orange-500'} text-white font-bold px-4 py-2 rounded-lg shadow-md text-base">
-                                ${isRemoval ? '🗑️' : '⚖️'} ${order.qty % 1 === 0 ? order.qty : order.qty.toFixed(2)} kg
+                        ${order.isPrepared ? `
+                            <span class="inline-flex items-center bg-green-600 text-white font-bold px-3 py-1 rounded-full text-xs">
+                                ✓ FATTO
                             </span>
-                        ` : group.unit === 'pezzo' && order.weight ? `
-                            <span class="inline-flex items-center ${isRemoval ? 'bg-red-500' : isAddition || isModification ? 'bg-orange-500' : 'bg-orange-500'} text-white font-bold px-4 py-2 rounded-lg shadow-md text-base">
-                                ${isRemoval ? '🗑️' : '🔢'} ${order.qty % 1 === 0 ? order.qty : order.qty.toFixed(2)} ${group.unit}
-                            </span>
-                            <span class="inline-flex items-center bg-purple-500 text-white font-bold px-4 py-2 rounded-lg shadow-md text-base">
-                                ⚖️ ${order.weight}kg totali
-                            </span>
+                        ` : isRemoval ? `
+                            <button onclick="app.confirmModificationDone('${order.orderId}', ${order.itemIndex})"
+                                class="bg-red-600 hover:bg-red-700 text-white font-bold px-3 py-1 rounded text-xs">
+                                ✓ Rimuovi
+                            </button>
+                        ` : isAddition ? `
+                            <button onclick="app.confirmModificationDone('${order.orderId}', ${order.itemIndex})"
+                                class="bg-orange-600 hover:bg-orange-700 text-white font-bold px-3 py-1 rounded text-xs">
+                                ✓ Fatto
+                            </button>
                         ` : `
-                            <span class="inline-flex items-center ${isRemoval ? 'bg-red-500' : isAddition || isModification ? 'bg-orange-500' : 'bg-orange-500'} text-white font-bold px-4 py-2 rounded-lg shadow-md text-base">
-                                ${isRemoval ? '🗑️' : group.unit === 'pezzo' ? '🔢' : '📏'} ${order.qty % 1 === 0 ? order.qty : order.qty.toFixed(2)} ${group.unit}
-                            </span>
+                            <button onclick="app.toggleItemPrepared('${order.orderId}', ${order.itemIndex})"
+                                class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-3 py-1 rounded text-xs">
+                                ✓ Fatto
+                            </button>
                         `}
                     </div>
-                </div>
-                ${order.isPrepared && !isRemoval ? `
-                    <div class="flex-shrink-0">
-                        <span class="inline-flex items-center bg-green-600 text-white font-bold px-4 py-2 rounded-full text-base shadow-lg">
-                            ✓ FATTO
-                        </span>
+                    <div class="text-sm text-gray-700 font-medium">${order.customerName}</div>
+                    <div class="text-sm text-gray-600 mt-1">
+                        ${group.unit === 'pezzo' ? '🔢' : '⚖️'} ${order.qty % 1 === 0 ? order.qty : order.qty.toFixed(1)} ${group.unit}
                     </div>
-                ` : isRemoval ? `
-                    <div class="flex-shrink-0">
-                        <button onclick="app.confirmModificationDone('${order.orderId}', ${order.itemIndex})"
-                            class="inline-flex items-center bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2 rounded-lg shadow-lg transition">
+                    ${hasMod ? `
+                        <div class="text-xs font-semibold text-${isRemoval ? 'red' : 'orange'}-700 mt-1">
+                            ${order.modification.description}
+                        </div>
+                    ` : ''}
+                </div>
+                `;
+                        }).join('')}
+        </div>
+    </div>
+</div>
+`;
+                    }).join('');
+                }
+
+                renderModifications() {
+                    const container = document.getElementById('modifications-list');
+
+                    if (!container) {
+                        console.log('⏭️ modifications-list non trovato, skip render');
+                        return;
+                    }
+
+                    const dateFilter = document.getElementById('mod-date-filter').value;
+
+                    // Filtra ordini con modifiche pendenti
+                    let ordersWithMods = this.db.orders.filter(o =>
+                        !o.deleted &&
+                        o.pendingModifications &&
+                        o.pendingModifications.length > 0
+                    );
+
+                    // Filtra per data se selezionata
+                    if (dateFilter) {
+                        ordersWithMods = ordersWithMods.filter(o => o.deliveryDate === dateFilter);
+                    }
+
+                    if (ordersWithMods.length === 0) {
+                        container.innerHTML = `
+            <div class="bg-white rounded-lg shadow p-8 text-center">
+                <p class="text-gray-500 text-lg">✅ Nessuna modifica pendente!</p>
+                <p class="text-sm text-gray-400 mt-2">Tutti gli ordini sono aggiornati</p>
+            </div>
+        `;
+                        return;
+                    }
+
+                    // Ordina per numero ordine
+                    ordersWithMods.sort((a, b) => {
+                        const numA = parseInt(a.number.split('-')[0]);
+                        const numB = parseInt(b.number.split('-')[0]);
+                        return numA - numB;
+                    });
+
+                    // Render
+                    container.innerHTML = ordersWithMods.map(order => {
+                        const customer = this.db.customers.find(c => c.id === order.customerId);
+                        const customerName = customer ? `${customer.lastName} ${customer.firstName}` : 'Sconosciuto';
+                        const modsCount = order.pendingModifications.length;
+
+                        // Raggruppa modifiche per tipo
+                        const additions = order.pendingModifications.filter(m => m.action === 'aggiungere');
+                        const removals = order.pendingModifications.filter(m => m.action === 'rimuovere');
+
+                        return `
+<div class="bg-white rounded-lg shadow-lg overflow-hidden mb-4 border-l-4 border-orange-500">
+    <!-- Header Ordine -->
+    <div class="bg-gradient-to-r from-orange-500 to-red-500 text-white p-4">
+        <div class="flex justify-between items-center">
+            <div>
+                <h3 class="text-xl font-bold">
+                    📦 Ordine #${order.number}
+                </h3>
+                <p class="text-sm opacity-90 mt-1">${customerName}</p>
+            </div>
+            <div class="text-right">
+                <div class="bg-white text-orange-600 px-3 py-1 rounded-full font-bold text-sm">
+                    ⚠️ ${modsCount} modifica${modsCount > 1 ? 'he' : ''}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="p-4 space-y-3">
+        ${additions.length > 0 ? `
+            <div class="space-y-2">
+                <h4 class="font-bold text-orange-700 text-sm uppercase mb-2">➕ Da Aggiungere</h4>
+                ${additions.map(mod => `
+                    <div class="flex items-center justify-between p-3 bg-orange-50 border-2 border-orange-200 rounded-lg">
+                        <div class="flex-1">
+                            <div class="font-bold text-orange-900">${mod.productName}</div>
+                            <div class="text-sm text-orange-700">${mod.description}</div>
+                            <div class="text-sm font-medium text-orange-800 mt-1">
+                                📦 ${mod.newQty} ${mod.unit}
+                            </div>
+                        </div>
+                        <button onclick="app.confirmModificationDone('${order.id}', ${mod.index})"
+                            class="bg-orange-600 hover:bg-orange-700 text-white font-bold px-4 py-2 rounded-lg shadow-lg transition whitespace-nowrap ml-3">
+                            ✓ Aggiunto
+                        </button>
+                    </div>
+                `).join('')}
+            </div>
+        ` : ''}
+        
+        ${removals.length > 0 ? `
+            <div class="space-y-2">
+                <h4 class="font-bold text-red-700 text-sm uppercase mb-2">🗑️ Da Rimuovere</h4>
+                ${removals.map(mod => `
+                    <div class="flex items-center justify-between p-3 bg-red-50 border-2 border-red-200 rounded-lg">
+                        <div class="flex-1">
+                            <div class="font-bold text-red-900">${mod.productName}</div>
+                            <div class="text-sm text-red-700">${mod.description}</div>
+                            <div class="text-sm font-medium text-red-800 mt-1">
+                                🗑️ ${mod.oldQty} ${mod.unit}
+                            </div>
+                        </div>
+                        <button onclick="app.confirmModificationDone('${order.id}', ${mod.index})"
+                            class="bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2 rounded-lg shadow-lg transition whitespace-nowrap ml-3">
                             ✓ Rimosso
                         </button>
                     </div>
-                ` : hasMod ? `
-                    <div class="flex-shrink-0">
-                        <button onclick="app.confirmModificationDone('${order.orderId}', ${order.itemIndex})"
-                            class="inline-flex items-center bg-orange-600 hover:bg-orange-700 text-white font-bold px-4 py-2 rounded-lg shadow-lg transition">
-                            ✓ Fatto
-                        </button>
-                    </div>
-                ` : ''}
+                `).join('')}
             </div>
-        `;
-                        }).join('')}
+        ` : ''}
+    </div>
 </div>
-            </div>
-        </div>
-    `;
+        `;
                     }).join('');
                 }
 
@@ -10751,15 +11475,32 @@
         </div>
 
 
-        <!-- Pulsante Home Floating -->
-        <button onclick="app.switchTab('dashboard')"
-            class="fixed bottom-6 right-6 bg-gradient-to-br from-blue-600 to-purple-600 text-white w-16 h-16 rounded-full shadow-2xl hover:shadow-3xl transition-all duration-200 flex items-center justify-center z-50 hover:scale-110 active:scale-95"
-            title="Torna alla Dashboard" style="box-shadow: 0 10px 40px rgba(59, 130, 246, 0.5);">
-            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-            </svg>
-        </button>
+        <!-- Floating Buttons con Auto-Hide -->
+        <div id="floating-buttons"
+            class="fixed bottom-6 left-0 right-0 flex justify-between px-6 transition-all duration-300 z-50"
+            style="pointer-events: none;">
+            <!-- Home Button (Left) -->
+            <button onclick="app.switchTab('dashboard')"
+                class="bg-gradient-to-br from-blue-500 to-blue-600 text-white w-14 h-14 rounded-full shadow-2xl hover:shadow-3xl transition-all duration-300 flex items-center justify-center hover:scale-110 active:scale-95"
+                style="pointer-events: auto;">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6">
+                    </path>
+                </svg>
+            </button>
+
+            <!-- Scanner QR Button (Right) -->
+            <button onclick="app.openFidelityQRScanner()"
+                class="bg-gradient-to-br from-green-500 to-green-600 text-white w-14 h-14 rounded-full shadow-2xl hover:shadow-3xl transition-all duration-300 flex items-center justify-center hover:scale-110 active:scale-95"
+                style="pointer-events: auto;">
+                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z">
+                    </path>
+                </svg>
+            </button>
+        </div>
 
 </body>
 
