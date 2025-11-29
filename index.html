@@ -4713,7 +4713,7 @@
                     });
                 }
 
-                sendFidelityCardWhatsApp(customerId) {
+                async sendFidelityCardWhatsApp(customerId) {
                     const customer = this.db.customers.find(c => c.id === customerId);
                     if (!customer || !customer.phone) {
                         this.showToast('❌ Cliente senza numero di telefono', 'error');
@@ -4758,7 +4758,7 @@
                         });
                     };
 
-                    waitForQR().then((qrImg) => {
+                    waitForQR().then(async (qrImg) => {
                         const canvas = document.createElement('canvas');
                         const ctx = canvas.getContext('2d');
 
@@ -4865,8 +4865,9 @@
                             `Grazie per la fiducia! 😊\n\nPastificio Gramsci`;
 
                         // 🚀 SISTEMA AVANZATO DI AUTOMAZIONE COMPLETA
-                        this.advancedCardSender(cardImageDataUrl, messageText, phoneFormatted, customer);
-
+                        console.log('🚀 Chiamata advancedCardSender...');
+                        await this.advancedCardSender(cardImageDataUrl, messageText, phoneFormatted, customer);
+                        console.log('✅ advancedCardSender completata');
                         document.body.removeChild(qrContainer);
                     });
                 }
