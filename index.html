@@ -363,6 +363,9 @@
 
         document.getElementById("env-badge").textContent = envMessage;
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+    <script>eruda.init();</script>
+
 
     <!-- Schermata Login/Password -->
     <div id="auth-screen"
@@ -5333,7 +5336,7 @@
 
                     this.markCardAsSent(customer);
                 }
-                
+
                 markCardAsSent(customer) {
                     if (!customer.fidelity) {
                         customer.fidelity = { stamps: 0, rewards: 0, history: [], cardSent: false };
