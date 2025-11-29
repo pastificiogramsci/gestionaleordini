@@ -5298,20 +5298,8 @@
                     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
                     console.log('📱 isMobile:', isMobile);
 
-                    // Strategia 1: Web Share API - Allega automaticamente su mobile
-                    if (isMobile) {
-                        const shareSuccess = await this.tryWebShare(imageDataUrl, messageText, customer);
-                        if (shareSuccess) {
-                            // Se Web Share funziona, file già allegato - FATTO!
-                            this.markCardAsSent(customer);
-                            return;
-                        }
-                        // Se Web Share fallisce, continua con il backup
-                        console.log('⚠️ Web Share fallito, uso metodo backup');
-                    }
-
-                    // Strategia di backup: Download + WhatsApp separati
-                    const fileName = `tessera-fidelity-${customer.lastName}-${customer.firstName}.jpg`;
+                    // Strategia MOBILE: Download + WhatsApp (più affidabile)
+                    const fileName = `tessera-${customer.firstName}-${customer.lastName}.jpg`;
                     const link = document.createElement('a');
                     link.href = imageDataUrl;
                     link.download = fileName;
@@ -5319,26 +5307,33 @@
                     link.click();
                     document.body.removeChild(link);
 
-                    console.log('✅ Download singolo creato:', fileName);
-                    this.showToast('📥 Tessera scaricata! Allega manualmente su WhatsApp', 'info');
+                    console.log('✅ Download creato:', fileName);
 
-                    // Crea URL temporaneo per drag&drop (solo desktop)
-                    let shareUrl = null;
-                    if (!isMobile) {
-                        shareUrl = await this.createShareableUrl(imageDataUrl, customer);
+                    if (isMobile) {
+                        // Su mobile: toast chiaro + apri WhatsApp
+                        this.showToast(`📥 Tessera scaricata!\n📎 Allegala al messaggio WhatsApp che si aprirà`, 'success');
+
+                        setTimeout(() => {
+                            window.open(`https://wa.me/${phoneFormatted}?text=${encodeURIComponent(messageText)}`, '_blank');
+
+                            // Secondo toast dopo apertura WhatsApp
+                            setTimeout(() => {
+                                this.showToast(`📎 Clicca 📎 in WhatsApp e allega: ${fileName}`, 'info');
+                            }, 1000);
+                        }, 2000);
+                    } else {
+                        // Desktop: metodo originale
+                        const shareUrl = await this.createShareableUrl(imageDataUrl, customer);
+                        this.showPreWhatsAppInstructions(customer.firstName, true);
+
+                        setTimeout(() => {
+                            this.openWhatsAppWithMessage(messageText, phoneFormatted, shareUrl, true);
+                        }, 3000);
                     }
-
-                    // Mostra istruzioni
-                    this.showPreWhatsAppInstructions(customer.firstName, !isMobile);
-
-                    // Apre WhatsApp dopo delay
-                    setTimeout(() => {
-                        this.openWhatsAppWithMessage(messageText, phoneFormatted, shareUrl, !isMobile);
-                    }, 3000);
 
                     this.markCardAsSent(customer);
                 }
-
+                
                 markCardAsSent(customer) {
                     if (!customer.fidelity) {
                         customer.fidelity = { stamps: 0, rewards: 0, history: [], cardSent: false };
