@@ -4540,11 +4540,20 @@
 
                     // Attendi che il QR sia effettivamente renderizzato
                     const waitForQR = () => {
-                        return new Promise((resolve) => {
+                        return new Promise((resolve, reject) => {
+                            let attempts = 0;
+                            const maxAttempts = 50; // 5 secondi max (50 * 100ms)
+
                             const checkQR = () => {
+                                attempts++;
                                 const qrImg = qrContainer.querySelector('img');
+
                                 if (qrImg && qrImg.complete && qrImg.naturalHeight !== 0) {
+                                    console.log('✅ QR pronto dopo', attempts * 100, 'ms');
                                     resolve(qrImg);
+                                } else if (attempts >= maxAttempts) {
+                                    console.error('❌ QR timeout dopo', maxAttempts * 100, 'ms');
+                                    reject(new Error('QR timeout'));
                                 } else {
                                     setTimeout(checkQR, 100);
                                 }
@@ -4713,10 +4722,23 @@
                     });
                 }
 
+                // ========================================
+                // FUNZIONI FIDELITY CARD - BLOCCO CORRETTO
+                // ========================================
+
                 async sendFidelityCardWhatsApp(customerId) {
+                    // Lock per evitare chiamate multiple
+                    if (this.sendingCard) {
+                        console.log('⚠️ Invio già in corso, attendi...');
+                        this.showToast('⏳ Generazione in corso...', 'info');
+                        return;
+                    }
+                    this.sendingCard = true;
+
                     const customer = this.db.customers.find(c => c.id === customerId);
                     if (!customer || !customer.phone) {
                         this.showToast('❌ Cliente senza numero di telefono', 'error');
+                        this.sendingCard = false;
                         return;
                     }
 
@@ -4734,7 +4756,7 @@
                     qrContainer.style.display = 'none';
                     document.body.appendChild(qrContainer);
 
-                    // Genera QR con callback per assicurarsi che sia pronto
+                    // Genera QR
                     const qrCode = new QRCode(qrContainer, {
                         text: qrData,
                         width: 400,
@@ -4743,13 +4765,22 @@
                         colorLight: "#ffffff"
                     });
 
-                    // Attendi che il QR sia effettivamente renderizzato
+                    // Attendi QR con timeout
                     const waitForQR = () => {
-                        return new Promise((resolve) => {
+                        return new Promise((resolve, reject) => {
+                            let attempts = 0;
+                            const maxAttempts = 50;
+
                             const checkQR = () => {
+                                attempts++;
                                 const qrImg = qrContainer.querySelector('img');
+
                                 if (qrImg && qrImg.complete && qrImg.naturalHeight !== 0) {
+                                    console.log('✅ QR pronto dopo', attempts * 100, 'ms');
                                     resolve(qrImg);
+                                } else if (attempts >= maxAttempts) {
+                                    console.error('❌ QR timeout');
+                                    reject(new Error('QR timeout'));
                                 } else {
                                     setTimeout(checkQR, 100);
                                 }
@@ -4759,98 +4790,85 @@
                     };
 
                     waitForQR().then(async (qrImg) => {
+                        console.log('✅ QR ricevuto, inizio rendering...');
+
                         const canvas = document.createElement('canvas');
                         const ctx = canvas.getContext('2d');
 
-                        // Formato card (ottimizzato per mobile)
                         const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
                         canvas.width = isMobile ? 800 : 1200;
                         canvas.height = isMobile ? 500 : 750;
-                        console.log('✅ Canvas dimensioni:', canvas.width, 'x', canvas.height);
+                        console.log('✅ Canvas creato:', canvas.width, 'x', canvas.height);
 
-                        // Gradiente elegante beige simile al logo
+                        // Gradiente
                         const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-                        gradient.addColorStop(0, '#F8E3C4'); // Beige chiaro
-                        gradient.addColorStop(1, '#F2D4A4'); // Beige più caldo
+                        gradient.addColorStop(0, '#F8E3C4');
+                        gradient.addColorStop(1, '#F2D4A4');
                         ctx.fillStyle = gradient;
                         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-                        // Texture leggera
+                        // Texture ridotta
                         ctx.globalAlpha = 0.03;
-                        for (let i = 0; i < 2000; i++) {
-                            ctx.fillStyle = '#5D3F24'; // Marrone più scuro
+                        const texturePoints = isMobile ? 100 : 500;
+                        for (let i = 0; i < texturePoints; i++) {
+                            ctx.fillStyle = '#5D3F24';
                             ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 2, 2);
                         }
                         ctx.globalAlpha = 1;
+                        console.log('✅ Texture completata');
 
-                        // Intestazione Pastificio Gramsci (nome attività più evidente)
-                        ctx.fillStyle = '#5D3F24'; // Marrone del logo
-                        ctx.font = 'bold 60px Georgia';
-                        ctx.textAlign = 'center';
-                        ctx.fillText('PASTIFICIO GRAMSCI', canvas.width / 2, 100);
+                        const scale = isMobile ? 0.7 : 1;
 
-                        // Sottotitolo
-                        ctx.font = 'italic 36px Georgia';
+                        // Intestazione
                         ctx.fillStyle = '#5D3F24';
-                        ctx.fillText('TESSERA FEDELTÀ', canvas.width / 2, 160);
+                        ctx.font = `bold ${60 * scale}px Georgia`;
+                        ctx.textAlign = 'center';
+                        ctx.fillText('PASTIFICIO GRAMSCI', canvas.width / 2, 100 * scale);
 
-                        // Linea decorativa ondulata
+                        ctx.font = `italic ${36 * scale}px Georgia`;
+                        ctx.fillText('TESSERA FEDELTÀ', canvas.width / 2, 160 * scale);
+
+                        // Linea decorativa
                         ctx.strokeStyle = '#5D3F24';
                         ctx.lineWidth = 3;
                         ctx.beginPath();
                         for (let x = 0; x <= canvas.width; x += 10) {
-                            const y = 200 + Math.sin(x * 0.02) * 5;
+                            const y = 200 * scale + Math.sin(x * 0.02) * 5;
                             if (x === 0) ctx.moveTo(x, y);
                             else ctx.lineTo(x, y);
                         }
                         ctx.stroke();
 
-                        // Nome cliente elegante
+                        // Nome cliente
                         ctx.fillStyle = '#5D3F24';
-                        ctx.font = 'bold 46px Georgia';
-                        ctx.textAlign = 'center';
-                        ctx.fillText(`${customer.firstName} ${customer.lastName}`, canvas.width / 2, 280);
+                        ctx.font = `bold ${46 * scale}px Georgia`;
+                        ctx.fillText(`${customer.firstName} ${customer.lastName}`, canvas.width / 2, 280 * scale);
 
-                        // QR Code con cornice elegante
-                        const qrSize = 300;
-                        const qrX = canvas.width / 2 - qrSize / 2; // Centrato
-                        const qrY = 350; // Sotto il nome
+                        // QR Code
+                        const qrSize = isMobile ? 200 : 300;
+                        const qrX = canvas.width / 2 - qrSize / 2;
+                        const qrY = isMobile ? 300 : 350;
 
-                        // Ombra QR
-                        ctx.shadowColor = 'rgba(0,0,0,0.2)';
-                        ctx.shadowBlur = 20;
-                        ctx.shadowOffsetX = 0;
-                        ctx.shadowOffsetY = 10;
-
-                        // Cornice marrone QR
-                        ctx.fillStyle = '#5D3F24'; // Marrone del logo
+                        ctx.fillStyle = '#5D3F24';
                         ctx.fillRect(qrX - 15, qrY - 15, qrSize + 30, qrSize + 30);
-
-                        ctx.shadowColor = 'transparent';
-
-                        // Sfondo bianco QR
                         ctx.fillStyle = '#ffffff';
                         ctx.fillRect(qrX - 8, qrY - 8, qrSize + 16, qrSize + 16);
 
-                        // Disegna QR
                         ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
+                        console.log('✅ QR disegnato');
 
-                        // Testo sotto QR
                         ctx.fillStyle = '#5D3F24';
-                        ctx.font = 'italic 20px Georgia';
-                        ctx.textAlign = 'center';
-                        ctx.fillText('Scansiona in negozio', qrX + qrSize / 2, qrY + qrSize + 40);
+                        ctx.font = `italic ${20 * scale}px Georgia`;
+                        ctx.fillText('Scansiona in negozio', canvas.width / 2, qrY + qrSize + 40);
 
-                        // Footer elegante
-                        ctx.fillStyle = '#5D3F24';
-                        ctx.font = 'italic 22px Georgia';
-                        ctx.textAlign = 'center';
+                        ctx.font = `italic ${22 * scale}px Georgia`;
                         ctx.fillText('Grazie per la tua fedeltà!', canvas.width / 2, canvas.height - 30);
 
-                        // Esporta l'immagine come data URL
-                        const cardImageDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                        console.log('✅ Grafica completata, conversione JPEG...');
 
-                        // Prepara il messaggio WhatsApp
+                        const cardImageDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                        console.log('✅ JPEG creato, size:', Math.round(cardImageDataUrl.length / 1024), 'KB');
+
                         const phone = customer.phone.replace(/[^0-9]/g, '');
                         const phoneFormatted = phone.startsWith('39') ? phone : '39' + phone;
                         const currentStamps = customer.fidelity?.stamps || 0;
@@ -4866,436 +4884,20 @@
                             `📱 SALVA QUESTA TESSERA sul telefono!\n\n` +
                             `Grazie per la fiducia! 😊\n\nPastificio Gramsci`;
 
-                        // 🚀 SISTEMA AVANZATO DI AUTOMAZIONE COMPLETA
                         console.log('🚀 Chiamata advancedCardSender...');
                         await this.advancedCardSender(cardImageDataUrl, messageText, phoneFormatted, customer);
                         console.log('✅ advancedCardSender completata');
-                        document.body.removeChild(qrContainer);
-                    });
-                }
-
-                // Genera immagine coupon con QR code
-                generateCouponImage(customerId, couponCode) {
-                    const customer = this.db.customers.find(c => c.id === customerId);
-                    if (!customer || !customer.coupons) return;
-
-                    const coupon = customer.coupons.find(c => c.code === couponCode);
-                    if (!coupon) {
-                        this.showToast('❌ Coupon non trovato', 'error');
-                        return;
-                    }
-
-                    // Dati per il QR code
-                    const qrData = JSON.stringify({
-                        type: 'coupon',
-                        couponCode: coupon.code,
-                        customerId: customer.id,
-                        customerName: `${customer.firstName} ${customer.lastName}`,
-                        campaignName: coupon.campaignName
-                    });
-
-                    const qrContainer = document.createElement('div');
-                    qrContainer.style.display = 'none';
-                    document.body.appendChild(qrContainer);
-
-                    // Genera QR con callback per assicurarsi che sia pronto
-                    const qrCode = new QRCode(qrContainer, {
-                        text: qrData,
-                        width: 400,
-                        height: 400,
-                        colorDark: "#6B21A8", // Viola scuro per coupon
-                        colorLight: "#ffffff"
-                    });
-
-                    // Attendi che il QR sia effettivamente renderizzato
-                    const waitForQR = () => {
-                        return new Promise((resolve) => {
-                            const checkQR = () => {
-                                const qrImg = qrContainer.querySelector('img');
-                                if (qrImg && qrImg.complete && qrImg.naturalHeight !== 0) {
-                                    resolve(qrImg);
-                                } else {
-                                    setTimeout(checkQR, 100);
-                                }
-                            };
-                            checkQR();
-                        });
-                    };
-
-                    waitForQR().then((qrImg) => {
-                        const canvas = document.createElement('canvas');
-                        const ctx = canvas.getContext('2d');
-
-                        // Formato coupon (biglietto)
-                        canvas.width = 1200;
-                        canvas.height = 800;
-
-                        // Gradiente viola/rosa per coupon
-                        const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-                        gradient.addColorStop(0, '#FDF4FF'); // Rosa molto chiaro
-                        gradient.addColorStop(1, '#FAE8FF'); // Rosa chiaro
-                        ctx.fillStyle = gradient;
-                        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-                        // Texture leggera (ridotta per mobile)
-                        ctx.globalAlpha = 0.03;
-                        for (let i = 0; i < 200; i++) { // ← 200 invece di 2000!
-                            ctx.fillStyle = '#5D3F24';
-                            ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 2, 2);
-                        }
-                        ctx.globalAlpha = 1;
-                        console.log('✅ Texture completata');
-
-                        // Intestazione
-                        ctx.fillStyle = '#6B21A8'; // Viola
-                        ctx.font = 'bold 56px Georgia';
-                        ctx.textAlign = 'center';
-                        ctx.fillText('PASTIFICIO GRAMSCI', canvas.width / 2, 90);
-
-                        // Badge sconto in alto a destra
-                        const discountText = coupon.discountType === 'percentage'
-                            ? `${coupon.discountValue}%`
-                            : `€${coupon.discountValue}`;
-
-                        ctx.fillStyle = '#C026D3'; // Rosa/viola
-                        ctx.beginPath();
-                        ctx.arc(1000, 100, 80, 0, Math.PI * 2);
-                        ctx.fill();
-
-                        ctx.fillStyle = '#ffffff';
-                        ctx.font = 'bold 48px Arial';
-                        ctx.textAlign = 'center';
-                        ctx.fillText(discountText, 1000, 120);
-
-                        // Tipo coupon
-                        ctx.font = 'italic 32px Georgia';
-                        ctx.fillStyle = '#6B21A8';
-                        ctx.textAlign = 'center';
-                        ctx.fillText('🎟️ COUPON SCONTO', canvas.width / 2, 150);
-
-                        // Linea decorativa
-                        ctx.strokeStyle = '#C026D3';
-                        ctx.lineWidth = 3;
-                        ctx.setLineDash([10, 5]);
-                        ctx.beginPath();
-                        ctx.moveTo(100, 180);
-                        ctx.lineTo(canvas.width - 100, 180);
-                        ctx.stroke();
-                        ctx.setLineDash([]);
-
-                        // Nome campagna
-                        ctx.fillStyle = '#6B21A8';
-                        ctx.font = 'bold 40px Georgia';
-                        ctx.textAlign = 'center';
-                        ctx.fillText(coupon.campaignName, canvas.width / 2, 240);
-
-                        // Descrizione
-                        if (coupon.description) {
-                            ctx.font = 'italic 24px Georgia';
-                            ctx.fillStyle = '#7C3AED';
-                            ctx.fillText(coupon.description, canvas.width / 2, 280);
-                        }
-
-                        // Nome cliente
-                        ctx.fillStyle = '#6B21A8';
-                        ctx.font = 'bold 28px Georgia';
-                        ctx.fillText(`Cliente: ${customer.firstName} ${customer.lastName}`, canvas.width / 2, 330);
-
-                        // QR Code centrato
-                        const qrSize = 280;
-                        const qrX = canvas.width / 2 - qrSize / 2;
-                        const qrY = 370;
-
-                        // Ombra QR
-                        ctx.shadowColor = 'rgba(107, 33, 168, 0.3)';
-                        ctx.shadowBlur = 20;
-                        ctx.shadowOffsetX = 0;
-                        ctx.shadowOffsetY = 10;
-
-                        // Cornice viola QR
-                        ctx.fillStyle = '#6B21A8';
-                        ctx.fillRect(qrX - 15, qrY - 15, qrSize + 30, qrSize + 30);
-
-                        ctx.shadowColor = 'transparent';
-
-                        // Sfondo bianco QR
-                        ctx.fillStyle = '#ffffff';
-                        ctx.fillRect(qrX - 8, qrY - 8, qrSize + 16, qrSize + 16);
-
-                        // Disegna QR
-                        ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
-
-                        // Codice coupon sotto il QR
-                        ctx.fillStyle = '#6B21A8';
-                        ctx.font = 'bold 24px monospace';
-                        ctx.textAlign = 'center';
-                        ctx.fillText(coupon.code, canvas.width / 2, qrY + qrSize + 40);
-
-                        // Scadenza
-                        const expiryText = coupon.expiryDate
-                            ? `Valido fino al ${new Date(coupon.expiryDate).toLocaleDateString('it-IT')}`
-                            : 'Senza scadenza';
-
-                        ctx.font = 'italic 20px Georgia';
-                        ctx.fillStyle = '#7C3AED';
-                        ctx.fillText(expiryText, canvas.width / 2, qrY + qrSize + 75);
-
-                        // Footer
-                        ctx.fillStyle = '#6B21A8';
-                        ctx.font = 'italic 22px Georgia';
-                        ctx.fillText('Mostra questo coupon in negozio!', canvas.width / 2, canvas.height - 30);
-
-                        // Converti canvas in PNG
-                        canvas.toBlob(async (blob) => {
-                            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-                            const fileName = `coupon-${coupon.code}.png`;
-
-                            const messageText =
-                                `🎟️ Ciao ${customer.firstName}!\n\n` +
-                                `🎁 Hai ricevuto un COUPON SCONTO!\n\n` +
-                                `📋 Campagna: ${coupon.campaignName}\n` +
-                                `💰 Sconto: ${discountText}\n` +
-                                `📅 ${expiryText}\n\n` +
-                                `📱 SALVA l'immagine e mostrala in negozio!\n\n` +
-                                `Pastificio Gramsci`;
-
-                            // Prova Web Share API su mobile
-                            if (isMobile && navigator.share && navigator.canShare) {
-                                try {
-                                    const file = new File([blob], fileName, { type: 'image/png' });
-
-                                    if (navigator.canShare({ files: [file] })) {
-                                        await navigator.share({
-                                            files: [file],
-                                            title: 'Coupon Sconto',
-                                            text: messageText
-                                        });
-
-                                        this.showToast('✅ Coupon condiviso!');
-                                        document.body.removeChild(qrContainer);
-                                        return;
-                                    }
-                                } catch (err) {
-                                    console.log('Condivisione annullata:', err);
-                                }
-                            }
-
-                            // Fallback: Download
-                            const url = URL.createObjectURL(blob);
-                            const link = document.createElement('a');
-                            link.href = url;
-                            link.download = fileName;
-                            link.style.display = 'none';
-                            document.body.appendChild(link);
-                            link.click();
-
-                            setTimeout(() => {
-                                document.body.removeChild(link);
-                                URL.revokeObjectURL(url);
-                            }, 100);
-
-                            this.showToast('✅ Coupon scaricato!');
-                        }, 'image/png', 1.0);
 
                         document.body.removeChild(qrContainer);
-                    });
-                }
+                        this.sendingCard = false;
 
-                // Invia coupon su WhatsApp
-                sendCouponWhatsApp(customerId, couponCode) {
-                    const customer = this.db.customers.find(c => c.id === customerId);
-                    if (!customer || !customer.phone) {
-                        this.showToast('❌ Cliente senza numero di telefono', 'error');
-                        return;
-                    }
-
-                    const coupon = customer.coupons?.find(c => c.code === couponCode);
-                    if (!coupon) {
-                        this.showToast('❌ Coupon non trovato', 'error');
-                        return;
-                    }
-
-                    // Dati per il QR code
-                    const qrData = JSON.stringify({
-                        type: 'coupon',
-                        couponCode: coupon.code,
-                        customerId: customer.id,
-                        customerName: `${customer.firstName} ${customer.lastName}`,
-                        campaignName: coupon.campaignName
-                    });
-
-                    const qrContainer = document.createElement('div');
-                    qrContainer.style.display = 'none';
-                    document.body.appendChild(qrContainer);
-
-                    // Genera QR con callback
-                    const qrCode = new QRCode(qrContainer, {
-                        text: qrData,
-                        width: 400,
-                        height: 400,
-                        colorDark: "#6B21A8",
-                        colorLight: "#ffffff"
-                    });
-
-                    // Attendi che il QR sia pronto
-                    const waitForQR = () => {
-                        return new Promise((resolve) => {
-                            const checkQR = () => {
-                                const qrImg = qrContainer.querySelector('img');
-                                if (qrImg && qrImg.complete && qrImg.naturalHeight !== 0) {
-                                    resolve(qrImg);
-                                } else {
-                                    setTimeout(checkQR, 100);
-                                }
-                            };
-                            checkQR();
-                        });
-                    };
-
-                    waitForQR().then((qrImg) => {
-                        const canvas = document.createElement('canvas');
-                        const ctx = canvas.getContext('2d');
-
-                        // [Stesso codice del canvas di generateCouponImage]
-                        canvas.width = 1200;
-                        canvas.height = 800;
-
-                        const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-                        gradient.addColorStop(0, '#FDF4FF');
-                        gradient.addColorStop(1, '#FAE8FF');
-                        ctx.fillStyle = gradient;
-                        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-                        ctx.globalAlpha = 0.03;
-                        for (let i = 0; i < 2000; i++) {
-                            ctx.fillStyle = '#6B21A8';
-                            ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 2, 2);
+                    }).catch(error => {
+                        console.error('❌ Errore generazione tessera:', error);
+                        this.showToast('❌ Errore generazione tessera', 'error');
+                        if (qrContainer && qrContainer.parentNode) {
+                            document.body.removeChild(qrContainer);
                         }
-                        ctx.globalAlpha = 1;
-
-                        ctx.fillStyle = '#6B21A8';
-                        ctx.font = 'bold 56px Georgia';
-                        ctx.textAlign = 'center';
-                        ctx.fillText('PASTIFICIO GRAMSCI', canvas.width / 2, 90);
-
-                        const discountText = coupon.discountType === 'percentage'
-                            ? `${coupon.discountValue}%`
-                            : `€${coupon.discountValue}`;
-
-                        ctx.fillStyle = '#C026D3';
-                        ctx.beginPath();
-                        ctx.arc(1000, 100, 80, 0, Math.PI * 2);
-                        ctx.fill();
-
-                        ctx.fillStyle = '#ffffff';
-                        ctx.font = 'bold 48px Arial';
-                        ctx.textAlign = 'center';
-                        ctx.fillText(discountText, 1000, 120);
-
-                        ctx.font = 'italic 32px Georgia';
-                        ctx.fillStyle = '#6B21A8';
-                        ctx.textAlign = 'center';
-                        ctx.fillText('🎟️ COUPON SCONTO', canvas.width / 2, 150);
-
-                        ctx.strokeStyle = '#C026D3';
-                        ctx.lineWidth = 3;
-                        ctx.setLineDash([10, 5]);
-                        ctx.beginPath();
-                        ctx.moveTo(100, 180);
-                        ctx.lineTo(canvas.width - 100, 180);
-                        ctx.stroke();
-                        ctx.setLineDash([]);
-
-                        ctx.fillStyle = '#6B21A8';
-                        ctx.font = 'bold 40px Georgia';
-                        ctx.textAlign = 'center';
-                        ctx.fillText(coupon.campaignName, canvas.width / 2, 240);
-
-                        if (coupon.description) {
-                            ctx.font = 'italic 24px Georgia';
-                            ctx.fillStyle = '#7C3AED';
-                            ctx.fillText(coupon.description, canvas.width / 2, 280);
-                        }
-
-                        ctx.fillStyle = '#6B21A8';
-                        ctx.font = 'bold 28px Georgia';
-                        ctx.fillText(`Cliente: ${customer.firstName} ${customer.lastName}`, canvas.width / 2, 330);
-
-                        const qrSize = 280;
-                        const qrX = canvas.width / 2 - qrSize / 2;
-                        const qrY = 370;
-
-                        ctx.shadowColor = 'rgba(107, 33, 168, 0.3)';
-                        ctx.shadowBlur = 20;
-                        ctx.shadowOffsetX = 0;
-                        ctx.shadowOffsetY = 10;
-
-                        ctx.fillStyle = '#6B21A8';
-                        ctx.fillRect(qrX - 15, qrY - 15, qrSize + 30, qrSize + 30);
-
-                        ctx.shadowColor = 'transparent';
-
-                        ctx.fillStyle = '#ffffff';
-                        ctx.fillRect(qrX - 8, qrY - 8, qrSize + 16, qrSize + 16);
-
-                        ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
-
-                        ctx.fillStyle = '#6B21A8';
-                        ctx.font = 'bold 24px monospace';
-                        ctx.textAlign = 'center';
-                        ctx.fillText(coupon.code, canvas.width / 2, qrY + qrSize + 40);
-
-                        const expiryText = coupon.expiryDate
-                            ? `Valido fino al ${new Date(coupon.expiryDate).toLocaleDateString('it-IT')}`
-                            : 'Senza scadenza';
-
-                        ctx.font = 'italic 20px Georgia';
-                        ctx.fillStyle = '#7C3AED';
-                        ctx.fillText(expiryText, canvas.width / 2, qrY + qrSize + 75);
-
-                        ctx.fillStyle = '#6B21A8';
-                        ctx.font = 'italic 22px Georgia';
-                        ctx.fillText('Mostra questo coupon in negozio!', canvas.width / 2, canvas.height - 30);
-
-                        // Converti e invia su WhatsApp
-                        canvas.toBlob(async (blob) => {
-                            const url = URL.createObjectURL(blob);
-                            const fileName = `coupon-${coupon.code}.png`;
-
-                            // Download
-                            const link = document.createElement('a');
-                            link.href = url;
-                            link.download = fileName;
-                            link.style.display = 'none';
-                            document.body.appendChild(link);
-                            link.click();
-
-                            setTimeout(() => {
-                                document.body.removeChild(link);
-                                URL.revokeObjectURL(url);
-                            }, 100);
-
-                            // Messaggio WhatsApp
-                            const messageText =
-                                `🎟️ Ciao ${customer.firstName}!\n\n` +
-                                `🎁 Hai ricevuto un COUPON SCONTO!\n\n` +
-                                `📋 ${coupon.campaignName}\n` +
-                                `💰 Sconto: ${discountText}\n` +
-                                `📅 ${expiryText}\n\n` +
-                                `📱 SALVA l'immagine e mostrala in negozio per ottenere lo sconto!\n\n` +
-                                `Pastificio Gramsci`;
-
-                            this.showToast('✅ Coupon scaricato! Apertura WhatsApp...');
-
-                            setTimeout(() => {
-                                const phone = customer.phone.replace(/[^0-9]/g, '');
-                                const phoneFormatted = phone.startsWith('39') ? phone : '39' + phone;
-                                const whatsappUrl = `https://wa.me/${phoneFormatted}?text=${encodeURIComponent(messageText)}`;
-                                window.open(whatsappUrl, '_blank');
-                            }, 800);
-                        }, 'image/png', 1.0);
-
-                        document.body.removeChild(qrContainer);
+                        this.sendingCard = false;
                     });
                 }
 
@@ -5305,7 +4907,6 @@
                     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
                     console.log('📱 isMobile:', isMobile);
 
-                    // Strategia MOBILE: Download + WhatsApp (più affidabile)
                     const fileName = `tessera-${customer.firstName}-${customer.lastName}.jpg`;
                     const link = document.createElement('a');
                     link.href = imageDataUrl;
@@ -5317,19 +4918,16 @@
                     console.log('✅ Download creato:', fileName);
 
                     if (isMobile) {
-                        // Su mobile: toast chiaro + apri WhatsApp
-                        this.showToast(`📥 Tessera scaricata!\n📎 Allegala al messaggio WhatsApp che si aprirà`, 'success');
+                        this.showToast(`📥 Tessera scaricata!\n📎 Allegala al messaggio WhatsApp`, 'success');
 
                         setTimeout(() => {
                             window.open(`https://wa.me/${phoneFormatted}?text=${encodeURIComponent(messageText)}`, '_blank');
 
-                            // Secondo toast dopo apertura WhatsApp
                             setTimeout(() => {
-                                this.showToast(`📎 Clicca 📎 in WhatsApp e allega: ${fileName}`, 'info');
+                                this.showToast(`📎 Clicca 📎 e allega: ${fileName}`, 'info');
                             }, 1000);
                         }, 2000);
                     } else {
-                        // Desktop: metodo originale
                         const shareUrl = await this.createShareableUrl(imageDataUrl, customer);
                         this.showPreWhatsAppInstructions(customer.firstName, true);
 
@@ -5355,41 +4953,25 @@
 
                     if (!navigator.share) {
                         console.log('❌ Web Share API non supportata');
-                        this.showToast('Web Share non supportato - uso download', 'info');
+                        this.showToast('Web Share non supportato', 'info');
                         return false;
                     }
 
                     try {
-                        console.log('📦 Conversione immagine in blob...');
-
-                        // Converte data URL in blob
+                        console.log('📦 Conversione blob...');
                         const response = await fetch(imageDataUrl);
-                        console.log('✅ Fetch completato');
-
                         const blob = await response.blob();
-                        console.log('✅ Blob creato, size:', blob.size);
-
                         const file = new File([blob], `tessera-${customer.firstName}.jpg`, { type: 'image/jpeg' });
-                        console.log('✅ File creato:', file.name);
 
-                        // Usa Web Share API per condivisione nativa
-                        console.log('📤 Chiamata navigator.share...');
-                        await navigator.share({
-                            files: [file]
-                        });
+                        await navigator.share({ files: [file] });
 
-                        console.log('✅ Condivisione Web Share API completata!');
-                        this.showToast(`🎉 Tessera condivisa con successo!`);
+                        console.log('✅ Condivisione completata!');
+                        this.showToast(`🎉 Tessera condivisa!`);
                         return true;
                     } catch (error) {
-                        console.log('❌ ERRORE Web Share API:', error.name, error.message);
-
-                        if (error.name === 'AbortError') {
-                            console.log('ℹ️ Utente ha annullato la condivisione');
-                            this.showToast('Condivisione annullata', 'info');
-                        } else {
-                            console.log('❌ Errore tecnico:', error);
-                            this.showToast('Errore condivisione - uso download', 'warning');
+                        console.log('❌ Errore Web Share:', error.name);
+                        if (error.name !== 'AbortError') {
+                            this.showToast('Errore condivisione', 'warning');
                         }
                         return false;
                     }
@@ -5397,136 +4979,67 @@
 
                 async createShareableUrl(imageDataUrl, customer) {
                     try {
-                        // Crea un URL blob temporaneo per l'immagine
                         const response = await fetch(imageDataUrl);
                         const blob = await response.blob();
-                        const shareUrl = URL.createObjectURL(blob);
-
-                        console.log('✅ URL temporaneo creato per drag&drop');
-                        return shareUrl;
+                        return URL.createObjectURL(blob);
                     } catch (error) {
-                        console.log('❌ Errore creazione URL condivisione:', error);
+                        console.log('❌ Errore URL:', error);
                         return null;
                     }
                 }
 
-                openWhatsAppWithMessage(messageText, phoneFormatted, shareUrl, isDesktop, customerName) {
+                openWhatsAppWithMessage(messageText, phoneFormatted, shareUrl, isDesktop) {
                     if (isDesktop) {
-                        // Desktop: apre WhatsApp Web + finestra immagine separata
-                        const whatsappWebUrl = `https://web.whatsapp.com/send?phone=${phoneFormatted}&text=${encodeURIComponent(messageText)}`;
-                        window.open(whatsappWebUrl, '_blank');
+                        window.open(`https://web.whatsapp.com/send?phone=${phoneFormatted}&text=${encodeURIComponent(messageText)}`, '_blank');
 
-                        // Apre anche l'immagine in una nuova tab per drag&drop facile
                         if (shareUrl) {
                             setTimeout(() => {
-                                const imageWindow = window.open(shareUrl, '_blank', 'width=500,height=400,left=100,top=100');
-                                if (imageWindow) {
-                                    imageWindow.document.title = `Trascina in WhatsApp - ${customerName}`;
-                                }
+                                window.open(shareUrl, '_blank', 'width=500,height=400');
                             }, 1000);
                         }
                     } else {
-                        // Mobile: apre app WhatsApp
-                        const whatsappAppUrl = `https://wa.me/${phoneFormatted}?text=${encodeURIComponent(messageText)}`;
-                        window.open(whatsappAppUrl, '_blank');
+                        window.open(`https://wa.me/${phoneFormatted}?text=${encodeURIComponent(messageText)}`, '_blank');
                     }
-
-                    console.log('✅ WhatsApp aperto con messaggio corretto');
                 }
 
                 showPreWhatsAppInstructions(customerName, isDesktop) {
                     const popup = document.createElement('div');
                     popup.style.cssText = `
-                    position: fixed;
-                    top: 50%;
-                    left: 50%;
-                    transform: translate(-50%, -50%);
-                    background: linear-gradient(135deg, #10B981, #059669);
-                    color: white;
-                    padding: 30px;
-                    border-radius: 20px;
-                    box-shadow: 0 25px 50px rgba(0,0,0,0.5);
-                    z-index: 10000;
-                    max-width: 500px;
-                    animation: popInCenter 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-                    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-                    border: 3px solid rgba(255,255,255,0.3);
-                    text-align: center;
-                `;
+        position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+        background: linear-gradient(135deg, #10B981, #059669); color: white;
+        padding: 30px; border-radius: 20px; box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+        z-index: 10000; max-width: 500px; text-align: center;
+    `;
 
                     popup.innerHTML = `
-                    <div style="font-size: 48px; margin-bottom: 15px;">🎯</div>
-                    <h2 style="margin: 0 0 15px 0; font-size: 24px;">Tessera per ${customerName}</h2>
-                    
-                    <div style="background: rgba(255,255,255,0.15); padding: 20px; border-radius: 15px; margin-bottom: 20px;">
-                        <div style="font-size: 16px; font-weight: bold; margin-bottom: 15px;">✅ TUTTO PRONTO!</div>
-                        <div style="font-size: 14px; line-height: 1.6;">
-                            📥 Tessera scaricata in Download<br>
-                            📱 WhatsApp si aprirà tra 3 secondi<br>
-                            ${isDesktop ? '🖼️ Finestra immagine separata si aprirà' : '📎 Usa il pulsante allega in WhatsApp'}
-                        </div>
-                    </div>
-                    
-                    <div style="background: linear-gradient(135deg, rgba(59,130,246,0.9), rgba(37,99,235,0.9)); padding: 20px; border-radius: 15px; margin-bottom: 20px;">
-                        <div style="font-size: 18px; font-weight: bold; margin-bottom: 10px;">🚀 PROSSIMO PASSO:</div>
-                        ${isDesktop ?
-                            '<div style="font-size: 15px;">Trascina l\'immagine dalla finestra separata → WhatsApp</div>' :
-                            '<div style="font-size: 15px;">Tocca 📎 in WhatsApp → Seleziona l\'immagine tessera</div>'
-                        }
-                    </div>
-                    
-                    <div style="font-size: 18px; font-weight: bold; color: #FFF; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">
-                        WhatsApp si apre automaticamente in <span id="countdown" style="font-size: 24px;">3</span>
-                    </div>
-                `;
-
-                    // Stile per animazione
-                    const style = document.createElement('style');
-                    style.textContent = `
-                    @keyframes popInCenter {
-                        0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
-                        50% { transform: translate(-50%, -50%) scale(1.1); opacity: 0.8; }
-                        100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
-                    }
-                `;
-                    document.head.appendChild(style);
+        <h2 style="margin: 0 0 15px 0;">Tessera per ${customerName}</h2>
+        <div>✅ Tessera scaricata<br>📱 WhatsApp si apre in <span id="countdown">3</span>s</div>
+    `;
 
                     document.body.appendChild(popup);
 
-                    // Countdown 3 secondi
                     let count = 3;
-                    const countdownEl = document.getElementById('countdown');
-                    const countdownInterval = setInterval(() => {
+                    const interval = setInterval(() => {
                         count--;
-                        if (countdownEl) countdownEl.textContent = count;
+                        const el = document.getElementById('countdown');
+                        if (el) el.textContent = count;
                         if (count <= 0) {
-                            clearInterval(countdownInterval);
-                            if (popup.parentNode) {
-                                popup.parentNode.removeChild(popup);
-                                if (style.parentNode) style.parentNode.removeChild(style);
-                            }
+                            clearInterval(interval);
+                            if (popup.parentNode) popup.parentNode.removeChild(popup);
                         }
                     }, 1000);
                 }
 
-
-
                 sendStampsUpdateWhatsApp(customerId, stampsAdded) {
-                    console.log('📞 sendStampsUpdateWhatsApp chiamato:', { customerId, stampsAdded });
-
                     const customer = this.db.customers.find(c => c.id === customerId);
-                    console.log('👤 Cliente trovato:', customer ? customer.firstName : 'NESSUNO');
-                    console.log('📱 Telefono cliente:', customer?.phone);
 
                     if (!customer || !customer.phone) {
-                        console.error('❌ Cliente senza telefono, impossibile aprire WhatsApp');
-                        this.showToast('⚠️ Cliente senza numero di telefono', 'warning');
+                        this.showToast('⚠️ Cliente senza telefono', 'warning');
                         return;
                     }
 
                     const phone = customer.phone.replace(/[^0-9]/g, '');
                     const phoneFormatted = phone.startsWith('39') ? phone : '39' + phone;
-                    console.log('📞 Telefono formattato:', phoneFormatted);
 
                     const currentStamps = customer.fidelity.stamps;
                     const totalNeeded = this.fidelityConfig.stampsPerReward;
@@ -5535,35 +5048,22 @@
 
                     let message = `🎉 Ciao ${customer.firstName}!\n\n`;
 
-                    // Cambia il messaggio in base a se sono stati aggiunti bollini o è solo un aggiornamento
                     if (stampsAdded > 0) {
-                        message += `📍 Hai appena guadagnato ${stampsAdded} bollin${stampsAdded === 1 ? 'o' : 'i'}!\n\n`;
-                    } else {
-                        message += `💳 Ecco la situazione aggiornata della tua tessera fedeltà!\n\n`;
+                        message += `📍 Hai guadagnato ${stampsAdded} bollini!\n\n`;
                     }
 
                     message += `🏷️ Bollini totali: ${currentStamps}/${totalNeeded}\n`;
 
                     if (availableRewards > 0) {
-                        message += `🎁 Hai ${availableRewards} premi${availableRewards === 1 ? 'o' : ''} disponibil${availableRewards === 1 ? 'e' : 'i'}!\n\n` +
-                            `🎊 Fantastico! Passa in negozio per riscattare il tuo premio! 🎊\n`;
-                    } else if (currentStamps % totalNeeded === 0) {
-                        message += `\n🔥 Hai completato la card! Al prossimo acquisto avrai un premio! 🔥\n`;
+                        message += `🎁 Hai ${availableRewards} premi disponibili!\n`;
                     } else if (stampsToNext > 0) {
-                        message += `\n⭐ Ti manc${stampsToNext === 1 ? 'a' : 'ano'} solo ${stampsToNext} bollin${stampsToNext === 1 ? 'o' : 'i'} al prossimo premio!\n`;
+                        message += `⭐ Mancano ${stampsToNext} bollini al prossimo premio!\n`;
                     }
 
-                    message += `\nGrazie per la fiducia! 😊\n\nPastificio Gramsci`;
+                    message += `\nGrazie! 😊\nPastificio Gramsci`;
 
-                    console.log('💬 Messaggio WhatsApp:', message);
-
-                    const whatsappUrl = `https://wa.me/${phoneFormatted}?text=${encodeURIComponent(message)}`;
-                    console.log('🔗 URL WhatsApp:', whatsappUrl);
-
-                    window.open(whatsappUrl, '_blank');
-                    console.log('✅ window.open chiamato');
-
-                    this.showToast('✅ Messaggio aggiornamento pronto su WhatsApp');
+                    window.open(`https://wa.me/${phoneFormatted}?text=${encodeURIComponent(message)}`, '_blank');
+                    this.showToast('✅ Messaggio pronto su WhatsApp');
                 }
 
                 // NUOVA FUNZIONE: Messaggio premio riscattato
