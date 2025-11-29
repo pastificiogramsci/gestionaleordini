@@ -4856,13 +4856,15 @@
                                 `📱 SALVA l'immagine e mostrala in negozio!\n\n` +
                                 `Pastificio Gramsci`;
 
-                            // WEB SHARE API - con controllo canShare
+                            let sharedSuccessfully = false;
+
+                            // WEB SHARE API - prova su mobile
                             if (isMobile && navigator.share && navigator.canShare) {
                                 try {
                                     const file = new File([blob], fileName, { type: 'image/png' });
 
                                     if (navigator.canShare({ files: [file] })) {
-                                        console.log('✅ canShare OK, invio...');
+                                        console.log('✅ Tentativo Web Share...');
 
                                         await navigator.share({
                                             files: [file],
@@ -4870,45 +4872,48 @@
                                             text: messageText
                                         });
 
-                                        this.showToast('✅ Tessera condivisa! Seleziona WhatsApp');
-                                        this.markCardAsSent(customer);
-                                        document.body.removeChild(qrContainer);
-                                        return;
+                                        console.log('✅ Web Share completato!');
+                                        this.showToast('✅ Tessera condivisa!');
+                                        sharedSuccessfully = true;
                                     }
                                 } catch (err) {
-                                    console.log('⚠️ Web Share fallito:', err);
+                                    console.log('⚠️ Web Share annullato/fallito:', err.name);
+                                    // Se annullato, procedi con fallback
                                 }
                             }
 
-                            // FALLBACK: Download + WhatsApp
-                            console.log('📥 Uso fallback download');
+                            // FALLBACK: se Web Share non disponibile o fallito
+                            if (!sharedSuccessfully) {
+                                console.log('📥 Uso fallback download + WhatsApp');
 
-                            const url = URL.createObjectURL(blob);
-                            const link = document.createElement('a');
-                            link.href = url;
-                            link.download = fileName;
-                            link.style.display = 'none';
-                            document.body.appendChild(link);
-                            link.click();
+                                const url = URL.createObjectURL(blob);
+                                const link = document.createElement('a');
+                                link.href = url;
+                                link.download = fileName;
+                                link.style.display = 'none';
+                                document.body.appendChild(link);
+                                link.click();
 
-                            setTimeout(() => {
-                                document.body.removeChild(link);
-                                URL.revokeObjectURL(url);
-                            }, 100);
+                                setTimeout(() => {
+                                    document.body.removeChild(link);
+                                    URL.revokeObjectURL(url);
+                                }, 100);
 
-                            this.showToast('✅ Tessera scaricata! Apertura WhatsApp...');
+                                this.showToast('📥 Tessera scaricata! Apertura WhatsApp...', 'success');
 
-                            // Apri WhatsApp
-                            setTimeout(() => {
-                                const phone = customer.phone.replace(/[^0-9]/g, '');
-                                const phoneFormatted = phone.startsWith('39') ? phone : '39' + phone;
-                                window.open(`https://wa.me/${phoneFormatted}?text=${encodeURIComponent(messageText)}`, '_blank');
+                                // Apri WhatsApp
+                                setTimeout(() => {
+                                    const phone = customer.phone.replace(/[^0-9]/g, '');
+                                    const phoneFormatted = phone.startsWith('39') ? phone : '39' + phone;
+                                    window.open(`https://wa.me/${phoneFormatted}?text=${encodeURIComponent(messageText)}`, '_blank');
+                                }, 1000);
+                            }
 
-                                this.markCardAsSent(customer);
-                                document.body.removeChild(qrContainer);
-                            }, 800);
+                            // Cleanup e salva stato
+                            this.markCardAsSent(customer);
+                            document.body.removeChild(qrContainer);
 
-                        }, 'image/png', 1.0);  // PNG non JPEG!
+                        }, 'image/png', 1.0);
 
                     }, 1000);  // TIMEOUT FISSO 500ms
                 }
