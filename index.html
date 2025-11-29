@@ -4756,28 +4756,39 @@
                         colorLight: "#ffffff"
                     });
 
-                    this.showToast('⏳ Generazione QR...', 'info');
-                    console.log('🔄 QR in generazione...');
+                    this.showToast('⏳ Generazione tessera...', 'info');
 
-                    // TIMEOUT FISSO - più affidabile di Promise
-                    setTimeout(async () => {
+                    // ATTENDI QR CON RETRY
+                    let attempts = 0;
+                    const maxAttempts = 20;
+
+                    const waitAndDraw = () => {
+                        attempts++;
                         const qrImg = qrContainer.querySelector('img');
-                        if (!qrImg) {
-                            console.error('❌ QR non generato');
-                            document.body.removeChild(qrContainer);
+
+                        console.log(`🔄 Tentativo ${attempts}: img=${!!qrImg}, complete=${qrImg?.complete}, height=${qrImg?.naturalHeight}`);
+
+                        if (qrImg && qrImg.complete && qrImg.naturalHeight > 0) {
+                            console.log('✅ QR PRONTO! Inizio disegno...');
+                            drawCanvas(qrImg);
+                        } else if (attempts < maxAttempts) {
+                            setTimeout(waitAndDraw, 200);
+                        } else {
+                            console.error('❌ QR timeout');
                             this.showToast('❌ Errore generazione QR', 'error');
-                            return;
+                            if (qrContainer.parentNode) document.body.removeChild(qrContainer);
                         }
+                    };
 
-                        console.log('✅ QR generato');
-
+                    const drawCanvas = (qrImg) => {
                         const canvas = document.createElement('canvas');
                         const ctx = canvas.getContext('2d');
 
-                        // Ottimizzato per mobile
                         const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
                         canvas.width = isMobile ? 800 : 1200;
                         canvas.height = isMobile ? 500 : 750;
+
+                        console.log('📐 Canvas:', canvas.width, 'x', canvas.height, '| Mobile:', isMobile);
 
                         // Gradiente
                         const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
@@ -4786,32 +4797,32 @@
                         ctx.fillStyle = gradient;
                         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-                        // Texture ridotta per mobile
+                        // Texture RIDOTTA
                         ctx.globalAlpha = 0.03;
-                        const texturePoints = isMobile ? 100 : 500;
+                        const texturePoints = isMobile ? 50 : 200;
                         for (let i = 0; i < texturePoints; i++) {
                             ctx.fillStyle = '#5D3F24';
                             ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 2, 2);
                         }
                         ctx.globalAlpha = 1;
 
-                        const scale = isMobile ? 0.7 : 1;
+                        const scale = isMobile ? 0.65 : 1;
 
                         // Intestazione
                         ctx.fillStyle = '#5D3F24';
-                        ctx.font = `bold ${60 * scale}px Georgia`;
+                        ctx.font = `bold ${Math.floor(60 * scale)}px Georgia`;
                         ctx.textAlign = 'center';
-                        ctx.fillText('PASTIFICIO GRAMSCI', canvas.width / 2, 100 * scale);
+                        ctx.fillText('PASTIFICIO GRAMSCI', canvas.width / 2, Math.floor(80 * scale));
 
-                        ctx.font = `italic ${36 * scale}px Georgia`;
-                        ctx.fillText('TESSERA FEDELTÀ', canvas.width / 2, 160 * scale);
+                        ctx.font = `italic ${Math.floor(32 * scale)}px Georgia`;
+                        ctx.fillText('TESSERA FEDELTÀ', canvas.width / 2, Math.floor(130 * scale));
 
                         // Linea decorativa
                         ctx.strokeStyle = '#5D3F24';
-                        ctx.lineWidth = 3;
+                        ctx.lineWidth = 2;
                         ctx.beginPath();
                         for (let x = 0; x <= canvas.width; x += 10) {
-                            const y = 200 * scale + Math.sin(x * 0.02) * 5;
+                            const y = Math.floor(150 * scale) + Math.sin(x * 0.02) * 3;
                             if (x === 0) ctx.moveTo(x, y);
                             else ctx.lineTo(x, y);
                         }
@@ -4819,31 +4830,42 @@
 
                         // Nome cliente
                         ctx.fillStyle = '#5D3F24';
-                        ctx.font = `bold ${46 * scale}px Georgia`;
-                        ctx.fillText(`${customer.firstName} ${customer.lastName}`, canvas.width / 2, 280 * scale);
+                        ctx.font = `bold ${Math.floor(40 * scale)}px Georgia`;
+                        ctx.fillText(`${customer.firstName} ${customer.lastName}`, canvas.width / 2, Math.floor(200 * scale));
 
-                        // QR Code
-                        const qrSize = isMobile ? 200 : 300;
-                        const qrX = canvas.width / 2 - qrSize / 2;
-                        const qrY = isMobile ? 300 : 350;
+                        // QR Code - PROPORZIONATO
+                        const qrSize = Math.floor(isMobile ? 180 : 260);
+                        const qrX = Math.floor((canvas.width - qrSize) / 2);
+                        const qrY = Math.floor(isMobile ? 240 : 280);
 
+                        console.log('📦 QR:', qrX, qrY, qrSize);
+
+                        // Cornice
                         ctx.fillStyle = '#5D3F24';
-                        ctx.fillRect(qrX - 15, qrY - 15, qrSize + 30, qrSize + 30);
+                        ctx.fillRect(qrX - 12, qrY - 12, qrSize + 24, qrSize + 24);
                         ctx.fillStyle = '#ffffff';
-                        ctx.fillRect(qrX - 8, qrY - 8, qrSize + 16, qrSize + 16);
+                        ctx.fillRect(qrX - 6, qrY - 6, qrSize + 12, qrSize + 12);
 
-                        ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
+                        // DISEGNA QR
+                        try {
+                            ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
+                            console.log('✅ QR disegnato');
+                        } catch (e) {
+                            console.error('❌ drawImage error:', e);
+                        }
 
+                        // Testo sotto QR
                         ctx.fillStyle = '#5D3F24';
-                        ctx.font = `italic ${20 * scale}px Georgia`;
-                        ctx.fillText('Scansiona in negozio', canvas.width / 2, qrY + qrSize + 40);
+                        ctx.font = `italic ${Math.floor(18 * scale)}px Georgia`;
+                        ctx.fillText('Scansiona in negozio', canvas.width / 2, qrY + qrSize + Math.floor(35 * scale));
 
-                        ctx.font = `italic ${22 * scale}px Georgia`;
-                        ctx.fillText('Grazie per la tua fedeltà!', canvas.width / 2, canvas.height - 30);
+                        // Footer
+                        ctx.font = `italic ${Math.floor(20 * scale)}px Georgia`;
+                        ctx.fillText('Grazie per la tua fedeltà!', canvas.width / 2, canvas.height - Math.floor(25 * scale));
 
-                        console.log('✅ Canvas completato');
+                        console.log('✅ Canvas completo');
 
-                        // BLOB - più compatibile di dataURL!
+                        // BLOB
                         canvas.toBlob(async (blob) => {
                             const fileName = `tessera-${customer.firstName}-${customer.lastName}.png`;
                             const stamps = customer.fidelity?.stamps || 0;
@@ -4858,13 +4880,13 @@
 
                             let sharedSuccessfully = false;
 
-                            // WEB SHARE API - prova su mobile
+                            // WEB SHARE
                             if (isMobile && navigator.share && navigator.canShare) {
                                 try {
                                     const file = new File([blob], fileName, { type: 'image/png' });
 
                                     if (navigator.canShare({ files: [file] })) {
-                                        console.log('✅ Tentativo Web Share...');
+                                        console.log('📤 Web Share...');
 
                                         await navigator.share({
                                             files: [file],
@@ -4872,19 +4894,18 @@
                                             text: messageText
                                         });
 
-                                        console.log('✅ Web Share completato!');
+                                        console.log('✅ Condiviso!');
                                         this.showToast('✅ Tessera condivisa!');
                                         sharedSuccessfully = true;
                                     }
                                 } catch (err) {
-                                    console.log('⚠️ Web Share annullato/fallito:', err.name);
-                                    // Se annullato, procedi con fallback
+                                    console.log('⚠️ Web Share fallito:', err.name);
                                 }
                             }
 
-                            // FALLBACK: se Web Share non disponibile o fallito
+                            // FALLBACK
                             if (!sharedSuccessfully) {
-                                console.log('📥 Uso fallback download + WhatsApp');
+                                console.log('📥 Fallback download');
 
                                 const url = URL.createObjectURL(blob);
                                 const link = document.createElement('a');
@@ -4901,7 +4922,6 @@
 
                                 this.showToast('📥 Tessera scaricata! Apertura WhatsApp...', 'success');
 
-                                // Apri WhatsApp
                                 setTimeout(() => {
                                     const phone = customer.phone.replace(/[^0-9]/g, '');
                                     const phoneFormatted = phone.startsWith('39') ? phone : '39' + phone;
@@ -4909,13 +4929,15 @@
                                 }, 1000);
                             }
 
-                            // Cleanup e salva stato
+                            // Cleanup
                             this.markCardAsSent(customer);
-                            document.body.removeChild(qrContainer);
+                            if (qrContainer.parentNode) document.body.removeChild(qrContainer);
 
                         }, 'image/png', 1.0);
+                    };
 
-                    }, 1000);  // TIMEOUT FISSO 500ms
+                    // AVVIA
+                    waitAndDraw();
                 }
 
                 async advancedCardSender(imageDataUrl, messageText, phoneFormatted, customer) {
