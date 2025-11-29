@@ -4727,24 +4727,15 @@
                 // ========================================
 
                 async sendFidelityCardWhatsApp(customerId) {
-                    // Lock per evitare chiamate multiple
-                    if (this.sendingCard) {
-                        console.log('⚠️ Invio già in corso, attendi...');
-                        this.showToast('⏳ Generazione in corso...', 'info');
-                        return;
-                    }
-                    this.sendingCard = true;
-
                     const customer = this.db.customers.find(c => c.id === customerId);
-                    if (!customer || !customer.phone) {
+                    if (!customer) return;
+
+                    if (!customer.phone) {
                         this.showToast('❌ Cliente senza numero di telefono', 'error');
-                        this.sendingCard = false;
                         return;
                     }
 
-                    console.log('🎯 INIZIO sendFidelityCardWhatsApp per:', customer.firstName);
-                    console.log('📱 User Agent:', navigator.userAgent);
-                    console.log('🔍 Web Share supportato?', !!navigator.share);
+                    console.log('🎯 Invio tessera per:', customer.firstName);
 
                     const qrData = JSON.stringify({
                         id: customer.id,
@@ -4752,53 +4743,38 @@
                         app: 'fidelity-card'
                     });
 
+                    // Genera QR code
                     const qrContainer = document.createElement('div');
                     qrContainer.style.display = 'none';
                     document.body.appendChild(qrContainer);
 
-                    // Genera QR
-                    const qrCode = new QRCode(qrContainer, {
+                    new QRCode(qrContainer, {
                         text: qrData,
                         width: 400,
                         height: 400,
-                        colorDark: "#3E2723",
+                        colorDark: "#5D3F24",
                         colorLight: "#ffffff"
                     });
 
-                    // Attendi QR con timeout
-                    const waitForQR = () => {
-                        return new Promise((resolve, reject) => {
-                            let attempts = 0;
-                            const maxAttempts = 50;
+                    // TIMEOUT FISSO - più affidabile di Promise
+                    setTimeout(async () => {
+                        const qrImg = qrContainer.querySelector('img');
+                        if (!qrImg) {
+                            console.error('❌ QR non generato');
+                            document.body.removeChild(qrContainer);
+                            this.showToast('❌ Errore generazione QR', 'error');
+                            return;
+                        }
 
-                            const checkQR = () => {
-                                attempts++;
-                                const qrImg = qrContainer.querySelector('img');
-
-                                if (qrImg && qrImg.complete && qrImg.naturalHeight !== 0) {
-                                    console.log('✅ QR pronto dopo', attempts * 100, 'ms');
-                                    resolve(qrImg);
-                                } else if (attempts >= maxAttempts) {
-                                    console.error('❌ QR timeout');
-                                    reject(new Error('QR timeout'));
-                                } else {
-                                    setTimeout(checkQR, 100);
-                                }
-                            };
-                            checkQR();
-                        });
-                    };
-
-                    waitForQR().then(async (qrImg) => {
-                        console.log('✅ QR ricevuto, inizio rendering...');
+                        console.log('✅ QR generato');
 
                         const canvas = document.createElement('canvas');
                         const ctx = canvas.getContext('2d');
 
-                        const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
+                        // Ottimizzato per mobile
+                        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
                         canvas.width = isMobile ? 800 : 1200;
                         canvas.height = isMobile ? 500 : 750;
-                        console.log('✅ Canvas creato:', canvas.width, 'x', canvas.height);
 
                         // Gradiente
                         const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
@@ -4807,7 +4783,7 @@
                         ctx.fillStyle = gradient;
                         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-                        // Texture ridotta
+                        // Texture ridotta per mobile
                         ctx.globalAlpha = 0.03;
                         const texturePoints = isMobile ? 100 : 500;
                         for (let i = 0; i < texturePoints; i++) {
@@ -4815,7 +4791,6 @@
                             ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 2, 2);
                         }
                         ctx.globalAlpha = 1;
-                        console.log('✅ Texture completata');
 
                         const scale = isMobile ? 0.7 : 1;
 
@@ -4855,7 +4830,6 @@
                         ctx.fillRect(qrX - 8, qrY - 8, qrSize + 16, qrSize + 16);
 
                         ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
-                        console.log('✅ QR disegnato');
 
                         ctx.fillStyle = '#5D3F24';
                         ctx.font = `italic ${20 * scale}px Georgia`;
@@ -4864,41 +4838,76 @@
                         ctx.font = `italic ${22 * scale}px Georgia`;
                         ctx.fillText('Grazie per la tua fedeltà!', canvas.width / 2, canvas.height - 30);
 
-                        console.log('✅ Grafica completata, conversione JPEG...');
+                        console.log('✅ Canvas completato');
 
-                        const cardImageDataUrl = canvas.toDataURL('image/jpeg', 0.8);
-                        console.log('✅ JPEG creato, size:', Math.round(cardImageDataUrl.length / 1024), 'KB');
+                        // BLOB - più compatibile di dataURL!
+                        canvas.toBlob(async (blob) => {
+                            const fileName = `tessera-${customer.firstName}-${customer.lastName}.png`;
+                            const stamps = customer.fidelity?.stamps || 0;
 
-                        const phone = customer.phone.replace(/[^0-9]/g, '');
-                        const phoneFormatted = phone.startsWith('39') ? phone : '39' + phone;
-                        const currentStamps = customer.fidelity?.stamps || 0;
+                            const messageText =
+                                `🎉 Ciao ${customer.firstName}! Benvenuto nel programma Fedeltà!\n\n` +
+                                `💳 Ecco la tua tessera digitale!\n\n` +
+                                `📊 Stato attuale: ${stamps}/${this.fidelityConfig.stampsPerReward || 10} bollini\n` +
+                                (customer.fidelity?.rewards > 0 ? `🎁 Hai ${customer.fidelity.rewards} premi disponibili!\n\n` : '\n') +
+                                `📱 SALVA l'immagine e mostrala in negozio!\n\n` +
+                                `Pastificio Gramsci`;
 
-                        const messageText =
-                            `🎉 Ciao ${customer.firstName}! Benvenuto nel programma Fedeltà!\n\n` +
-                            `💳 Ecco la tua tessera digitale personale!\n\n` +
-                            `📊 Come funziona:\n` +
-                            `📍 Ogni ${this.fidelityConfig.eurosPerStamp || 20}€ = 1 bollino ✓\n` +
-                            `🏷️ Accumula ${this.fidelityConfig.stampsPerReward || 10} bollini = 1 PREMIO! 🎁\n\n` +
-                            `🎯 Stato attuale: ${currentStamps}/${this.fidelityConfig.stampsPerReward || 10} bollini\n` +
-                            (customer.fidelity?.rewards > 0 ? `🎁 Hai ${customer.fidelity.rewards} premio/i da riscattare!\n\n` : '\n') +
-                            `📱 SALVA QUESTA TESSERA sul telefono!\n\n` +
-                            `Grazie per la fiducia! 😊\n\nPastificio Gramsci`;
+                            // WEB SHARE API - con controllo canShare
+                            if (isMobile && navigator.share && navigator.canShare) {
+                                try {
+                                    const file = new File([blob], fileName, { type: 'image/png' });
 
-                        console.log('🚀 Chiamata advancedCardSender...');
-                        await this.advancedCardSender(cardImageDataUrl, messageText, phoneFormatted, customer);
-                        console.log('✅ advancedCardSender completata');
+                                    if (navigator.canShare({ files: [file] })) {
+                                        console.log('✅ canShare OK, invio...');
 
-                        document.body.removeChild(qrContainer);
-                        this.sendingCard = false;
+                                        await navigator.share({
+                                            files: [file],
+                                            title: 'Tessera Fedeltà',
+                                            text: messageText
+                                        });
 
-                    }).catch(error => {
-                        console.error('❌ Errore generazione tessera:', error);
-                        this.showToast('❌ Errore generazione tessera', 'error');
-                        if (qrContainer && qrContainer.parentNode) {
-                            document.body.removeChild(qrContainer);
-                        }
-                        this.sendingCard = false;
-                    });
+                                        this.showToast('✅ Tessera condivisa! Seleziona WhatsApp');
+                                        this.markCardAsSent(customer);
+                                        document.body.removeChild(qrContainer);
+                                        return;
+                                    }
+                                } catch (err) {
+                                    console.log('⚠️ Web Share fallito:', err);
+                                }
+                            }
+
+                            // FALLBACK: Download + WhatsApp
+                            console.log('📥 Uso fallback download');
+
+                            const url = URL.createObjectURL(blob);
+                            const link = document.createElement('a');
+                            link.href = url;
+                            link.download = fileName;
+                            link.style.display = 'none';
+                            document.body.appendChild(link);
+                            link.click();
+
+                            setTimeout(() => {
+                                document.body.removeChild(link);
+                                URL.revokeObjectURL(url);
+                            }, 100);
+
+                            this.showToast('✅ Tessera scaricata! Apertura WhatsApp...');
+
+                            // Apri WhatsApp
+                            setTimeout(() => {
+                                const phone = customer.phone.replace(/[^0-9]/g, '');
+                                const phoneFormatted = phone.startsWith('39') ? phone : '39' + phone;
+                                window.open(`https://wa.me/${phoneFormatted}?text=${encodeURIComponent(messageText)}`, '_blank');
+
+                                this.markCardAsSent(customer);
+                                document.body.removeChild(qrContainer);
+                            }, 800);
+
+                        }, 'image/png', 1.0);  // PNG non JPEG!
+
+                    }, 500);  // TIMEOUT FISSO 500ms
                 }
 
                 async advancedCardSender(imageDataUrl, messageText, phoneFormatted, customer) {
