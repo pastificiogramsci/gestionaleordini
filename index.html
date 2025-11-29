@@ -4756,6 +4756,9 @@
                         colorLight: "#ffffff"
                     });
 
+                    this.showToast('⏳ Generazione QR...', 'info');
+                    console.log('🔄 QR in generazione...');
+
                     // TIMEOUT FISSO - più affidabile di Promise
                     setTimeout(async () => {
                         const qrImg = qrContainer.querySelector('img');
@@ -4907,7 +4910,7 @@
 
                         }, 'image/png', 1.0);  // PNG non JPEG!
 
-                    }, 500);  // TIMEOUT FISSO 500ms
+                    }, 1000);  // TIMEOUT FISSO 500ms
                 }
 
                 async advancedCardSender(imageDataUrl, messageText, phoneFormatted, customer) {
