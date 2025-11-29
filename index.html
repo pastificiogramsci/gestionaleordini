@@ -492,12 +492,19 @@
                     <button onclick="app.switchTab('preparazione')"
                         class="tab-btn flex-1 p-4 border-b-2 border-transparent text-gray-500 whitespace-nowrap"
                         data-tab="preparazione">📋 Preparazione</button>
-                    <button onclick="app.switchTab('prodotti')"
-                        class="tab-btn flex-1 p-4 border-b-2 border-transparent text-gray-500 whitespace-nowrap"
-                        data-tab="prodotti">📦 Prodotti</button>
+                    <button onclick="app.switchTab('modifiche')"
+                        class="tab-btn flex-1 p-4 border-b-2 border-transparent text-gray-500 whitespace-nowrap relative"
+                        data-tab="modifiche">
+                        ⚠️ Modifiche
+                        <span id="mod-badge"
+                            class="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center hidden">0</span>
+                    </button>
                     <button onclick="app.switchTab('clienti')"
                         class="tab-btn flex-1 p-4 border-b-2 border-transparent text-gray-500 whitespace-nowrap"
                         data-tab="clienti">👥 Clienti</button>
+                    <button onclick="app.switchTab('prodotti')"
+                        class="tab-btn flex-1 p-4 border-b-2 border-transparent text-gray-500 whitespace-nowrap"
+                        data-tab="prodotti">📦 Prodotti</button>
                     <button onclick="app.switchTab('fidelity')"
                         class="tab-btn flex-1 p-4 border-b-2 border-transparent text-gray-500 whitespace-nowrap"
                         data-tab="fidelity">🎁 Fidelity</button>
@@ -598,30 +605,6 @@
                         <div class="text-sm opacity-90 font-medium">Fatturato</div>
                         <div class="text-3xl font-bold mt-2" id="stat-revenue-month">€0</div>
                         <div class="text-xs opacity-75 mt-2">👆 Clicca per filtrare</div>
-                    </div>
-                </div>
-
-                <!-- Scanner QR Universale (MIGLIORATO) -->
-                <div
-                    class="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl shadow-lg p-6 border-2 border-blue-200 hover:border-blue-300 transition-colors duration-200 mb-6">
-                    <div class="flex flex-col md:flex-row justify-between items-center gap-4">
-                        <div class="flex items-center gap-4">
-                            <div class="bg-gradient-to-br from-blue-600 to-purple-600 text-white rounded-full p-4">
-                                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
-                                </svg>
-                            </div>
-                            <div>
-                                <h3 class="text-2xl font-bold text-gray-800">📷 Scanner QR Veloce</h3>
-                                <p class="text-sm text-gray-600 mt-1">Scansiona tessere fidelity e coupon in un attimo
-                                </p>
-                            </div>
-                        </div>
-                        <button onclick="app.openUniversalQRScanner()"
-                            class="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-lg hover:from-blue-700 hover:to-purple-700 font-bold shadow-lg hover:shadow-xl transition-all duration-200 active:scale-95 whitespace-nowrap">
-                            🎯 Avvia Scanner
-                        </button>
                     </div>
                 </div>
 
@@ -1725,7 +1708,7 @@
             </div>
         </div>
         <script>
-            
+
             // Fix per Dropbox SDK - Wrapper fetch
             const originalFetch = window.fetch;
             const boundFetch = function (...args) {
@@ -7908,6 +7891,23 @@
                     document.getElementById('stats-orders').textContent = this.db.orders.filter(o => !o.deleted).length;
                     document.getElementById('stats-products').textContent = this.db.products.filter(p => !p.deleted).length;
                     document.getElementById('stats-customers').textContent = this.db.customers.filter(c => !c.deleted).length;
+                    // Aggiorna badge modifiche
+                    const ordersWithMods = this.db.orders.filter(o =>
+                        !o.deleted &&
+                        o.pendingModifications &&
+                        o.pendingModifications.length > 0
+                    );
+                    const totalMods = ordersWithMods.reduce((sum, o) => sum + o.pendingModifications.length, 0);
+
+                    const modBadge = document.getElementById('mod-badge');
+                    if (modBadge) {
+                        if (totalMods > 0) {
+                            modBadge.textContent = totalMods > 99 ? '99+' : totalMods;
+                            modBadge.classList.remove('hidden');
+                        } else {
+                            modBadge.classList.add('hidden');
+                        }
+                    }
                 }
 
                 updateDashboardStats() {
@@ -10261,8 +10261,9 @@
                     </div>
                 </div>
                 <div class="flex flex-col gap-2">
-                    <button onclick="event.stopPropagation(); app.sendFidelityCardWhatsApp('${cust.id}')"
-                        class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm font-medium whitespace-nowrap">
+                    <button onclick="event.stopPropagation(); event.preventDefault(); app.sendFidelityCardWhatsApp('${cust.id}')"
+                        class="bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 text-sm font-medium whitespace-nowrap active:scale-95 transition-transform"
+                        style="min-height: 44px; touch-action: manipulation;">
                         📤 Invia Tessera
                     </button>
                     <button onclick="event.stopPropagation(); app.openCustomerModal('${cust.id}')"
@@ -10322,8 +10323,9 @@
                         </div>
                     </div>
                     <div class="flex flex-col gap-2 shrink-0">
-                        <button onclick="app.sendFidelityCardWhatsApp('${cust.id}')"
-                            class="bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 text-sm font-medium whitespace-nowrap">
+                        <button onclick="event.stopPropagation(); event.preventDefault(); app.sendFidelityCardWhatsApp('${cust.id}')"
+                            class="bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 text-sm font-medium whitespace-nowrap active:scale-95 transition-transform"
+                            style="min-height: 44px; touch-action: manipulation;">
                             📤 Tessera
                         </button>
                         <button onclick="app.deleteFidelityCustomer('${cust.id}')"
@@ -10690,6 +10692,7 @@
 
                     if (!container) {
                         console.log('⏭️ modifications-list non trovato, skip render');
+                        this.updateStats(); // Aggiorna badge
                         return;
                     }
 
@@ -10714,6 +10717,7 @@
                 <p class="text-sm text-gray-400 mt-2">Tutti gli ordini sono aggiornati</p>
             </div>
         `;
+                        this.updateStats(); // Aggiorna badge
                         return;
                     }
 
@@ -10799,6 +10803,8 @@
 </div>
         `;
                     }).join('');
+
+                    this.updateStats(); // Aggiorna badge
                 }
 
                 toggleItemPrepared(orderId, itemIndex) {
