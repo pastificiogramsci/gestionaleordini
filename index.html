@@ -946,7 +946,7 @@
                     </h2>
                     <div id="dropbox-status" class="mb-4"></div>
                     <div class="space-y-3">
-                        <button onclick="app.connectDropbox()"
+                        <button onclick="app.avviaAuthDropbox()"
                             class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg shadow-lg hover:bg-blue-700 transition">
                             🔗 Connetti Dropbox
                         </button>
@@ -5356,31 +5356,36 @@
                     }
 
                     try {
+                        console.log('📦 Conversione immagine in blob...');
+
                         // Converte data URL in blob
                         const response = await fetch(imageDataUrl);
+                        console.log('✅ Fetch completato');
+
                         const blob = await response.blob();
+                        console.log('✅ Blob creato, size:', blob.size);
+
                         const file = new File([blob], `tessera-${customer.firstName}.jpg`, { type: 'image/jpeg' });
+                        console.log('✅ File creato:', file.name);
 
                         // Usa Web Share API per condivisione nativa
-                        // Alcuni browser ignorano text se c'è files - usa solo files
+                        console.log('📤 Chiamata navigator.share...');
                         await navigator.share({
                             files: [file]
                         });
 
-                        // Dopo la condivisione, apri WhatsApp con il messaggio
-                        this.showToast('📤 Ora invia il messaggio su WhatsApp!', 'info');
-                        setTimeout(() => {
-                            const phone = customer.phone.replace(/[^0-9]/g, '');
-                            const phoneFormatted = phone.startsWith('39') ? phone : '39' + phone;
-                            window.open(`https://wa.me/${phoneFormatted}?text=${encodeURIComponent(messageText)}`, '_blank');
-                        }, 2000);
-
                         console.log('✅ Condivisione Web Share API completata!');
-                        this.showToast(`🎉 Tessera condivisa con successo per ${customer.firstName}!`);
+                        this.showToast(`🎉 Tessera condivisa con successo!`);
                         return true;
                     } catch (error) {
-                        if (error.name !== 'AbortError') {
-                            console.log('❌ Errore Web Share API:', error);
+                        console.log('❌ ERRORE Web Share API:', error.name, error.message);
+
+                        if (error.name === 'AbortError') {
+                            console.log('ℹ️ Utente ha annullato la condivisione');
+                            this.showToast('Condivisione annullata', 'info');
+                        } else {
+                            console.log('❌ Errore tecnico:', error);
+                            this.showToast('Errore condivisione - uso download', 'warning');
                         }
                         return false;
                     }
