@@ -4762,9 +4762,11 @@
                         const canvas = document.createElement('canvas');
                         const ctx = canvas.getContext('2d');
 
-                        // Formato card elegante
-                        canvas.width = 1200;
-                        canvas.height = 750;
+                        // Formato card (ottimizzato per mobile)
+                        const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
+                        canvas.width = isMobile ? 800 : 1200;
+                        canvas.height = isMobile ? 500 : 750;
+                        console.log('✅ Canvas dimensioni:', canvas.width, 'x', canvas.height);
 
                         // Gradiente elegante beige simile al logo
                         const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
@@ -4935,13 +4937,14 @@
                         ctx.fillStyle = gradient;
                         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-                        // Texture leggera
+                        // Texture leggera (ridotta per mobile)
                         ctx.globalAlpha = 0.03;
-                        for (let i = 0; i < 2000; i++) {
-                            ctx.fillStyle = '#6B21A8'; // Viola
+                        for (let i = 0; i < 200; i++) { // ← 200 invece di 2000!
+                            ctx.fillStyle = '#5D3F24';
                             ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 2, 2);
                         }
                         ctx.globalAlpha = 1;
+                        console.log('✅ Texture completata');
 
                         // Intestazione
                         ctx.fillStyle = '#6B21A8'; // Viola
