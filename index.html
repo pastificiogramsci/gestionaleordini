@@ -4717,6 +4717,10 @@
                         return;
                     }
 
+                    console.log('🎯 INIZIO sendFidelityCardWhatsApp per:', customer.firstName);
+                    console.log('📱 User Agent:', navigator.userAgent);
+                    console.log('🔍 Web Share supportato?', !!navigator.share);
+
                     const qrData = JSON.stringify({
                         id: customer.id,
                         name: `${customer.firstName} ${customer.lastName}`,
@@ -5289,20 +5293,24 @@
                 }
 
                 async advancedCardSender(imageDataUrl, messageText, phoneFormatted, customer) {
-                    // Strategia 1: Web Share API - Condivisione nativa del sistema (solo su mobile)
-                    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                    console.log('📤 advancedCardSender chiamata');
 
+                    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                    console.log('📱 isMobile:', isMobile);
+
+                    // Strategia 1: Web Share API - Allega automaticamente su mobile
                     if (isMobile) {
                         const shareSuccess = await this.tryWebShare(imageDataUrl, messageText, customer);
                         if (shareSuccess) {
-                            // Se Web Share funziona, non serve altro
+                            // Se Web Share funziona, file già allegato - FATTO!
                             this.markCardAsSent(customer);
                             return;
                         }
+                        // Se Web Share fallisce, continua con il backup
+                        console.log('⚠️ Web Share fallito, uso metodo backup');
                     }
 
-                    // Strategia di backup: Download singolo + WhatsApp
-                    // Download UN SOLO FILE invece di 4 duplicati
+                    // Strategia di backup: Download + WhatsApp separati
                     const fileName = `tessera-fidelity-${customer.lastName}-${customer.firstName}.jpg`;
                     const link = document.createElement('a');
                     link.href = imageDataUrl;
@@ -5312,6 +5320,7 @@
                     document.body.removeChild(link);
 
                     console.log('✅ Download singolo creato:', fileName);
+                    this.showToast('📥 Tessera scaricata! Allega manualmente su WhatsApp', 'info');
 
                     // Crea URL temporaneo per drag&drop (solo desktop)
                     let shareUrl = null;
@@ -5319,13 +5328,13 @@
                         shareUrl = await this.createShareableUrl(imageDataUrl, customer);
                     }
 
-                    // Mostra istruzioni PRIMA di aprire WhatsApp per evitare che vengano coperte
+                    // Mostra istruzioni
                     this.showPreWhatsAppInstructions(customer.firstName, !isMobile);
 
-                    // Apre WhatsApp dopo un delay per permettere di leggere le istruzioni
+                    // Apre WhatsApp dopo delay
                     setTimeout(() => {
                         this.openWhatsAppWithMessage(messageText, phoneFormatted, shareUrl, !isMobile);
-                    }, 3000); // 3 secondi di delay
+                    }, 3000);
 
                     this.markCardAsSent(customer);
                 }
@@ -5340,8 +5349,11 @@
                 }
 
                 async tryWebShare(imageDataUrl, messageText, customer) {
+                    console.log('🧪 Tentativo Web Share API...');
+
                     if (!navigator.share) {
                         console.log('❌ Web Share API non supportata');
+                        this.showToast('Web Share non supportato - uso download', 'info');
                         return false;
                     }
 
@@ -5352,11 +5364,18 @@
                         const file = new File([blob], `tessera-${customer.firstName}.jpg`, { type: 'image/jpeg' });
 
                         // Usa Web Share API per condivisione nativa
+                        // Alcuni browser ignorano text se c'è files - usa solo files
                         await navigator.share({
-                            title: `Tessera Fedeltà - ${customer.firstName} ${customer.lastName}`,
-                            text: messageText,
                             files: [file]
                         });
+
+                        // Dopo la condivisione, apri WhatsApp con il messaggio
+                        this.showToast('📤 Ora invia il messaggio su WhatsApp!', 'info');
+                        setTimeout(() => {
+                            const phone = customer.phone.replace(/[^0-9]/g, '');
+                            const phoneFormatted = phone.startsWith('39') ? phone : '39' + phone;
+                            window.open(`https://wa.me/${phoneFormatted}?text=${encodeURIComponent(messageText)}`, '_blank');
+                        }, 2000);
 
                         console.log('✅ Condivisione Web Share API completata!');
                         this.showToast(`🎉 Tessera condivisa con successo per ${customer.firstName}!`);
