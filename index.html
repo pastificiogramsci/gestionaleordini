@@ -4692,10 +4692,27 @@
                             return;
                         }
 
-                        // Se c'è img, usala
+                        // Se c'è img, aspetta che sia COMPLETAMENTE caricata
                         if (qrImg) {
                             console.log('✅ Img trovata, complete=', qrImg.complete, 'height=', qrImg.naturalHeight);
-                            drawCanvas(qrImg);
+
+                            // Se già completa, usa subito
+                            if (qrImg.complete && qrImg.naturalHeight > 0) {
+                                console.log('✅ Img già pronta, disegno subito');
+                                drawCanvas(qrImg);
+                            } else {
+                                // Altrimenti aspetta l'evento onload
+                                console.log('⏳ Img non pronta, aspetto onload...');
+                                qrImg.onload = () => {
+                                    console.log('✅ Img onload completato!');
+                                    drawCanvas(qrImg);
+                                };
+                                qrImg.onerror = () => {
+                                    console.error('❌ Errore caricamento img');
+                                    this.showToast('❌ Errore QR', 'error');
+                                    document.body.removeChild(qrContainer);
+                                };
+                            }
                             return;
                         }
 
