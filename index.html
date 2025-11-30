@@ -4541,6 +4541,7 @@
                     this.showToast('✅ WhatsApp aperto! Allega la tessera', 'success');
                     this.markCardAsSent(customer);
                 }
+                
                 async generateFidelityCard(customerId) {
                     const customer = this.db.customers.find(c => c.id === customerId);
                     if (!customer) return;
@@ -4674,52 +4675,67 @@
 
                         console.log('🔍 IMG trovata?', !!qrImg, '| CANVAS trovato?', !!qrCanvas);
 
-                        // Se non c'è img ma c'è canvas, converti canvas in img
+                        // Se c'è img, controlla il src
+                        if (qrImg) {
+                            console.log('✅ Img trovata');
+                            console.log('📸 complete:', qrImg.complete);
+                            console.log('📸 naturalHeight:', qrImg.naturalHeight);
+                            console.log('📸 naturalWidth:', qrImg.naturalWidth);
+                            console.log('📸 src length:', qrImg.src?.length || 0);
+                            console.log('📸 src primi 100:', qrImg.src?.substring(0, 100) || 'VUOTO');
+
+                            // Se src è vuoto o corrotto, usa canvas
+                            if (!qrImg.src || qrImg.src.length < 100) {
+                                console.error('❌ IMG SRC VUOTO! Uso canvas...');
+                                qrImg = null; // Forza uso canvas
+                            }
+                        }
+
+                        // Se non c'è img valida E c'è canvas, usa canvas
                         if (!qrImg && qrCanvas) {
-                            console.log('✅ Trovato canvas, converto in img...');
+                            console.log('🔄 Converto CANVAS in IMG...');
 
                             const tempImg = new Image();
                             tempImg.onload = () => {
-                                console.log('✅ Canvas → Img completato');
+                                console.log('✅ Canvas → Img OK');
                                 drawCanvas(tempImg);
                             };
                             tempImg.onerror = () => {
-                                console.error('❌ Errore conversione canvas → img');
+                                console.error('❌ Errore canvas → img');
                                 this.showToast('❌ Errore QR', 'error');
                                 document.body.removeChild(qrContainer);
                             };
-                            tempImg.src = qrCanvas.toDataURL();
+
+                            const canvasDataUrl = qrCanvas.toDataURL();
+                            console.log('📸 Canvas dataURL length:', canvasDataUrl.length);
+                            tempImg.src = canvasDataUrl;
                             return;
                         }
 
-                        // Se c'è img, aspetta che sia COMPLETAMENTE caricata
-                        if (qrImg) {
-                            console.log('✅ Img trovata, complete=', qrImg.complete, 'height=', qrImg.naturalHeight);
-                            console.log('📸 Img src:', qrImg.src.substring(0, 100));
+                        // Se c'è img con src valido
+                        if (qrImg && qrImg.src && qrImg.src.length > 100) {
+                            console.log('🔄 Ricarico IMG per onload...');
 
-                            // FORZA ricaricamento per triggerare onload
                             const tempImg = new Image();
                             tempImg.onload = () => {
-                                console.log('✅ Nuova img caricata!');
+                                console.log('✅ IMG caricata!');
                                 drawCanvas(tempImg);
                             };
                             tempImg.onerror = () => {
-                                console.error('❌ Errore caricamento');
+                                console.error('❌ Errore load img');
                                 this.showToast('❌ Errore QR', 'error');
                                 document.body.removeChild(qrContainer);
                             };
-
-                            // Copia il src dall'img esistente
                             tempImg.src = qrImg.src;
                             return;
                         }
 
-                        // Nessuno dei due trovato
-                        console.error('❌ Né img né canvas trovati!');
-                        this.showToast('❌ QR non generato - browser incompatibile', 'error');
+                        // Nessuno trovato
+                        console.error('❌ Né img né canvas validi!');
+                        this.showToast('❌ QR non generato', 'error');
                         document.body.removeChild(qrContainer);
 
-                    }, 2000); // 2 secondi
+                    }, 2000);
                 }
 
                 markCardAsSent(customer) {
