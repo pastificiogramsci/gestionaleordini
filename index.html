@@ -7014,9 +7014,10 @@
                         await new Promise(resolve => setTimeout(resolve, 1000));
                         await this.syncFromDropboxSilent();
 
-                        // Aggiungi bollini solo per ordini nuovi con pagamento completato
+                        // Aggiungi bollini/coupon solo per ordini nuovi con pagamento completato
                         if (isNewOrder && order.paymentStatus === 'pagato') {
-                            this.addStampsFromOrder(customerId, orderTotal);
+                            const deliveryDateStr = order.deliveryDate; // formato YYYY-MM-DD
+                            await this.addStampsFromOrder(customerId, orderTotal, deliveryDateStr);
                         }
 
                         this.filteredOrders = null;
@@ -8373,53 +8374,48 @@
                     }
 
                     container.innerHTML = this.db.campaigns.map(campaign => {
-                        const isActive = !campaign.expiryDate || new Date(campaign.expiryDate) >= new Date();
+                        const isActive = campaign.active !== false;
                         const statusColor = isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800';
-                        const statusText = isActive ? 'Attiva' : 'Scaduta';
+                        const statusText = isActive ? '✅ Attiva' : '⏸️ Disattivata';
 
                         const discountText = campaign.discountType === 'percentage'
                             ? `${campaign.discountValue}%`
                             : `€${campaign.discountValue}`;
 
                         return `
-                        <div class="border rounded-lg p-4 mb-3 ${!isActive ? 'opacity-50' : ''}">
-                            <div class="flex justify-between items-start mb-2">
-                                <div>
-                                    <h3 class="font-bold text-lg">${campaign.name}</h3>
-                                    <p class="text-sm text-gray-600">${campaign.description || ''}</p>
-                                </div>
-                                <span class="px-2 py-1 rounded text-xs font-semibold ${statusColor}">${statusText}</span>
-                            </div>
-                            
-                            <div class="flex gap-4 text-sm mb-2">
-                                <div class="bg-purple-50 px-3 py-1 rounded">
-                                    <span class="font-bold text-purple-600">${discountText}</span> di sconto
-                                </div>
-                                ${campaign.expiryDate ? `
-                                    <div class="text-gray-600">
-                                        Scade: ${new Date(campaign.expiryDate).toLocaleDateString('it-IT')}
+                            <div class="border rounded-lg p-4 mb-3 ${!isActive ? 'opacity-50' : ''}">
+                                <div class="flex justify-between items-start mb-2">
+                                    <div>
+                                        <h3 class="font-bold text-lg">${campaign.name}</h3>
+                                        <p class="text-sm text-gray-600">${campaign.description || ''}</p>
                                     </div>
-                                ` : ''}
-                            </div>
-
-                            ${campaign.deliveryDates && campaign.deliveryDates.length > 0 ? `
-                                <div class="text-xs text-gray-600 mt-2">
-                                    📅 Date valide: ${campaign.deliveryDates.map(d => new Date(d).toLocaleDateString('it-IT')).join(', ')}
+                                    <span class="px-2 py-1 rounded text-xs font-semibold ${statusColor}">${statusText}</span>
                                 </div>
-                            ` : ''}
+                                
+                                <div class="flex gap-4 text-sm mb-2">
+                                    <div class="bg-purple-50 px-3 py-1 rounded">
+                                        <span class="font-bold text-purple-600">${discountText}</span> di sconto
+                                    </div>
+                                </div>
 
-                            <div class="flex gap-2 mt-3">
-                                <button onclick="app.generateCouponsForCampaign('${campaign.id}')" 
-                                    class="flex-1 bg-purple-600 text-white px-3 py-2 rounded text-sm hover:bg-purple-700">
-                                    🎫 Genera Coupon
-                                </button>
-                                <button onclick="app.deleteCampaign('${campaign.id}')" 
-                                    class="bg-red-600 text-white px-3 py-2 rounded text-sm hover:bg-red-700">
-                                    🗑️
-                                </button>
+                                <div class="text-xs text-gray-600 space-y-1 mb-3">
+                                    <div>📅 <strong>Date ritiro:</strong> ${campaign.deliveryDates ? campaign.deliveryDates.map(d => new Date(d).toLocaleDateString('it-IT')).join(', ') : 'N/D'}</div>
+                                    <div>🎯 <strong>Coupon valido:</strong> ${campaign.validFrom ? new Date(campaign.validFrom).toLocaleDateString('it-IT') : '?'} - ${campaign.validUntil ? new Date(campaign.validUntil).toLocaleDateString('it-IT') : '?'}</div>
+                                    <div>${campaign.suspendStamps ? '🚫 Bollini sospesi per queste date' : '✅ Bollini attivi'}</div>
+                                </div>
+
+                                <div class="flex gap-2">
+                                    <button onclick="app.toggleCampaign('${campaign.id}')" 
+                                        class="flex-1 ${isActive ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-green-500 hover:bg-green-600'} text-white px-3 py-2 rounded text-sm">
+                                        ${isActive ? '⏸️ Disattiva' : '▶️ Attiva'}
+                                    </button>
+                                    <button onclick="app.deleteCampaign('${campaign.id}')" 
+                                        class="bg-red-600 text-white px-3 py-2 rounded text-sm hover:bg-red-700">
+                                        🗑️
+                                    </button>
+                                </div>
                             </div>
-                        </div>
-                    `;
+                        `;
                     }).join('');
                 }
 
@@ -8427,12 +8423,13 @@
                     document.getElementById('campaign-name').value = '';
                     document.getElementById('campaign-description').value = '';
                     document.getElementById('campaign-discount-type').value = 'percentage';
-                    document.getElementById('campaign-discount-value').value = '';
-                    document.getElementById('campaign-expiry').value = '';
+                    document.getElementById('campaign-discount-value').value = '20';
+                    document.getElementById('campaign-valid-from').value = '';
+                    document.getElementById('campaign-valid-until').value = '';
+                    document.getElementById('campaign-suspend-stamps').checked = true;
                     document.getElementById('campaign-dates-container').innerHTML = '';
 
                     this.addCampaignDateInput();
-                    this.updateCampaignDiscountLabel();
 
                     const modal = document.getElementById('campaign-modal');
                     modal.classList.remove('hidden');
@@ -8443,12 +8440,6 @@
                     const modal = document.getElementById('campaign-modal');
                     modal.classList.remove('flex');
                     modal.classList.add('hidden');
-                }
-
-                updateCampaignDiscountLabel() {
-                    const type = document.getElementById('campaign-discount-type').value;
-                    const label = document.getElementById('campaign-discount-label');
-                    label.textContent = type === 'percentage' ? '(% da 1 a 100)' : '(€)';
                 }
 
                 addCampaignDateInput() {
@@ -8470,7 +8461,9 @@
                     const description = document.getElementById('campaign-description').value.trim();
                     const discountType = document.getElementById('campaign-discount-type').value;
                     const discountValue = parseFloat(document.getElementById('campaign-discount-value').value);
-                    const expiryDate = document.getElementById('campaign-expiry').value;
+                    const validFrom = document.getElementById('campaign-valid-from').value;
+                    const validUntil = document.getElementById('campaign-valid-until').value;
+                    const suspendStamps = document.getElementById('campaign-suspend-stamps').checked;
 
                     if (!name) {
                         this.showToast('⚠️ Inserisci il nome della campagna', 'error');
@@ -8487,25 +8480,37 @@
                         .map(input => input.value)
                         .filter(date => date);
 
+                    if (deliveryDates.length === 0) {
+                        this.showToast('⚠️ Aggiungi almeno una data di ritiro', 'error');
+                        return;
+                    }
+
+                    if (!validFrom || !validUntil) {
+                        this.showToast('⚠️ Specifica il periodo di validità del coupon', 'error');
+                        return;
+                    }
+
                     const campaign = {
                         id: this.generateId(),
                         name,
                         description,
                         discountType,
                         discountValue,
-                        deliveryDates,
-                        expiryDate: expiryDate || null,
-                        createdAt: new Date().toISOString(),
-                        lastModified: new Date().toISOString()
+                        deliveryDates: deliveryDates.sort(),
+                        validFrom,
+                        validUntil,
+                        suspendStamps,
+                        active: true,
+                        createdAt: new Date().toISOString()
                     };
 
                     this.db.campaigns.push(campaign);
                     this.saveData();
-                    await this.syncToDropbox(true); // ✅ AGGIUNTO
+                    await this.syncToDropbox(true);
 
                     this.closeCampaignModal();
                     this.renderCampaignsList();
-                    this.showToast('✅ Campagna creata e sincronizzata!');
+                    this.showToast(`✅ Campagna "${campaign.name}" creata!`);
                 }
 
                 async deleteCampaign(campaignId) {
@@ -8518,35 +8523,672 @@
                     this.showToast('✅ Campagna eliminata e sincronizzata');
                 }
 
-                async generateCouponsForCampaign(campaignId) {
+                // ==========================================
+                // 🎫 SISTEMA COUPON - LOGICA CORRETTA
+                // ==========================================
+
+                toggleCampaign(campaignId) {
                     const campaign = this.db.campaigns.find(c => c.id === campaignId);
                     if (!campaign) return;
 
-                    let count = 0;
-                    this.db.customers.forEach(customer => {
-                        if (!customer.coupons) customer.coupons = [];
+                    campaign.active = !campaign.active;
+                    this.saveData();
+                    this.syncToDropbox(true);
+                    this.renderCampaignsList();
+                    this.showToast(`${campaign.active ? '✅ Campagna attivata' : '⏸️ Campagna disattivata'}`);
+                }
 
-                        const couponCode = `${campaign.name.substring(0, 3).toUpperCase()}${Date.now().toString().slice(-4)}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+                generateCouponCode() {
+                    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+                    let code = '';
+                    for (let i = 0; i < 8; i++) {
+                        code += chars.charAt(Math.floor(Math.random() * chars.length));
+                    }
+                    return code;
+                }
 
-                        customer.coupons.push({
-                            id: this.generateId(),
-                            code: couponCode,
-                            campaignId: campaign.id,
-                            campaignName: campaign.name,
-                            description: campaign.description,
-                            discountType: campaign.discountType,
-                            discountValue: campaign.discountValue,
-                            deliveryDates: campaign.deliveryDates,
-                            expiryDate: campaign.expiryDate,
-                            used: false,
-                            createdAt: new Date().toISOString()
-                        });
-                        count++;
+                // Assegna coupon al cliente basandosi sulla data di ritiro
+                assignCouponToCustomer(customerId, deliveryDate) {
+                    const customer = this.db.customers.find(c => c.id === customerId);
+                    if (!customer) return null;
+
+                    // Trova campagne attive per questa data di ritiro
+                    const activeCampaigns = this.db.campaigns.filter(c => {
+                        if (c.active === false) return false;
+                        if (!c.deliveryDates || !Array.isArray(c.deliveryDates)) return false;
+                        return c.deliveryDates.includes(deliveryDate);
                     });
 
-                    await this.saveData();
+                    if (activeCampaigns.length === 0) return null;
+
+                    // Verifica se il cliente ha già un coupon attivo (non usato e non scaduto)
+                    const today = new Date().toISOString().split('T')[0];
+                    const existingActiveCoupon = customer.coupons?.find(c => {
+                        if (c.used) return false;
+                        if (c.validUntil && today > c.validUntil) return false;
+                        return true;
+                    });
+
+                    if (existingActiveCoupon) {
+                        console.log(`⚠️ Cliente ${customer.firstName} ha già un coupon attivo: ${existingActiveCoupon.code}`);
+                        return { alreadyHasCoupon: true, existingCoupon: existingActiveCoupon };
+                    }
+
+                    const campaign = activeCampaigns[0];
+
+                    const coupon = {
+                        id: this.generateId(),
+                        campaignId: campaign.id,
+                        campaignName: campaign.name,
+                        description: campaign.description,
+                        discountType: campaign.discountType,
+                        discountValue: campaign.discountValue,
+                        code: this.generateCouponCode(),
+                        assignedDate: new Date().toISOString(),
+                        deliveryDate: deliveryDate,
+                        validFrom: campaign.validFrom,
+                        validUntil: campaign.validUntil,
+                        used: false,
+                        usedDate: null
+                    };
+
+                    if (!customer.coupons) customer.coupons = [];
+                    customer.coupons.push(coupon);
+
+                    return {
+                        coupon,
+                        campaign,
+                        suspendStamps: campaign.suspendStamps
+                    };
+                }
+
+                // Funzione principale chiamata quando un ordine viene completato
+                async addStampsFromOrder(customerId, orderTotal, deliveryDate) {
+                    const customer = this.db.customers.find(c => c.id === customerId);
+                    if (!customer) {
+                        console.error('❌ Cliente non trovato per addStampsFromOrder');
+                        return;
+                    }
+
+                    // Inizializza fidelity se manca
+                    if (!customer.fidelity) {
+                        customer.fidelity = {
+                            stamps: 0,
+                            totalSpent: 0,
+                            rewards: 0,
+                            history: [],
+                            rewardsList: [],
+                            cardSent: false
+                        };
+                    }
+
+                    // Verifica se c'è una campagna coupon per questa data
+                    const couponResult = this.assignCouponToCustomer(customerId, deliveryDate);
+
+                    let shouldAddStamps = true;
+                    let couponAssigned = null;
+
+                    if (couponResult) {
+                        if (couponResult.alreadyHasCoupon) {
+                            // Cliente ha già un coupon, non ne assegniamo un altro
+                            console.log(`ℹ️ ${customer.firstName} ha già un coupon attivo, non ne viene assegnato un altro`);
+                            this.showToast(`ℹ️ ${customer.firstName} ha già un coupon attivo`, 'info');
+                        } else {
+                            // Coupon assegnato con successo
+                            couponAssigned = couponResult.coupon;
+                            shouldAddStamps = !couponResult.suspendStamps;
+
+                            console.log(`🎫 Coupon ${couponAssigned.code} assegnato a ${customer.firstName}`);
+                            this.showToast(`🎫 Coupon "${couponResult.campaign.name}" assegnato a ${customer.firstName}!`, 'success');
+
+                            // Chiedi se inviare su WhatsApp
+                            if (customer.phone) {
+                                setTimeout(() => {
+                                    if (confirm(`Vuoi inviare il coupon a ${customer.firstName} su WhatsApp?`)) {
+                                        this.sendCouponWhatsApp(customerId, couponAssigned.code);
+                                    }
+                                }, 500);
+                            }
+                        }
+                    }
+
+                    // Aggiungi bollini solo se non sono sospesi
+                    if (shouldAddStamps) {
+                        const stampsToAdd = Math.floor(orderTotal / this.fidelityConfig.eurosPerStamp);
+
+                        if (stampsToAdd > 0) {
+                            customer.fidelity.stamps += stampsToAdd;
+                            customer.fidelity.totalSpent = (customer.fidelity.totalSpent || 0) + orderTotal;
+
+                            customer.fidelity.history.push({
+                                date: new Date().toISOString(),
+                                type: 'earned',
+                                stamps: stampsToAdd,
+                                amount: orderTotal
+                            });
+
+                            // Verifica se ha raggiunto un premio
+                            const stampsPerReward = this.fidelityConfig.stampsPerReward;
+                            const newRewardsEarned = Math.floor(customer.fidelity.stamps / stampsPerReward);
+
+                            if (newRewardsEarned > 0) {
+                                customer.fidelity.rewards = (customer.fidelity.rewards || 0) + newRewardsEarned;
+                                customer.fidelity.stamps = customer.fidelity.stamps % stampsPerReward;
+
+                                if (!customer.fidelity.rewardsList) customer.fidelity.rewardsList = [];
+                                for (let i = 0; i < newRewardsEarned; i++) {
+                                    customer.fidelity.rewardsList.push({
+                                        id: this.generateId(),
+                                        earnedDate: new Date().toISOString(),
+                                        redeemed: false
+                                    });
+                                }
+
+                                this.showToast(`🎁 ${customer.firstName} ha guadagnato ${newRewardsEarned} premio/i!`, 'success');
+                            }
+
+                            console.log(`✅ Aggiunti ${stampsToAdd} bollini a ${customer.firstName}`);
+                        }
+                    } else {
+                        console.log(`🚫 Bollini sospesi per ${customer.firstName} (campagna coupon attiva)`);
+
+                        // Aggiungi alla history che i bollini sono stati sospesi
+                        customer.fidelity.history.push({
+                            date: new Date().toISOString(),
+                            type: 'suspended',
+                            stamps: 0,
+                            amount: orderTotal,
+                            note: `Bollini sospesi - Coupon ${couponAssigned?.code} assegnato`
+                        });
+                    }
+
+                    // Salva
+                    this.saveData();
+                    await this.syncToDropbox(true);
                     this.renderFidelityDashboard();
-                    this.showToast(`✅ ${count} coupon generati e inviati ai clienti!`);
+                }
+
+                openUseCouponModal(customerId, couponId) {
+                    const customer = this.db.customers.find(c => c.id === customerId);
+                    if (!customer) return;
+
+                    const coupon = customer.coupons?.find(c => c.id === couponId);
+                    if (!coupon) return;
+
+                    const content = document.getElementById('use-coupon-content');
+                    content.innerHTML = `
+        <div class="space-y-4">
+            <div class="bg-purple-50 border-2 border-purple-300 rounded-lg p-4 text-center">
+                <p class="font-bold text-lg mb-1">🎫 ${coupon.code}</p>
+                <p class="text-sm text-gray-600">${coupon.campaignName}</p>
+                <p class="text-2xl font-bold text-purple-700 mt-2">
+                    ${coupon.discountType === 'percentage' ? coupon.discountValue + '%' : '€' + coupon.discountValue}
+                </p>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Importo Ordine (€) *</label>
+                <input type="number" id="order-amount-input" step="0.01" min="0.01" required
+                       placeholder="es. 50.00"
+                       oninput="app.updateCouponPreview('${couponId}')"
+                       class="w-full px-4 py-3 border-2 rounded-lg text-lg focus:ring-2 focus:ring-purple-500">
+            </div>
+
+            <div id="coupon-preview" class="hidden bg-green-50 border-2 border-green-300 rounded-lg p-4"></div>
+
+            <div class="flex gap-3">
+                <button type="button" onclick="app.closeUseCouponModal()"
+                        class="flex-1 bg-gray-200 text-gray-700 py-3 px-4 rounded-lg hover:bg-gray-300 font-medium">
+                    Annulla
+                </button>
+                <button onclick="app.confirmUseCoupon('${customerId}', '${couponId}')"
+                        class="flex-1 bg-purple-600 text-white py-3 px-4 rounded-lg hover:bg-purple-700 font-medium">
+                    ✅ Applica
+                </button>
+            </div>
+        </div>
+    `;
+
+                    const modal = document.getElementById('use-coupon-modal');
+                    modal.classList.remove('hidden');
+                    modal.classList.add('flex');
+                    setTimeout(() => document.getElementById('order-amount-input').focus(), 100);
+                }
+
+                closeUseCouponModal() {
+                    const modal = document.getElementById('use-coupon-modal');
+                    modal.classList.add('hidden');
+                    modal.classList.remove('flex');
+                }
+
+                updateCouponPreview(couponId) {
+                    const amount = parseFloat(document.getElementById('order-amount-input').value);
+                    const preview = document.getElementById('coupon-preview');
+
+                    if (!amount || amount <= 0) {
+                        preview.classList.add('hidden');
+                        return;
+                    }
+
+                    const result = this.previewCouponDiscount(couponId, amount);
+                    if (!result) return;
+
+                    preview.innerHTML = `
+        <div class="space-y-2">
+            <div class="flex justify-between text-sm">
+                <span>Totale:</span>
+                <span class="font-medium">€${amount.toFixed(2)}</span>
+            </div>
+            <div class="flex justify-between text-sm text-green-700">
+                <span>Sconto:</span>
+                <span class="font-bold">-€${result.discountAmount.toFixed(2)}</span>
+            </div>
+            <div class="border-t-2 pt-2 flex justify-between">
+                <span class="font-bold">TOTALE:</span>
+                <span class="text-xl font-bold text-green-700">€${result.finalAmount.toFixed(2)}</span>
+            </div>
+        </div>
+    `;
+                    preview.classList.remove('hidden');
+                }
+
+                previewCouponDiscount(couponId, orderAmount) {
+                    const customer = this.db.customers.find(c => c.coupons?.some(cp => cp.id === couponId));
+                    if (!customer) return null;
+
+                    const coupon = customer.coupons.find(c => c.id === couponId);
+                    if (!coupon || coupon.used) return null;
+
+                    let discountAmount;
+                    if (coupon.discountType === 'percentage') {
+                        discountAmount = (orderAmount * coupon.discountValue) / 100;
+                    } else {
+                        discountAmount = coupon.discountValue;
+                    }
+
+                    if (discountAmount > orderAmount) {
+                        discountAmount = orderAmount;
+                    }
+
+                    return {
+                        discountAmount: parseFloat(discountAmount.toFixed(2)),
+                        finalAmount: parseFloat((orderAmount - discountAmount).toFixed(2))
+                    };
+                }
+
+                async confirmUseCoupon(customerId, couponId) {
+                    const amount = parseFloat(document.getElementById('order-amount-input').value);
+
+                    if (!amount || amount <= 0) {
+                        this.showToast('⚠️ Inserisci un importo', 'error');
+                        return;
+                    }
+
+                    if (!confirm('Usare questo coupon?\nNon potrà più essere riutilizzato.')) {
+                        return;
+                    }
+
+                    const result = await this.useCoupon(customerId, couponId, amount);
+
+                    if (result) {
+                        this.showToast(`✅ Sconto di €${result.discountAmount.toFixed(2)} applicato!`, 'success');
+                        this.closeUseCouponModal();
+                        this.renderFidelityDashboard();
+                    }
+                }
+
+                async useCoupon(customerId, couponId, orderAmount) {
+                    const customer = this.db.customers.find(c => c.id === customerId);
+                    if (!customer || !customer.coupons) return null;
+
+                    const coupon = customer.coupons.find(c => c.id === couponId);
+                    if (!coupon || coupon.used) {
+                        this.showToast('❌ Coupon non valido', 'error');
+                        return null;
+                    }
+
+                    // Verifica validità date
+                    const today = new Date().toISOString().split('T')[0];
+                    if (coupon.validFrom && today < coupon.validFrom) {
+                        this.showToast('❌ Coupon non ancora valido', 'error');
+                        return null;
+                    }
+                    if (coupon.validUntil && today > coupon.validUntil) {
+                        this.showToast('❌ Coupon scaduto', 'error');
+                        return null;
+                    }
+
+                    let discountAmount;
+                    if (coupon.discountType === 'percentage') {
+                        discountAmount = (orderAmount * coupon.discountValue) / 100;
+                    } else {
+                        discountAmount = coupon.discountValue;
+                    }
+
+                    if (discountAmount > orderAmount) {
+                        discountAmount = orderAmount;
+                    }
+
+                    coupon.used = true;
+                    coupon.usedDate = new Date().toISOString();
+                    coupon.usedAmount = parseFloat(discountAmount.toFixed(2));
+                    coupon.orderAmount = parseFloat(orderAmount.toFixed(2));
+
+                    this.saveData();
+                    await this.syncToDropbox(true);
+
+                    return {
+                        discountAmount: discountAmount,
+                        finalAmount: orderAmount - discountAmount,
+                        coupon: coupon
+                    };
+                }
+
+                // ==========================================
+                // 🎨 GENERA IMMAGINE COUPON CON QR (STILE PASTIFICIO)
+                // ==========================================
+                async generateCouponCardImage(customerId, couponId) {
+                    const customer = this.db.customers.find(c => c.id === customerId);
+                    const coupon = customer?.coupons?.find(c => c.id === couponId);
+
+                    if (!customer || !coupon) {
+                        console.error('Cliente o coupon non trovato');
+                        return null;
+                    }
+
+                    // Dati QR code
+                    const qrData = JSON.stringify({
+                        type: 'coupon',
+                        customerId: customer.id,
+                        couponId: coupon.id,
+                        couponCode: coupon.code,
+                        customerName: `${customer.firstName} ${customer.lastName}`,
+                        app: 'coupon-verify'
+                    });
+
+                    // Genera QR code
+                    const qrContainer = document.createElement('div');
+                    qrContainer.style.display = 'none';
+                    document.body.appendChild(qrContainer);
+
+                    new QRCode(qrContainer, {
+                        text: qrData,
+                        width: 400,
+                        height: 400,
+                        colorDark: "#5D3F24",
+                        colorLight: "#ffffff"
+                    });
+
+                    return new Promise((resolve) => {
+                        setTimeout(() => {
+                            let qrImg = qrContainer.querySelector('img');
+                            const qrCanvas = qrContainer.querySelector('canvas');
+
+                            // Se img non valida, usa canvas
+                            if (!qrImg || !qrImg.src || qrImg.src.length < 100) {
+                                if (qrCanvas) {
+                                    qrImg = new Image();
+                                    qrImg.src = qrCanvas.toDataURL();
+                                }
+                            }
+
+                            if (qrImg) {
+                                const canvas = document.createElement('canvas');
+                                const ctx = canvas.getContext('2d');
+
+                                const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+                                canvas.width = isMobile ? 800 : 1200;
+                                canvas.height = isMobile ? 500 : 750;
+
+                                // Gradiente stile pastificio (beige/crema)
+                                const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+                                gradient.addColorStop(0, '#F8E3C4');
+                                gradient.addColorStop(1, '#F2D4A4');
+                                ctx.fillStyle = gradient;
+                                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                                // Texture leggera
+                                ctx.globalAlpha = 0.03;
+                                const texturePoints = isMobile ? 50 : 200;
+                                for (let i = 0; i < texturePoints; i++) {
+                                    ctx.fillStyle = '#5D3F24';
+                                    ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 2, 2);
+                                }
+                                ctx.globalAlpha = 1;
+
+                                const scale = isMobile ? 0.65 : 1;
+
+                                // Intestazione
+                                ctx.fillStyle = '#5D3F24';
+                                ctx.font = `bold ${Math.floor(60 * scale)}px Georgia`;
+                                ctx.textAlign = 'center';
+                                ctx.fillText('PASTIFICIO GRAMSCI', canvas.width / 2, Math.floor(70 * scale));
+
+                                ctx.font = `italic ${Math.floor(32 * scale)}px Georgia`;
+                                ctx.fillText('COUPON SCONTO', canvas.width / 2, Math.floor(115 * scale));
+
+                                // Linea decorativa
+                                ctx.strokeStyle = '#5D3F24';
+                                ctx.lineWidth = 2;
+                                ctx.beginPath();
+                                for (let x = 0; x <= canvas.width; x += 10) {
+                                    const y = Math.floor(135 * scale) + Math.sin(x * 0.02) * 3;
+                                    if (x === 0) ctx.moveTo(x, y);
+                                    else ctx.lineTo(x, y);
+                                }
+                                ctx.stroke();
+
+                                // Nome campagna
+                                ctx.fillStyle = '#5D3F24';
+                                ctx.font = `bold ${Math.floor(36 * scale)}px Georgia`;
+                                ctx.fillText(coupon.campaignName, canvas.width / 2, Math.floor(180 * scale));
+
+                                // Importo sconto (GRANDE)
+                                const discountText = coupon.discountType === 'percentage'
+                                    ? `${coupon.discountValue}% DI SCONTO`
+                                    : `€${coupon.discountValue} DI SCONTO`;
+                                ctx.font = `bold ${Math.floor(50 * scale)}px Georgia`;
+                                ctx.fillText(discountText, canvas.width / 2, Math.floor(235 * scale));
+
+                                // QR Code
+                                const qrSize = Math.floor(isMobile ? 180 : 260);
+                                const qrX = Math.floor((canvas.width - qrSize) / 2);
+                                const qrY = Math.floor(isMobile ? 270 : 280);
+
+                                // Cornice QR
+                                ctx.fillStyle = '#5D3F24';
+                                ctx.fillRect(qrX - 12, qrY - 12, qrSize + 24, qrSize + 24);
+                                ctx.fillStyle = '#ffffff';
+                                ctx.fillRect(qrX - 6, qrY - 6, qrSize + 12, qrSize + 12);
+
+                                // Disegna QR
+                                ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
+
+                                // Codice coupon sotto QR
+                                ctx.fillStyle = '#5D3F24';
+                                ctx.font = `bold ${Math.floor(28 * scale)}px Courier New`;
+                                ctx.fillText(`Codice: ${coupon.code}`, canvas.width / 2, qrY + qrSize + Math.floor(40 * scale));
+
+                                // Nome cliente
+                                ctx.font = `bold ${Math.floor(32 * scale)}px Georgia`;
+                                ctx.fillText(`${customer.firstName} ${customer.lastName}`, canvas.width / 2, qrY + qrSize + Math.floor(80 * scale));
+
+                                // Validità
+                                ctx.font = `italic ${Math.floor(22 * scale)}px Georgia`;
+                                const validText = coupon.validUntil
+                                    ? `Valido fino al ${new Date(coupon.validUntil).toLocaleDateString('it-IT')}`
+                                    : 'Senza scadenza';
+                                ctx.fillText(validText, canvas.width / 2, qrY + qrSize + Math.floor(115 * scale));
+
+                                // Footer
+                                ctx.font = `italic ${Math.floor(18 * scale)}px Georgia`;
+                                ctx.fillText('Mostra questo coupon in negozio', canvas.width / 2, canvas.height - Math.floor(20 * scale));
+
+                                // Converti in data URL
+                                const imageDataUrl = canvas.toDataURL('image/png', 1.0);
+                                document.body.removeChild(qrContainer);
+                                resolve(imageDataUrl);
+                            } else {
+                                document.body.removeChild(qrContainer);
+                                resolve(null);
+                            }
+                        }, 1000);
+                    });
+                }
+
+                // Wrapper per compatibilità con chiamate usando coupon.code
+                async generateCouponImage(customerId, couponCode) {
+                    const customer = this.db.customers.find(c => c.id === customerId);
+                    if (!customer) {
+                        this.showToast('❌ Cliente non trovato', 'error');
+                        return;
+                    }
+
+                    const coupon = customer.coupons?.find(c => c.code === couponCode);
+                    if (!coupon) {
+                        this.showToast('❌ Coupon non trovato', 'error');
+                        return;
+                    }
+
+                    this.showToast('⏳ Generazione coupon...', 'info');
+
+                    const imageDataUrl = await this.generateCouponCardImage(customerId, coupon.id);
+
+                    if (!imageDataUrl) {
+                        this.showToast('❌ Errore nella generazione', 'error');
+                        return;
+                    }
+
+                    // Download immagine
+                    const response = await fetch(imageDataUrl);
+                    const blob = await response.blob();
+                    const fileName = `coupon-${coupon.code}.png`;
+
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = fileName;
+                    link.click();
+
+                    setTimeout(() => URL.revokeObjectURL(url), 100);
+
+                    this.showToast('✅ Coupon scaricato!', 'success');
+                }
+
+                // ==========================================
+                // 📱 INVIA COUPON SU WHATSAPP
+                // ==========================================
+                async sendCouponWhatsApp(customerId, couponCode) {
+                    const customer = this.db.customers.find(c => c.id === customerId);
+                    if (!customer) {
+                        this.showToast('❌ Cliente non trovato', 'error');
+                        return;
+                    }
+
+                    const coupon = customer.coupons?.find(c => c.code === couponCode);
+                    if (!coupon) {
+                        this.showToast('❌ Coupon non trovato', 'error');
+                        return;
+                    }
+
+                    if (!customer.phone) {
+                        alert('❌ Cliente senza numero di telefono!\n\nAggiungi un numero per inviare il coupon.');
+                        return;
+                    }
+
+                    this.showToast('⏳ Generazione coupon in corso...', 'info');
+
+                    // Genera immagine coupon
+                    const imageDataUrl = await this.generateCouponCardImage(customerId, coupon.id);
+
+                    if (!imageDataUrl) {
+                        this.showToast('❌ Errore nella generazione del coupon', 'error');
+                        return;
+                    }
+
+                    const discountText = coupon.discountType === 'percentage'
+                        ? `${coupon.discountValue}%`
+                        : `€${coupon.discountValue}`;
+
+                    const messageText =
+                        `🎉 Ciao ${customer.firstName}!\n\n` +
+                        `🎁 Hai ricevuto un COUPON SCONTO!\n\n` +
+                        `📋 Campagna: ${coupon.campaignName}\n` +
+                        `💰 Sconto: ${discountText}\n` +
+                        `🔑 Codice: ${coupon.code}\n` +
+                        (coupon.expiryDate ? `📅 Valido fino al: ${new Date(coupon.expiryDate).toLocaleDateString('it-IT')}\n` :
+                            (coupon.validUntil ? `📅 Valido fino al: ${new Date(coupon.validUntil).toLocaleDateString('it-IT')}\n` : '')) +
+                        `\n📱 SALVA l'immagine e mostrala in negozio!\n\n` +
+                        `Pastificio Gramsci`;
+
+                    try {
+                        // Converti dataURL in Blob
+                        const response = await fetch(imageDataUrl);
+                        const blob = await response.blob();
+                        const fileName = `coupon-${coupon.code}.png`;
+
+                        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+                        // TENTATIVO 1: Web Share API (solo mobile con supporto file)
+                        if (isMobile && navigator.share && navigator.canShare) {
+                            try {
+                                const file = new File([blob], fileName, { type: 'image/png' });
+
+                                if (navigator.canShare({ files: [file] })) {
+                                    await navigator.share({
+                                        files: [file],
+                                        title: 'Coupon Sconto',
+                                        text: messageText
+                                    });
+
+                                    this.showToast('✅ Coupon condiviso! Seleziona WhatsApp e invia', 'success');
+                                    return;
+                                }
+                            } catch (shareErr) {
+                                if (shareErr.name === 'AbortError') {
+                                    this.showToast('❌ Condivisione annullata', 'warning');
+                                    return;
+                                }
+                                console.log('Web Share API fallita, uso fallback:', shareErr);
+                            }
+                        }
+
+                        // FALLBACK: Download immagine + Apri WhatsApp
+                        const url = URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.href = url;
+                        link.download = fileName;
+                        link.style.display = 'none';
+                        document.body.appendChild(link);
+                        link.click();
+
+                        setTimeout(() => {
+                            document.body.removeChild(link);
+                            URL.revokeObjectURL(url);
+                        }, 100);
+
+                        this.showToast('✅ Coupon scaricato!', 'success');
+
+                        // Mostra istruzioni
+                        alert(
+                            '📱 COME PROCEDERE:\n\n' +
+                            '1. L\'immagine del coupon è stata scaricata\n' +
+                            '2. Tra poco si aprirà WhatsApp\n' +
+                            '3. Allega manualmente l\'immagine scaricata\n' +
+                            '4. Invia il messaggio\n\n' +
+                            'Premi OK per aprire WhatsApp'
+                        );
+
+                        // Apri WhatsApp
+                        const phone = customer.phone.replace(/[^0-9]/g, '');
+                        const phoneFormatted = phone.startsWith('39') ? phone : '39' + phone;
+                        const whatsappUrl = `https://wa.me/${phoneFormatted}?text=${encodeURIComponent(messageText)}`;
+                        window.open(whatsappUrl, '_blank');
+
+                    } catch (error) {
+                        console.error('Errore invio coupon:', error);
+                        this.showToast('❌ Errore durante l\'invio del coupon', 'error');
+                    }
                 }
 
                 // Scanner QR Universale (Dashboard e altre sezioni)
@@ -8933,15 +9575,29 @@
                         ${activeCoupons > 0 ? `
                             <div class="border-t pt-4 mb-4">
                                 <h3 class="font-bold mb-2">🎫 Coupon Attivi (${activeCoupons})</h3>
-                                ${customer.coupons.filter(c => !c.used).map(coupon => `
-                                    <div class="bg-purple-50 border border-purple-200 rounded p-3 mb-2">
-                                        <div class="font-bold">${coupon.campaignName}</div>
-                                        <div class="text-sm text-gray-600">${coupon.code}</div>
-                                        <div class="text-sm text-purple-600">
-                                            ${coupon.discountType === 'percentage' ? `${coupon.discountValue}%` : `€${coupon.discountValue}`} di sconto
-                                        </div>
-                                    </div>
-                                `).join('')}
+                        ${customer.coupons.filter(c => !c.used).map(coupon => `
+                            <div class="bg-purple-50 border border-purple-200 rounded p-3 mb-2">
+                                <div class="font-bold">${coupon.campaignName}</div>
+                                <div class="text-sm text-gray-600">${coupon.code}</div>
+                                <div class="text-sm text-purple-600 mb-2">
+                                    ${coupon.discountType === 'percentage' ? `${coupon.discountValue}%` : `€${coupon.discountValue}`} di sconto
+                                </div>
+                                <div class="grid grid-cols-3 gap-2">
+                                    <button onclick="app.openUseCouponModal('${customer.id}', '${coupon.id}')" 
+                                            class="bg-purple-600 text-white py-2 px-2 rounded text-xs font-medium hover:bg-purple-700">
+                                        💰 Usa
+                                    </button>
+                                    <button onclick="app.generateCouponImage('${customer.id}', '${coupon.code}')" 
+                                            class="bg-blue-600 text-white py-2 px-2 rounded text-xs font-medium hover:bg-blue-700">
+                                        📥 PNG
+                                    </button>
+                                    <button onclick="app.sendCouponWhatsApp('${customer.id}', '${coupon.code}')" 
+                                            class="bg-green-600 text-white py-2 px-2 rounded text-xs font-medium hover:bg-green-700">
+                                        📱 WA
+                                    </button>
+                                </div>
+                            </div>
+                        `).join('')}
                             </div>
                         ` : ''}
 
@@ -10693,70 +11349,108 @@
         <!-- Modal Nuova Campagna Coupon -->
         <div id="campaign-modal"
             class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4 z-[100]">
-            <div class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-                <h2 class="text-2xl font-bold mb-4">🎫 Nuova Campagna Coupon</h2>
+            <div class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+                <div class="flex justify-between items-start mb-4">
+                    <h2 class="text-2xl font-bold">🎫 Nuova Campagna Coupon</h2>
+                    <button onclick="app.closeCampaignModal()" class="text-gray-400 hover:text-gray-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
 
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Nome Campagna</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Nome Campagna *</label>
                         <input type="text" id="campaign-name"
                             class="w-full px-3 py-2 border rounded-lg focus:border-purple-500 focus:outline-none"
-                            placeholder="Es. Natale 2024">
+                            placeholder="Es. Natale 2025">
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Descrizione</label>
-                        <input type="text" id="campaign-description"
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Descrizione Coupon *</label>
+                        <textarea id="campaign-description" rows="2"
                             class="w-full px-3 py-2 border rounded-lg focus:border-purple-500 focus:outline-none"
-                            placeholder="Es. Sconto natalizio speciale">
+                            placeholder="Es. Sconto speciale per ordini natalizi"></textarea>
                     </div>
 
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Tipo Sconto</label>
-                        <select id="campaign-discount-type" onchange="app.updateCampaignDiscountLabel()"
-                            class="w-full px-3 py-2 border rounded-lg focus:border-purple-500 focus:outline-none">
-                            <option value="percentage">Percentuale (%)</option>
-                            <option value="fixed">Importo Fisso (€)</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">
-                            Valore Sconto <span id="campaign-discount-label">(% da 1 a 100)</span>
-                        </label>
-                        <input type="number" id="campaign-discount-value" step="1" min="0"
-                            class="w-full px-3 py-2 border rounded-lg focus:border-purple-500 focus:outline-none"
-                            placeholder="Es. 10">
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Date di Ritiro Valide</label>
-                        <div class="text-sm text-gray-600 mb-2">Seleziona le date in cui il coupon è valido:</div>
-                        <div id="campaign-dates-container" class="space-y-2 mb-2">
-                            <!-- Date inputs dinamici -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Tipo Sconto *</label>
+                            <select id="campaign-discount-type"
+                                class="w-full px-3 py-2 border rounded-lg focus:border-purple-500 focus:outline-none">
+                                <option value="fixed">Importo Fisso (€)</option>
+                                <option value="percentage">Percentuale (%)</option>
+                            </select>
                         </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Valore Sconto *</label>
+                            <input type="number" id="campaign-discount-value" step="0.01" min="1"
+                                class="w-full px-3 py-2 border rounded-lg focus:border-purple-500 focus:outline-none"
+                                placeholder="Es. 20">
+                        </div>
+                    </div>
+
+                    <!-- Date Ritiro Ordini -->
+                    <div class="bg-blue-50 border-2 border-blue-300 rounded-lg p-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            📅 Date di Ritiro Ordini *
+                        </label>
+                        <p class="text-xs text-gray-600 mb-3">
+                            Quando i clienti ritirano l'ordine in queste date, riceveranno il coupon
+                        </p>
+                        <div id="campaign-dates-container" class="space-y-2 mb-3"></div>
                         <button type="button" onclick="app.addCampaignDateInput()"
-                            class="w-full bg-gray-200 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-300 text-sm">
+                            class="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 text-sm">
                             + Aggiungi Data
                         </button>
                     </div>
 
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Scadenza Coupon (Opzionale)</label>
-                        <input type="date" id="campaign-expiry"
-                            class="w-full px-3 py-2 border rounded-lg focus:border-purple-500 focus:outline-none">
-                        <p class="text-xs text-gray-500 mt-1">Lascia vuoto per nessuna scadenza</p>
+                    <!-- Periodo Validità Coupon -->
+                    <div class="bg-green-50 border-2 border-green-300 rounded-lg p-4">
+                        <h4 class="font-medium text-gray-700 mb-3">🎯 Periodo di Utilizzo Coupon</h4>
+                        <p class="text-xs text-gray-600 mb-3">
+                            Il coupon sarà valido per ordini effettuati in questo periodo (NON per l'ordine di ritiro)
+                        </p>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Valido dal *</label>
+                                <input type="date" id="campaign-valid-from"
+                                    class="w-full px-3 py-2 border rounded-lg focus:border-purple-500 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Valido fino al *</label>
+                                <input type="date" id="campaign-valid-until"
+                                    class="w-full px-3 py-2 border rounded-lg focus:border-purple-500 focus:outline-none">
+                            </div>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-2">
+                            Esempio: Cliente ritira 24 dic → Coupon valido 1-31 gennaio per il PROSSIMO ordine
+                        </p>
+                    </div>
+
+                    <!-- Sospendi Bollini -->
+                    <div class="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-4">
+                        <label class="flex items-start cursor-pointer">
+                            <input type="checkbox" id="campaign-suspend-stamps" class="mt-1 mr-3" checked>
+                            <div>
+                                <span class="font-medium">Sospendi accumulo bollini</span>
+                                <p class="text-sm text-gray-600">Per ordini ritirati nelle date selezionate, il cliente
+                                    riceverà SOLO il coupon (niente bollini)</p>
+                            </div>
+                        </label>
                     </div>
                 </div>
 
                 <div class="flex gap-3 mt-6">
                     <button onclick="app.closeCampaignModal()"
-                        class="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300">
+                        class="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 font-medium">
                         Annulla
                     </button>
                     <button onclick="app.saveCampaign()"
-                        class="flex-1 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700">
-                        Crea Campagna
+                        class="flex-1 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 font-medium">
+                        💾 Crea Campagna
                     </button>
                 </div>
             </div>
@@ -10891,22 +11585,21 @@
             </div>
         </div>
 
-        <!-- Modal Coupon Usati -->
-        <div id="used-coupons-modal"
-            class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4 z-[9999] hidden">
-            <div class="bg-white rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-                <div
-                    class="bg-gradient-to-r from-orange-600 to-orange-700 text-white p-6 rounded-t-lg flex justify-between items-center">
-                    <h2 class="text-2xl font-bold">✔️ Clienti con Coupon Usati</h2>
-                    <button onclick="app.closeUsedCouponsModal()" class="text-white hover:text-orange-200">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
-                </div>
-                <div class="overflow-y-auto flex-1 p-6">
-                    <div id="used-coupons-list"></div>
+        <!-- Modal Usa Coupon -->
+        <div id="use-coupon-modal"
+            class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4 z-[100]">
+            <div class="bg-white rounded-lg max-w-md w-full">
+                <div class="p-6">
+                    <div class="flex justify-between items-start mb-6">
+                        <h2 class="text-2xl font-bold">💰 Applica Coupon</h2>
+                        <button onclick="app.closeUseCouponModal()" class="text-gray-400 hover:text-gray-600">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                    <div id="use-coupon-content"></div>
                 </div>
             </div>
         </div>
