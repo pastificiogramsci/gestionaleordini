@@ -4513,215 +4513,6 @@
                     }
                 }
 
-
-                generateFidelityCard(customerId) {
-                    const customer = this.db.customers.find(c => c.id === customerId);
-                    if (!customer) return;
-
-                    // Genera l'immagine PNG della tessera
-                    const qrData = JSON.stringify({
-                        id: customer.id,
-                        name: `${customer.firstName} ${customer.lastName}`,
-                        app: 'fidelity-card'
-                    });
-
-                    const qrContainer = document.createElement('div');
-                    qrContainer.style.display = 'none';
-                    document.body.appendChild(qrContainer);
-
-                    // Genera QR con callback per assicurarsi che sia pronto
-                    const qrCode = new QRCode(qrContainer, {
-                        text: qrData,
-                        width: 400,
-                        height: 400,
-                        colorDark: "#3E2723",
-                        colorLight: "#ffffff"
-                    });
-
-                    // Attendi che il QR sia effettivamente renderizzato
-                    const waitForQR = () => {
-                        return new Promise((resolve, reject) => {
-                            let attempts = 0;
-                            const maxAttempts = 50; // 5 secondi max (50 * 100ms)
-
-                            const checkQR = () => {
-                                attempts++;
-                                const qrImg = qrContainer.querySelector('img');
-
-                                if (qrImg && qrImg.complete && qrImg.naturalHeight !== 0) {
-                                    console.log('✅ QR pronto dopo', attempts * 100, 'ms');
-                                    resolve(qrImg);
-                                } else if (attempts >= maxAttempts) {
-                                    console.error('❌ QR timeout dopo', maxAttempts * 100, 'ms');
-                                    reject(new Error('QR timeout'));
-                                } else {
-                                    setTimeout(checkQR, 100);
-                                }
-                            };
-                            checkQR();
-                        });
-                    };
-
-                    waitForQR().then((qrImg) => {
-                        const canvas = document.createElement('canvas');
-                        const ctx = canvas.getContext('2d');
-
-                        // Formato card elegante (stessa dimensione della tessera WhatsApp)
-                        canvas.width = 1200;
-                        canvas.height = 750;
-
-                        // Gradiente elegante beige simile al logo
-                        const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-                        gradient.addColorStop(0, '#F8E3C4'); // Beige chiaro
-                        gradient.addColorStop(1, '#F2D4A4'); // Beige più caldo
-                        ctx.fillStyle = gradient;
-                        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-                        // Texture leggera
-                        ctx.globalAlpha = 0.03;
-                        for (let i = 0; i < 2000; i++) {
-                            ctx.fillStyle = '#5D3F24'; // Marrone più scuro
-                            ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 2, 2);
-                        }
-                        ctx.globalAlpha = 1;
-
-                        // Intestazione Pastificio Gramsci (nome attività più evidente)
-                        ctx.fillStyle = '#5D3F24'; // Marrone del logo
-                        ctx.font = 'bold 60px Georgia';
-                        ctx.textAlign = 'center';
-                        ctx.fillText('PASTIFICIO GRAMSCI', canvas.width / 2, 100);
-
-                        // Sottotitolo
-                        ctx.font = 'italic 36px Georgia';
-                        ctx.fillStyle = '#5D3F24';
-                        ctx.fillText('TESSERA FEDELTÀ', canvas.width / 2, 160);
-
-                        // Linea decorativa ondulata
-                        ctx.strokeStyle = '#5D3F24';
-                        ctx.lineWidth = 3;
-                        ctx.beginPath();
-                        for (let x = 0; x <= canvas.width; x += 10) {
-                            const y = 200 + Math.sin(x * 0.02) * 5;
-                            if (x === 0) ctx.moveTo(x, y);
-                            else ctx.lineTo(x, y);
-                        }
-                        ctx.stroke();
-
-                        // Nome cliente elegante
-                        ctx.fillStyle = '#5D3F24';
-                        ctx.font = 'bold 46px Georgia';
-                        ctx.textAlign = 'center';
-                        ctx.fillText(`${customer.firstName} ${customer.lastName}`, canvas.width / 2, 280);
-
-                        // QR Code con cornice elegante
-                        const qrSize = 300;
-                        const qrX = canvas.width / 2 - qrSize / 2; // Centrato
-                        const qrY = 350; // Sotto il nome
-
-                        // Ombra QR
-                        ctx.shadowColor = 'rgba(0,0,0,0.2)';
-                        ctx.shadowBlur = 20;
-                        ctx.shadowOffsetX = 0;
-                        ctx.shadowOffsetY = 10;
-
-                        // Cornice marrone QR
-                        ctx.fillStyle = '#5D3F24'; // Marrone del logo
-                        ctx.fillRect(qrX - 15, qrY - 15, qrSize + 30, qrSize + 30);
-
-                        ctx.shadowColor = 'transparent';
-
-                        // Sfondo bianco QR
-                        ctx.fillStyle = '#ffffff';
-                        ctx.fillRect(qrX - 8, qrY - 8, qrSize + 16, qrSize + 16);
-
-                        // Disegna QR
-                        ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
-
-                        // Testo sotto QR
-                        ctx.fillStyle = '#5D3F24';
-                        ctx.font = 'italic 20px Georgia';
-                        ctx.textAlign = 'center';
-                        ctx.fillText('Scansiona in negozio', qrX + qrSize / 2, qrY + qrSize + 40);
-
-                        // Footer elegante
-                        ctx.fillStyle = '#5D3F24';
-                        ctx.font = 'italic 22px Georgia';
-                        ctx.textAlign = 'center';
-                        ctx.fillText('Grazie per la tua fedeltà!', canvas.width / 2, canvas.height - 30);
-
-                        // Converti canvas in PNG e scarica/condividi
-                        canvas.toBlob(async (blob) => {
-                            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-                            const fileName = `tessera-fidelity-${customer.lastName}-${customer.firstName}.png`;
-                            const currentStamps = customer.fidelity?.stamps || 0;
-
-                            const messageText =
-                                `🎉 Ciao ${customer.firstName}!\n\n` +
-                                `💳 Ti rimando la tua tessera fedeltà!\n\n` +
-                                `📊 Stato attuale: ${currentStamps}/${this.fidelityConfig.stampsPerReward || 10} bollini\n` +
-                                (customer.fidelity?.rewards > 0 ? `🎁 Hai ${customer.fidelity.rewards} premio/i da riscattare!\n\n` : '\n') +
-                                `📱 SALVA l'immagine sul telefono!\n\n` +
-                                `Pastificio Gramsci`;
-
-                            // Prova Web Share API su mobile (condivisione diretta con immagine allegata)
-                            if (isMobile && navigator.share && navigator.canShare) {
-                                try {
-                                    const file = new File([blob], fileName, { type: 'image/png' });
-
-                                    // Verifica se può condividere file
-                                    if (navigator.canShare({ files: [file] })) {
-                                        await navigator.share({
-                                            files: [file],
-                                            title: 'Tessera Fidelity',
-                                            text: messageText
-                                        });
-
-                                        this.showToast('✅ Tessera condivisa! Scegli WhatsApp per inviarla');
-                                        document.body.removeChild(qrContainer);
-                                        return;
-                                    }
-                                } catch (err) {
-                                    // Se l'utente annulla o c'è un errore, continua con il metodo di fallback
-                                    console.log('Condivisione annullata o non supportata:', err);
-                                }
-                            }
-
-                            // Fallback: Download + apertura WhatsApp (per desktop o se Web Share non funziona)
-                            const url = URL.createObjectURL(blob);
-
-                            // Crea link per download
-                            const link = document.createElement('a');
-                            link.href = url;
-                            link.download = fileName;
-                            link.style.display = 'none';
-                            document.body.appendChild(link);
-                            link.click();
-
-                            // Pulizia
-                            setTimeout(() => {
-                                document.body.removeChild(link);
-                                URL.revokeObjectURL(url);
-                            }, 100);
-
-                            this.showToast('✅ Tessera scaricata! Apertura WhatsApp...');
-
-                            // Apri WhatsApp dopo il download
-                            setTimeout(() => {
-                                if (customer.phone) {
-                                    const phone = customer.phone.replace(/[^0-9]/g, '');
-                                    const phoneFormatted = phone.startsWith('39') ? phone : '39' + phone;
-                                    const whatsappUrl = `https://wa.me/${phoneFormatted}?text=${encodeURIComponent(messageText)}`;
-                                    window.open(whatsappUrl, '_blank');
-                                } else {
-                                    this.showToast('⚠️ Numero di telefono mancante per aprire WhatsApp', 'warning');
-                                }
-                            }, 800);
-                        }, 'image/png', 1.0);
-
-                        document.body.removeChild(qrContainer);
-                    });
-                }
-
                 // ========================================
                 // FUNZIONI FIDELITY CARD - BLOCCO CORRETTO
                 // ========================================
@@ -4750,7 +4541,6 @@
                     this.showToast('✅ WhatsApp aperto! Allega la tessera', 'success');
                     this.markCardAsSent(customer);
                 }
-
                 async generateFidelityCard(customerId) {
                     const customer = this.db.customers.find(c => c.id === customerId);
                     if (!customer) return;
@@ -4775,15 +4565,9 @@
                         colorLight: "#ffffff"
                     });
 
-                    // Timeout semplice
-                    setTimeout(() => {
-                        const qrImg = qrContainer.querySelector('img');
-
-                        if (!qrImg) {
-                            this.showToast('❌ Errore generazione QR', 'error');
-                            document.body.removeChild(qrContainer);
-                            return;
-                        }
+                    // Funzione per disegnare il canvas
+                    const drawCanvas = (qrImg) => {
+                        console.log('🎨 Inizio disegno canvas...');
 
                         const canvas = document.createElement('canvas');
                         const ctx = canvas.getContext('2d');
@@ -4847,7 +4631,12 @@
                         ctx.fillRect(qrX - 6, qrY - 6, qrSize + 12, qrSize + 12);
 
                         // Disegna QR
-                        ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
+                        try {
+                            ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
+                            console.log('✅ QR disegnato sul canvas');
+                        } catch (e) {
+                            console.error('❌ Errore drawImage:', e);
+                        }
 
                         // Testo sotto QR
                         ctx.fillStyle = '#5D3F24';
@@ -4873,8 +4662,49 @@
                             this.markCardAsSent(customer);
                             document.body.removeChild(qrContainer);
                         }, 'image/png', 1.0);
+                    };
 
-                    }, 1500);
+                    // Attendi e cerca QR (IMG o CANVAS)
+                    setTimeout(() => {
+                        console.log('⏰ Cerco QR nel container...');
+                        console.log('📦 HTML:', qrContainer.innerHTML.substring(0, 300));
+
+                        let qrImg = qrContainer.querySelector('img');
+                        const qrCanvas = qrContainer.querySelector('canvas');
+
+                        console.log('🔍 IMG trovata?', !!qrImg, '| CANVAS trovato?', !!qrCanvas);
+
+                        // Se non c'è img ma c'è canvas, converti canvas in img
+                        if (!qrImg && qrCanvas) {
+                            console.log('✅ Trovato canvas, converto in img...');
+
+                            const tempImg = new Image();
+                            tempImg.onload = () => {
+                                console.log('✅ Canvas → Img completato');
+                                drawCanvas(tempImg);
+                            };
+                            tempImg.onerror = () => {
+                                console.error('❌ Errore conversione canvas → img');
+                                this.showToast('❌ Errore QR', 'error');
+                                document.body.removeChild(qrContainer);
+                            };
+                            tempImg.src = qrCanvas.toDataURL();
+                            return;
+                        }
+
+                        // Se c'è img, usala
+                        if (qrImg) {
+                            console.log('✅ Img trovata, complete=', qrImg.complete, 'height=', qrImg.naturalHeight);
+                            drawCanvas(qrImg);
+                            return;
+                        }
+
+                        // Nessuno dei due trovato
+                        console.error('❌ Né img né canvas trovati!');
+                        this.showToast('❌ QR non generato - browser incompatibile', 'error');
+                        document.body.removeChild(qrContainer);
+
+                    }, 2000); // 2 secondi
                 }
 
                 markCardAsSent(customer) {
