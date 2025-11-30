@@ -4541,7 +4541,7 @@
                     this.showToast('✅ WhatsApp aperto! Allega la tessera', 'success');
                     this.markCardAsSent(customer);
                 }
-                
+
                 async generateFidelityCard(customerId) {
                     const customer = this.db.customers.find(c => c.id === customerId);
                     if (!customer) return;
@@ -4735,6 +4735,196 @@
                         this.showToast('❌ QR non generato', 'error');
                         document.body.removeChild(qrContainer);
 
+                    }, 2000);
+                }
+
+                async generateAndSendFidelityCard(customerId) {
+                    const customer = this.db.customers.find(c => c.id === customerId);
+                    if (!customer) return;
+
+                    if (!customer.phone) {
+                        this.showToast('❌ Cliente senza telefono', 'error');
+                        return;
+                    }
+
+                    this.showToast('⏳ Generazione tessera...', 'info');
+
+                    const qrData = JSON.stringify({
+                        id: customer.id,
+                        name: `${customer.firstName} ${customer.lastName}`,
+                        app: 'fidelity-card'
+                    });
+
+                    const qrContainer = document.createElement('div');
+                    qrContainer.style.display = 'none';
+                    document.body.appendChild(qrContainer);
+
+                    new QRCode(qrContainer, {
+                        text: qrData,
+                        width: 400,
+                        height: 400,
+                        colorDark: "#5D3F24",
+                        colorLight: "#ffffff"
+                    });
+
+                    const drawCanvas = (qrImg) => {
+                        console.log('🎨 Inizio disegno canvas...');
+
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+
+                        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+                        canvas.width = isMobile ? 800 : 1200;
+                        canvas.height = isMobile ? 500 : 750;
+
+                        // Gradiente
+                        const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+                        gradient.addColorStop(0, '#F8E3C4');
+                        gradient.addColorStop(1, '#F2D4A4');
+                        ctx.fillStyle = gradient;
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                        // Texture
+                        ctx.globalAlpha = 0.03;
+                        const texturePoints = isMobile ? 50 : 200;
+                        for (let i = 0; i < texturePoints; i++) {
+                            ctx.fillStyle = '#5D3F24';
+                            ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 2, 2);
+                        }
+                        ctx.globalAlpha = 1;
+
+                        const scale = isMobile ? 0.65 : 1;
+
+                        // Intestazione
+                        ctx.fillStyle = '#5D3F24';
+                        ctx.font = `bold ${Math.floor(60 * scale)}px Georgia`;
+                        ctx.textAlign = 'center';
+                        ctx.fillText('PASTIFICIO GRAMSCI', canvas.width / 2, Math.floor(80 * scale));
+
+                        ctx.font = `italic ${Math.floor(32 * scale)}px Georgia`;
+                        ctx.fillText('TESSERA FEDELTÀ', canvas.width / 2, Math.floor(130 * scale));
+
+                        // Linea
+                        ctx.strokeStyle = '#5D3F24';
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        for (let x = 0; x <= canvas.width; x += 10) {
+                            const y = Math.floor(150 * scale) + Math.sin(x * 0.02) * 3;
+                            if (x === 0) ctx.moveTo(x, y);
+                            else ctx.lineTo(x, y);
+                        }
+                        ctx.stroke();
+
+                        // Nome
+                        ctx.fillStyle = '#5D3F24';
+                        ctx.font = `bold ${Math.floor(40 * scale)}px Georgia`;
+                        ctx.fillText(`${customer.firstName} ${customer.lastName}`, canvas.width / 2, Math.floor(200 * scale));
+
+                        // QR
+                        const qrSize = Math.floor(isMobile ? 180 : 260);
+                        const qrX = Math.floor((canvas.width - qrSize) / 2);
+                        const qrY = Math.floor(isMobile ? 240 : 280);
+
+                        ctx.fillStyle = '#5D3F24';
+                        ctx.fillRect(qrX - 12, qrY - 12, qrSize + 24, qrSize + 24);
+                        ctx.fillStyle = '#ffffff';
+                        ctx.fillRect(qrX - 6, qrY - 6, qrSize + 12, qrSize + 12);
+
+                        // Disegna QR
+                        try {
+                            ctx.save();
+                            ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
+                            ctx.restore();
+                            console.log('✅ QR disegnato');
+                        } catch (e) {
+                            console.error('❌ Errore drawImage:', e);
+                        }
+
+                        // Testo
+                        ctx.fillStyle = '#5D3F24';
+                        ctx.font = `italic ${Math.floor(18 * scale)}px Georgia`;
+                        ctx.fillText('Scansiona in negozio', canvas.width / 2, qrY + qrSize + Math.floor(35 * scale));
+
+                        ctx.font = `italic ${Math.floor(20 * scale)}px Georgia`;
+                        ctx.fillText('Grazie per la tua fedeltà!', canvas.width / 2, canvas.height - Math.floor(25 * scale));
+
+                        // BLOB + Download + WhatsApp
+                        canvas.toBlob((blob) => {
+                            const fileName = `tessera-${customer.firstName}-${customer.lastName}.png`;
+
+                            // Download
+                            const url = URL.createObjectURL(blob);
+                            const link = document.createElement('a');
+                            link.href = url;
+                            link.download = fileName;
+                            link.click();
+                            setTimeout(() => URL.revokeObjectURL(url), 100);
+
+                            this.showToast('✅ Tessera scaricata!', 'success');
+                            this.markCardAsSent(customer);
+
+                            // Messaggio WhatsApp
+                            const stamps = customer.fidelity?.stamps || 0;
+                            const messageText =
+                                `🎉 Ciao ${customer.firstName}!\n\n` +
+                                `💳 Ecco la tua tessera fedeltà!\n\n` +
+                                `📊 Stato: ${stamps}/${this.fidelityConfig.stampsPerReward || 10} bollini\n` +
+                                (customer.fidelity?.rewards > 0 ? `🎁 ${customer.fidelity.rewards} premi disponibili!\n\n` : '\n') +
+                                `📱 ALLEGA l'immagine scaricata!\n\nPastificio Gramsci`;
+
+                            // Apri WhatsApp
+                            setTimeout(() => {
+                                const phone = customer.phone.replace(/[^0-9]/g, '');
+                                const phoneFormatted = phone.startsWith('39') ? phone : '39' + phone;
+                                window.open(`https://wa.me/${phoneFormatted}?text=${encodeURIComponent(messageText)}`, '_blank');
+
+                                // Toast istruzioni
+                                setTimeout(() => {
+                                    this.showToast(`📎 Allega in WhatsApp:\n${fileName}`, 'info');
+                                }, 1000);
+                            }, 1500);
+
+                            document.body.removeChild(qrContainer);
+                        }, 'image/png', 1.0);
+                    };
+
+                    // Cerca QR
+                    setTimeout(() => {
+                        console.log('⏰ Cerco QR...');
+
+                        let qrImg = qrContainer.querySelector('img');
+                        const qrCanvas = qrContainer.querySelector('canvas');
+
+                        if (qrImg && (!qrImg.src || qrImg.src.length < 100)) {
+                            console.log('❌ IMG src vuoto, uso canvas');
+                            qrImg = null;
+                        }
+
+                        if (!qrImg && qrCanvas) {
+                            const tempImg = new Image();
+                            tempImg.onload = () => drawCanvas(tempImg);
+                            tempImg.onerror = () => {
+                                this.showToast('❌ Errore QR', 'error');
+                                document.body.removeChild(qrContainer);
+                            };
+                            tempImg.src = qrCanvas.toDataURL();
+                            return;
+                        }
+
+                        if (qrImg && qrImg.src && qrImg.src.length > 100) {
+                            const tempImg = new Image();
+                            tempImg.onload = () => drawCanvas(tempImg);
+                            tempImg.onerror = () => {
+                                this.showToast('❌ Errore QR', 'error');
+                                document.body.removeChild(qrContainer);
+                            };
+                            tempImg.src = qrImg.src;
+                            return;
+                        }
+
+                        console.error('❌ QR non trovato');
+                        this.showToast('❌ Errore generazione', 'error');
+                        document.body.removeChild(qrContainer);
                     }, 2000);
                 }
 
@@ -9504,19 +9694,15 @@
                     </div>
                 </div>
                     <div class="flex flex-col gap-2">
-                        <button onclick="event.stopPropagation(); app.generateFidelityCard('${cust.id}')"
-                            class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium whitespace-nowrap">
-                            🎫 Scarica Tessera
-                        </button>
-                        <button onclick="event.stopPropagation(); app.sendFidelityCardWhatsApp('${cust.id}')"
-                            class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm font-medium whitespace-nowrap">
-                            📤 Invia WhatsApp
-                        </button>
-                        <button onclick="event.stopPropagation(); app.openCustomerModal('${cust.id}')"
-                            class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 text-sm font-medium whitespace-nowrap">
-                            ✏️ Modifica
-                        </button>
-                    </div>
+                    <button onclick="event.stopPropagation(); app.generateAndSendFidelityCard('${cust.id}')"
+                        class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm font-medium whitespace-nowrap">
+                        📤 Invia Tessera
+                    </button>
+                    <button onclick="event.stopPropagation(); app.openCustomerModal('${cust.id}')"
+                        class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium whitespace-nowrap">
+                        ✏️ Modifica
+                    </button>
+                </div>
             </div>
         </div>`;
                     }).join('');
@@ -9569,13 +9755,9 @@
                         </div>
                     </div>
                     <div class="flex flex-col gap-2 shrink-0">
-                        <button onclick="app.generateFidelityCard('${cust.id}')"
-                            class="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium whitespace-nowrap">
-                            🎫 Scarica
-                        </button>
-                        <button onclick="app.sendFidelityCardWhatsApp('${cust.id}')"
+                        <button onclick="app.generateAndSendFidelityCard('${cust.id}')"
                             class="bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 text-sm font-medium whitespace-nowrap">
-                            📤 WhatsApp
+                            📤 Invia
                         </button>
                         <button onclick="app.deleteFidelityCustomer('${cust.id}')"
                             class="bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 text-sm font-medium whitespace-nowrap">
