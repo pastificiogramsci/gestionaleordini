@@ -88,6 +88,10 @@
                     onclick="app.switchTab('orders')">
                     📦 Ordini
                 </button>
+                <button class="tab-btn px-4 py-3 border-b-2 border-transparent whitespace-nowrap" data-tab="preparation"
+                    onclick="app.switchTab('preparation')">
+                    🔥 Preparazione
+                </button>
                 <button class="tab-btn px-4 py-3 border-b-2 border-transparent whitespace-nowrap" data-tab="customers"
                     onclick="app.switchTab('customers')">
                     👥 Clienti
@@ -164,6 +168,31 @@
             </div>
 
             <div id="orders-list" class="space-y-3"></div>
+        </div>
+
+        <!-- Preparation Tab -->
+        <div id="preparation-content" class="tab-content hidden">
+            <div class="bg-gradient-to-r from-orange-500 to-red-500 text-white p-6 rounded-lg shadow-lg mb-6">
+                <h2 class="text-2xl font-bold">🔥 Preparazione in Serie</h2>
+                <p class="text-sm mt-1">Raggruppa prodotti per preparare tutti gli ordini contemporaneamente</p>
+            </div>
+
+            <div class="bg-white rounded-lg shadow p-6 mb-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Data Consegna</label>
+                        <input type="date" id="prep-date" value="" class="w-full px-3 py-2 border rounded">
+                    </div>
+                    <div class="flex items-end">
+                        <button onclick="app.loadPreparation()"
+                            class="w-full bg-orange-600 text-white px-6 py-2 rounded-lg hover:bg-orange-700 font-bold">
+                            🔄 Aggiorna
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="preparation-list" class="space-y-4"></div>
         </div>
 
         <!-- Modal Nuovo Ordine -->

@@ -208,6 +208,91 @@ const App = {
         this.displayOrders(OrdersModule.getAllOrders('recent'));
     },
 
+    loadPreparation() {
+        const date = document.getElementById('prep-date').value;
+        if (!date) {
+            Utils.showToast("Seleziona una data", "warning");
+            return;
+        }
+
+        const orders = OrdersModule.getOrdersByDeliveryDate(date).filter(o =>
+            o.status !== 'delivered' && o.status !== 'cancelled'
+        );
+
+        if (orders.length === 0) {
+            document.getElementById('preparation-list').innerHTML =
+                '<p class="text-center text-gray-500 py-8">📦 Nessun ordine da preparare per questa data</p>';
+            return;
+        }
+
+        const byProduct = {};
+        orders.forEach(order => {
+            order.items.forEach(item => {
+                const product = ProductsModule.getProductById(item.productId);
+                if (!product) return;
+
+                if (!byProduct[item.productId]) {
+                    byProduct[item.productId] = {
+                        productId: item.productId,
+                        productName: product.name,
+                        totalQty: 0,
+                        orders: []
+                    };
+                }
+
+                byProduct[item.productId].totalQty += item.quantity;
+                byProduct[item.productId].orders.push({
+                    orderId: order.id,
+                    orderNumber: order.orderNumber,
+                    customerId: order.customerId,
+                    customerName: CustomersModule.getFullName(order.customerId),
+                    quantity: item.quantity
+                });
+            });
+        });
+
+        this.displayPreparation(Object.values(byProduct));
+    },
+
+    displayPreparation(products) {
+        const container = document.getElementById('preparation-list');
+
+        container.innerHTML = products.map((p, idx) => `
+        <div class="bg-gradient-to-r from-orange-50 to-red-50 border-2 border-orange-300 rounded-lg overflow-hidden">
+            <div class="bg-gradient-to-r from-orange-500 to-red-500 text-white p-4 flex justify-between items-center cursor-pointer" onclick="document.getElementById('prep-${idx}').classList.toggle('hidden')">
+                <div>
+                    <h3 class="text-xl font-bold">🍝 ${p.productName}</h3>
+                    <p class="text-sm">${p.orders.length} ordini - Totale: ${p.totalQty.toFixed(2)} kg</p>
+                </div>
+                <span class="text-2xl">▼</span>
+            </div>
+            
+            <div id="prep-${idx}" class="p-4 hidden">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-100">
+                        <tr>
+                            <th class="px-3 py-2 text-left">Cliente</th>
+                            <th class="px-3 py-2 text-right">Quantità</th>
+                            <th class="px-3 py-2 text-center">Azione</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${p.orders.map(o => `
+                            <tr class="border-b">
+                                <td class="px-3 py-2"><span class="bg-blue-600 text-white px-2 py-1 rounded font-bold">#${o.orderNumber}</span> ${o.customerName}</td>
+                                <td class="px-3 py-2 text-right font-bold">${o.quantity.toFixed(2)}</td>
+                                <td class="px-3 py-2 text-center">
+                                    <button onclick="app.viewOrderDetails('${o.orderId}')" class="bg-blue-600 text-white px-3 py-1 rounded text-xs">Vedi</button>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `).join('');
+    },
+
     displayOrders(orders) {
         const container = document.getElementById('orders-list');
         if (!container) return;
@@ -240,8 +325,7 @@ const App = {
             return `
                 <div class="bg-white p-4 rounded-lg shadow cursor-pointer" onclick="app.viewOrderDetails('${o.id}')">                <div class="flex justify-between items-start mb-2">
                     <div>
-                        <h3 class="font-bold text-lg">${customerName}</h3>
-                        <p class="text-sm text-gray-600">${o.items.length} prodotti</p>
+                        <h3 class="font-bold text-lg">#${o.orderNumber || 'N/A'} - ${customerName}</h3>                        <p class="text-sm text-gray-600">${o.items.length} prodotti</p>
                         ${o.deliveryDate ? `<p class="text-sm text-gray-600">📅 ${Utils.formatDate(o.deliveryDate)} ${o.deliveryTime || ''}</p>` : ''}
                     </div>
                     <div class="text-right">

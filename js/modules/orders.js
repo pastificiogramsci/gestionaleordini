@@ -44,8 +44,13 @@ const OrdersModule = {
 
     // Crea nuovo ordine
     createOrder(orderData) {
+        // Genera numero ordine progressivo per data
+        const sameDate = this.orders.filter(o => o.deliveryDate === orderData.deliveryDate);
+        const dateStr = orderData.deliveryDate ? new Date(orderData.deliveryDate).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' }) : '';
+        const orderNumber = `${sameDate.length + 1}-${dateStr}`;
         const order = {
             id: Utils.generateId(),
+            orderNumber: orderNumber,
             customerId: orderData.customerId,
             items: orderData.items || [], // Array di { productId, quantity, price }
             totalAmount: this.calculateOrderTotal(orderData.items),
