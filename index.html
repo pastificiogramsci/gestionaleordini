@@ -1,53 +1,56 @@
 <!DOCTYPE html>
 <html lang="it">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
     <meta name="theme-color" content="#3b82f6">
     <title>Gestionale Ordini - Pastificio Gramsci</title>
-    
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
+
     <!-- Librerie Esterne -->
     <script src="https://unpkg.com/dropbox@10.34.0/dist/Dropbox-sdk.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
-    
+
     <style>
         body {
             font-family: 'Inter', system-ui, sans-serif;
         }
-        
+
         /* Nascondi spinner input number */
         input[type=number]::-webkit-inner-spin-button,
         input[type=number]::-webkit-outer-spin-button {
             -webkit-appearance: none;
             margin: 0;
         }
+
         input[type=number] {
             -moz-appearance: textfield;
         }
-        
+
         /* Tab attivo */
         .tab-btn.active {
             border-bottom: 2px solid #3b82f6;
             color: #3b82f6;
         }
-        
+
         /* Modal */
         .modal {
             display: none;
         }
+
         .modal.flex {
             display: flex;
         }
-        
+
         /* Floating buttons auto-hide */
         #floating-buttons {
             transition: transform 0.3s ease, opacity 0.3s ease;
         }
-        
+
         /* Mobile ottimizzato */
         @media (max-width: 768px) {
             .tab-btn {
@@ -57,6 +60,7 @@
         }
     </style>
 </head>
+
 <body class="bg-gray-50">
 
     <!-- Header -->
@@ -64,7 +68,8 @@
         <div class="max-w-7xl mx-auto px-4 py-4">
             <div class="flex items-center justify-between">
                 <h1 class="text-2xl font-bold">🍝 Pastificio Gramsci</h1>
-                <button onclick="app.syncWithDropbox()" class="bg-white/20 hover:bg-white/30 px-3 py-2 rounded-lg text-sm">
+                <button onclick="app.syncWithDropbox()"
+                    class="bg-white/20 hover:bg-white/30 px-3 py-2 rounded-lg text-sm">
                     🔄 Sync
                 </button>
             </div>
@@ -75,28 +80,28 @@
     <nav class="bg-white shadow-sm sticky top-16 z-30">
         <div class="max-w-7xl mx-auto px-4">
             <div class="flex overflow-x-auto space-x-4">
-                <button class="tab-btn px-4 py-3 border-b-2 border-transparent whitespace-nowrap active" 
-                        data-tab="dashboard" onclick="app.switchTab('dashboard')">
+                <button class="tab-btn px-4 py-3 border-b-2 border-transparent whitespace-nowrap active"
+                    data-tab="dashboard" onclick="app.switchTab('dashboard')">
                     📊 Dashboard
                 </button>
-                <button class="tab-btn px-4 py-3 border-b-2 border-transparent whitespace-nowrap" 
-                        data-tab="orders" onclick="app.switchTab('orders')">
+                <button class="tab-btn px-4 py-3 border-b-2 border-transparent whitespace-nowrap" data-tab="orders"
+                    onclick="app.switchTab('orders')">
                     📦 Ordini
                 </button>
-                <button class="tab-btn px-4 py-3 border-b-2 border-transparent whitespace-nowrap" 
-                        data-tab="customers" onclick="app.switchTab('customers')">
+                <button class="tab-btn px-4 py-3 border-b-2 border-transparent whitespace-nowrap" data-tab="customers"
+                    onclick="app.switchTab('customers')">
                     👥 Clienti
                 </button>
-                <button class="tab-btn px-4 py-3 border-b-2 border-transparent whitespace-nowrap" 
-                        data-tab="products" onclick="app.switchTab('products')">
+                <button class="tab-btn px-4 py-3 border-b-2 border-transparent whitespace-nowrap" data-tab="products"
+                    onclick="app.switchTab('products')">
                     🍝 Prodotti
                 </button>
-                <button class="tab-btn px-4 py-3 border-b-2 border-transparent whitespace-nowrap" 
-                        data-tab="fidelity" onclick="app.switchTab('fidelity')">
+                <button class="tab-btn px-4 py-3 border-b-2 border-transparent whitespace-nowrap" data-tab="fidelity"
+                    onclick="app.switchTab('fidelity')">
                     🎁 Fidelity
                 </button>
-                <button class="tab-btn px-4 py-3 border-b-2 border-transparent whitespace-nowrap" 
-                        data-tab="settings" onclick="app.switchTab('settings')">
+                <button class="tab-btn px-4 py-3 border-b-2 border-transparent whitespace-nowrap" data-tab="settings"
+                    onclick="app.switchTab('settings')">
                     ⚙️ Impostazioni
                 </button>
             </div>
@@ -105,11 +110,11 @@
 
     <!-- Main Content -->
     <main class="max-w-7xl mx-auto px-4 py-6">
-        
+
         <!-- Dashboard Tab -->
         <div id="dashboard-content" class="tab-content">
             <h2 class="text-2xl font-bold mb-6">Dashboard</h2>
-            
+
             <!-- Stats Cards -->
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 <div class="bg-white rounded-lg shadow p-4">
@@ -129,7 +134,7 @@
                     <p class="text-xl font-bold text-green-600" id="stat-revenue">€0,00</p>
                 </div>
             </div>
-            
+
             <!-- Ordini Recenti -->
             <div class="bg-white rounded-lg shadow p-6">
                 <h3 class="text-lg font-bold mb-4">Ordini Recenti</h3>
@@ -145,15 +150,132 @@
 
         <!-- Customers Tab -->
         <div id="customers-content" class="tab-content hidden">
-            <h2 class="text-2xl font-bold mb-6">Clienti</h2>
-            <p class="text-gray-500">Contenuto clienti - da implementare</p>
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold">Clienti</h2>
+                <button onclick="app.openNewCustomerModal()"
+                    class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                    + Nuovo Cliente
+                </button>
+            </div>
+
+            <input type="text" id="customer-search" placeholder="Cerca cliente..." onkeyup="app.searchCustomers()"
+                class="w-full px-4 py-2 border rounded-lg mb-4">
+
+            <div id="customers-list" class="space-y-2"></div>
+        </div>
+
+        <!-- Modal Nuovo Cliente -->
+        <div id="new-customer-modal"
+            class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4 z-50">
+            <div class="bg-white rounded-lg p-6 w-full max-w-md">
+                <h3 class="text-xl font-bold mb-4">Nuovo Cliente</h3>
+                <form onsubmit="app.saveCustomer(event)">
+                    <input type="text" id="customer-firstname" placeholder="Nome *" required
+                        class="w-full px-3 py-2 border rounded mb-3">
+                    <input type="text" id="customer-lastname" placeholder="Cognome *" required
+                        class="w-full px-3 py-2 border rounded mb-3">
+                    <input type="tel" id="customer-phone" placeholder="Telefono"
+                        class="w-full px-3 py-2 border rounded mb-3">
+                    <input type="email" id="customer-email" placeholder="Email"
+                        class="w-full px-3 py-2 border rounded mb-3">
+                    <textarea id="customer-address" placeholder="Indirizzo"
+                        class="w-full px-3 py-2 border rounded mb-3"></textarea>
+                    <div class="flex gap-3 mt-4">
+                        <button type="button" onclick="app.closeModal('new-customer-modal')"
+                            class="flex-1 bg-gray-200 px-4 py-2 rounded">Annulla</button>
+                        <button type="submit"
+                            class="flex-1 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Salva</button>
+                    </div>
+                </form>
+            </div>
         </div>
 
         <!-- Products Tab -->
         <div id="products-content" class="tab-content hidden">
-            <h2 class="text-2xl font-bold mb-6">Prodotti</h2>
-            <p class="text-gray-500">Contenuto prodotti - da implementare</p>
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold">Prodotti</h2>
+                <button onclick="app.openNewProductModal()"
+                    class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">+ Nuovo Prodotto</button>
+            </div>
+            <input type="text" id="product-search" placeholder="Cerca prodotto..." onkeyup="app.searchProducts()"
+                class="w-full px-4 py-2 border rounded-lg mb-4">
+            <div id="products-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
         </div>
+
+        <!-- Modal Nuovo Prodotto -->
+        <div id="new-product-modal"
+            class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4 z-50">
+            <div class="bg-white rounded-lg p-6 w-full max-w-md">
+                <h3 class="text-xl font-bold mb-4">Nuovo Prodotto</h3>
+                <form onsubmit="app.saveProduct(event)">
+                    <input type="hidden" id="product-id">
+                    <input type="text" id="product-name" placeholder="Nome *" required
+                        class="w-full px-3 py-2 border rounded mb-3">
+                    <input type="number" step="0.01" id="product-price" placeholder="Prezzo *" required
+                        class="w-full px-3 py-2 border rounded mb-3">
+                    <input type="text" id="product-category" list="categories-list" placeholder="Categoria *" required
+                        class="w-full px-3 py-2 border rounded mb-3">
+                    <select id="product-category" onchange="checkNewCategory()"
+                        class="w-full px-3 py-2 border rounded mb-3" required>
+                        <option value="">-- Seleziona categoria --</option>
+                        <option value="Pasta">Pasta</option>
+                        <option value="Gastronomia">Gastronomia</option>
+                        <option value="Sughi">Sughi</option>
+                        <option value="Prodotti Forno">Prodotti Forno</option>
+                        <option value="Prodotti Rivendita">Prodotti Rivendita</option>
+                        <option value="Altro">Altro</option>
+                        <option value="__new__">+ Nuova categoria...</option>
+                    </select>
+                    <input type="text" id="product-category-new" placeholder="Nome nuova categoria"
+                        class="w-full px-3 py-2 border rounded mb-3 hidden">
+
+                    <select id="product-unit" onchange="toggleWeightInput()"
+                        class="w-full px-3 py-2 border rounded mb-3">
+                        <option value="kg">Kg</option>
+                        <option value="pezzo">Pezzo</option>
+                        <option value="kg (peso medio)">Kg (peso medio)</option>
+                    </select>
+
+                    <input type="number" step="0.001" id="product-weight" placeholder="Peso medio kg (es. 0.3)"
+                        class="w-full px-3 py-2 border rounded mb-3 hidden">
+
+                    <textarea id="product-description" placeholder="Descrizione"
+                        class="w-full px-3 py-2 border rounded mb-3"></textarea>
+                    <div class="flex gap-3 mt-4">
+                        <button type="button" onclick="app.closeModal('new-product-modal')"
+                            class="flex-1 bg-gray-200 px-4 py-2 rounded">Annulla</button>
+                        <button type="submit" class="flex-1 bg-blue-600 text-white px-4 py-2 rounded">Salva</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <script>
+            function toggleWeightInput() {
+                const unit = document.getElementById('product-unit').value;
+                const weightInput = document.getElementById('product-weight');
+                if (unit === 'kg (peso medio)') {
+                    weightInput.classList.remove('hidden');
+                    weightInput.required = true;
+                } else {
+                    weightInput.classList.add('hidden');
+                    weightInput.required = false;
+                    weightInput.value = '';
+                }
+
+                function checkNewCategory() {
+                    const sel = document.getElementById('product-category');
+                    const newInput = document.getElementById('product-category-new');
+                    if (sel.value === '__new__') {
+                        newInput.classList.remove('hidden');
+                        newInput.required = true;
+                    } else {
+                        newInput.classList.add('hidden');
+                        newInput.required = false;
+                    }
+                }
+            }
+        </script>
 
         <!-- Fidelity Tab -->
         <div id="fidelity-content" class="tab-content hidden">
@@ -164,55 +286,90 @@
         <!-- Settings Tab -->
         <div id="settings-content" class="tab-content hidden">
             <h2 class="text-2xl font-bold mb-6">Impostazioni</h2>
-            
-            <div class="bg-white rounded-lg shadow p-6">
-                <h3 class="text-lg font-bold mb-4">Dropbox</h3>
+
+            <!-- Backup e Ripristino -->
+            <div class="bg-white rounded-lg shadow p-6 mb-6">
+                <h3 class="text-lg font-bold mb-4">💾 Backup e Ripristino</h3>
+                <p class="text-gray-600 text-sm mb-4">Esporta tutti i dati per backup o trasferimento tra dispositivi
+                </p>
+
+                <div class="flex flex-col md:flex-row gap-3">
+                    <button onclick="app.exportData()"
+                        class="flex-1 bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 font-medium">
+                        📤 Esporta Dati (JSON)
+                    </button>
+                    <button onclick="app.importData()"
+                        class="flex-1 bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 font-medium">
+                        📥 Importa Dati (JSON)
+                    </button>
+                </div>
+
+                <input type="file" id="import-file-input" accept=".json" class="hidden">
+            </div>
+
+            <!-- Dropbox -->
+            <div class="bg-white rounded-lg shadow p-6 mb-6">
+                <h3 class="text-lg font-bold mb-4">☁️ Dropbox</h3>
                 <p class="mb-4">Stato: <span id="dropbox-status">Controllo...</span></p>
-                
-                <div class="space-x-3">
-                    <button onclick="app.connectDropbox()" 
-                            class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+
+                <div class="flex flex-col md:flex-row gap-3">
+                    <button onclick="app.connectDropbox()"
+                        class="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
                         Connetti Dropbox
                     </button>
-                    <button onclick="app.disconnectDropbox()" 
-                            class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300">
+                    <button onclick="app.disconnectDropbox()"
+                        class="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300">
                         Disconnetti
                     </button>
                 </div>
+            </div>
+
+            <!-- Reset Dati Test -->
+            <div class="bg-white rounded-lg shadow p-6 border-2 border-red-200">
+                <h3 class="text-lg font-bold mb-4 text-red-600">⚠️ Zona Pericolosa</h3>
+                <p class="text-gray-600 text-sm mb-4">Cancella tutti i dati di test (non reversibile!)</p>
+
+                <button onclick="TestData.reset()"
+                    class="w-full bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 font-medium">
+                    🗑️ Cancella Tutti i Dati
+                </button>
             </div>
         </div>
 
     </main>
 
     <!-- Floating Buttons -->
-    <div id="floating-buttons" class="fixed bottom-6 left-0 right-0 flex justify-between px-6 z-50" style="pointer-events: none;">
+    <div id="floating-buttons" class="fixed bottom-6 left-0 right-0 flex justify-between px-6 z-50"
+        style="pointer-events: none;">
         <!-- Home Button -->
         <button onclick="app.switchTab('dashboard')"
-                class="bg-blue-600 text-white w-14 h-14 rounded-full shadow-2xl hover:scale-110 transition-transform flex items-center justify-center"
-                style="pointer-events: auto;">
+            class="bg-blue-600 text-white w-14 h-14 rounded-full shadow-2xl hover:scale-110 transition-transform flex items-center justify-center"
+            style="pointer-events: auto;">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                    d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
             </svg>
         </button>
 
         <!-- QR Scanner Button -->
         <button onclick="app.openFidelityQRScanner()"
-                class="bg-green-600 text-white w-14 h-14 rounded-full shadow-2xl hover:scale-110 transition-transform flex items-center justify-center"
-                style="pointer-events: auto;">
+            class="bg-green-600 text-white w-14 h-14 rounded-full shadow-2xl hover:scale-110 transition-transform flex items-center justify-center"
+            style="pointer-events: auto;">
             <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                    d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
             </svg>
         </button>
     </div>
 
     <!-- Modal Scanner QR Fidelity -->
-    <div id="fidelity-qr-scanner-modal" class="modal fixed inset-0 bg-black bg-opacity-90 items-center justify-center p-4 z-50">
+    <div id="fidelity-qr-scanner-modal"
+        class="modal fixed inset-0 bg-black bg-opacity-90 items-center justify-center p-4 z-50">
         <div class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-lg">
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-2xl font-bold">📷 Scanner QR</h2>
-                <button onclick="app.closeFidelityQRScanner()" class="text-gray-500 hover:text-gray-700 text-3xl">×</button>
+                <button onclick="app.closeFidelityQRScanner()"
+                    class="text-gray-500 hover:text-gray-700 text-3xl">×</button>
             </div>
             <video id="fidelity-qr-video" class="w-full rounded-lg" autoplay playsinline></video>
             <p class="text-sm text-gray-600 text-center mt-4">Inquadra il QR code della tessera fidelity</p>
@@ -222,16 +379,16 @@
     <!-- ========================================== -->
     <!-- CARICAMENTO MODULI JavaScript -->
     <!-- ========================================== -->
-    
+
     <!-- 1. Configurazioni -->
     <script src="js/config.js"></script>
-    
+
     <!-- 2. Utility -->
     <script src="js/utils.js"></script>
-    
+
     <!-- 3. Storage -->
     <script src="js/storage.js"></script>
-    
+
     <!-- 4. Moduli -->
     <script src="js/modules/customers.js"></script>
     <script src="js/modules/products.js"></script>
@@ -246,4 +403,5 @@
     <script src="js/app.js"></script>
 
 </body>
+
 </html>

@@ -240,7 +240,182 @@ const TestData = {
         if (app) {
             app.refresh();
         }
+    },
+
+    // ==========================================
+    // IMPORTAZIONE DA FILE JSON VECCHIO
+    // ==========================================
+    
+    async importFromOldJSON(jsonData) {
+        console.log("📥 Importazione dati dal vecchio sistema...");
+        
+        try {
+            // 1. Importa prodotti
+            if (jsonData.products && jsonData.products.length > 0) {
+                await this.importProducts(jsonData.products);
+            }
+            
+            // 2. Importa clienti
+            if (jsonData.customers && jsonData.customers.length > 0) {
+                await this.importCustomers(jsonData.customers);
+            }
+            
+            // 3. Importa ordini
+            if (jsonData.orders && jsonData.orders.length > 0) {
+                await this.importOrders(jsonData.orders);
+            }
+            
+            console.log("✅ Importazione completata!");
+            Utils.showToast("✅ Dati importati con successo!", "success");
+            
+            // Ricarica dashboard
+            if (app) {
+                app.refresh();
+            }
+            
+        } catch (error) {
+            console.error("❌ Errore importazione:", error);
+            Utils.showToast("❌ Errore durante l'importazione", "error");
+        }
+    },
+    
+    async importProducts(oldProducts) {
+        console.log(`📦 Importazione ${oldProducts.length} prodotti...`);
+        
+        for (const oldProduct of oldProducts) {
+            const newProduct = {
+                id: oldProduct.id,
+                name: oldProduct.name,
+                price: oldProduct.price,
+                category: oldProduct.category || 'Altro',
+                description: oldProduct.unit ? `Venduto a ${oldProduct.unit}` : '',
+                active: true,
+                createdAt: new Date().toISOString()
+            };
+            
+            // Controlla se esiste già
+            const existing = ProductsModule.getProductById(oldProduct.id);
+            if (!existing) {
+                ProductsModule.products.push(newProduct);
+            }
+        }
+        
+        await ProductsModule.saveProducts();
+        console.log(`✅ ${oldProducts.length} prodotti importati`);
+    },
+    
+    async importCustomers(oldCustomers) {
+        console.log(`👥 Importazione ${oldCustomers.length} clienti...`);
+        
+        for (const oldCustomer of oldCustomers) {
+            const newCustomer = {
+                id: oldCustomer.id,
+                firstName: oldCustomer.firstName,
+                lastName: oldCustomer.lastName,
+                phone: oldCustomer.phone || '',
+                email: oldCustomer.email || '',
+                address: '',
+                notes: oldCustomer.marketing ? 'Marketing: Sì' : '',
+                createdAt: new Date().toISOString(),
+                totalOrders: 0,
+                totalSpent: 0
+            };
+            
+            // Controlla se esiste già
+            const existing = CustomersModule.getCustomerById(oldCustomer.id);
+            if (!existing) {
+                CustomersModule.customers.push(newCustomer);
+            }
+            
+            // Importa dati fidelity se presenti
+            if (oldCustomer.fidelity && oldCustomer.fidelity.stamps > 0) {
+                await this.importFidelity(oldCustomer);
+            }
+        }
+        
+        await CustomersModule.saveCustomers();
+        console.log(`✅ ${oldCustomers.length} clienti importati`);
+    },
+    
+    async importFidelity(oldCustomer) {
+        // Registra nel sistema fidelity se non già presente
+        let fidelity = FidelityModule.getFidelityCustomer(oldCustomer.id);
+        
+        if (!fidelity) {
+            fidelity = FidelityModule.registerCustomer(oldCustomer.id);
+        }
+        
+        // Imposta bollini
+        fidelity.stamps = oldCustomer.fidelity.stamps || 0;
+        fidelity.totalStamps = oldCustomer.fidelity.totalSpent || 0;
+        
+        // Converti cronologia
+        if (oldCustomer.fidelity.history) {
+            fidelity.history = oldCustomer.fidelity.history.map(h => ({
+                id: Utils.generateId(),
+                type: h.type,
+                stamps: h.stamps || 0,
+                date: h.date
+            }));
+        }
+        
+        // Converti premi
+        if (oldCustomer.fidelity.rewardsList) {
+            fidelity.rewards = oldCustomer.fidelity.rewardsList.map(r => ({
+                id: Utils.generateId(),
+                description: r.description || CONFIG.FIDELITY.DEFAULT_REWARD,
+                earnedAt: r.date,
+                redeemed: r.claimed || false,
+                redeemedAt: r.claimedDate
+            }));
+        }
+        
+        await FidelityModule.saveFidelity();
+    },
+    
+    async importOrders(oldOrders) {
+        console.log(`📦 Importazione ${oldOrders.length} ordini...`);
+        
+        for (const oldOrder of oldOrders) {
+            // Converti items
+            const items = oldOrder.items.map(item => ({
+                productId: item.productId,
+                quantity: item.qty,
+                price: item.price / item.qty // Prezzo unitario
+            }));
+            
+            // Calcola totale
+            const totalAmount = oldOrder.items.reduce((sum, item) => sum + item.price, 0);
+            
+            // Converti stato
+            let status = 'pending';
+            if (oldOrder.prepStatus === 'pronto') status = 'ready';
+            if (oldOrder.prepStatus === 'consegnato') status = 'delivered';
+            
+            const newOrder = {
+                id: oldOrder.id,
+                customerId: oldOrder.customerId,
+                items: items,
+                totalAmount: totalAmount,
+                status: status,
+                deliveryDate: oldOrder.deliveryDate,
+                deliveryTime: null,
+                notes: oldOrder.number ? `Numero ordine: ${oldOrder.number}` : '',
+                createdAt: oldOrder.createdDate ? new Date(oldOrder.createdDate).toISOString() : new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            };
+            
+            // Controlla se esiste già
+            const existing = OrdersModule.getOrderById(oldOrder.id);
+            if (!existing) {
+                OrdersModule.orders.push(newOrder);
+            }
+        }
+        
+        await OrdersModule.saveOrders();
+        console.log(`✅ ${oldOrders.length} ordini importati`);
     }
+
 };
 
 // Rendi disponibile globalmente
