@@ -92,6 +92,10 @@
                     onclick="app.switchTab('preparation')">
                     🔥 Preparazione
                 </button>
+                <button class="tab-btn px-4 py-3 border-b-2 border-transparent whitespace-nowrap" data-tab="modifiche"
+                    onclick="app.switchTab('modifiche')">
+                    ⚠️ Modifiche
+                </button>
                 <button class="tab-btn px-4 py-3 border-b-2 border-transparent whitespace-nowrap" data-tab="customers"
                     onclick="app.switchTab('customers')">
                     👥 Clienti
@@ -154,6 +158,35 @@
                     class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">+ Nuovo Ordine</button>
             </div>
 
+            <!-- FILTRI DATA -->
+            <div class="bg-white rounded-lg shadow p-4 mb-4">
+                <h3 class="font-bold mb-3">🔍 Filtri</h3>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                    <div>
+                        <label class="block text-sm mb-1">Data specifica</label>
+                        <input type="date" id="order-date-filter" class="w-full px-3 py-2 border rounded"
+                            onchange="app.applyOrderFilters()">
+                    </div>
+                    <div>
+                        <label class="block text-sm mb-1">Mese</label>
+                        <input type="month" id="order-month-filter" class="w-full px-3 py-2 border rounded"
+                            onchange="app.applyOrderFilters()">
+                    </div>
+                    <div>
+                        <label class="block text-sm mb-1">Anno</label>
+                        <select id="order-year-filter" class="w-full px-3 py-2 border rounded"
+                            onchange="app.applyOrderFilters()">
+                            <option value="">Tutti gli anni</option>
+                        </select>
+                    </div>
+                    <div class="flex items-end">
+                        <button onclick="app.clearOrderFilters()"
+                            class="w-full bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">🔄 Reset</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FILTRI STATO -->
             <div class="flex gap-2 mb-4 overflow-x-auto">
                 <button onclick="app.filterOrders('all')"
                     class="px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 whitespace-nowrap">Tutti</button>
@@ -177,22 +210,72 @@
                 <p class="text-sm mt-1">Raggruppa prodotti per preparare tutti gli ordini contemporaneamente</p>
             </div>
 
-            <div class="bg-white rounded-lg shadow p-6 mb-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- FILTRI -->
+            <div class="bg-white rounded-lg shadow p-4 mb-4">
+                <h3 class="font-bold mb-3">🔍 Filtri</h3>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
                     <div>
-                        <label class="block text-sm font-medium mb-2">Data Consegna</label>
-                        <input type="date" id="prep-date" value="" class="w-full px-3 py-2 border rounded">
+                        <label class="block text-sm mb-1">Data consegna</label>
+                        <input type="date" id="prep-date" class="w-full px-3 py-2 border rounded"
+                            onchange="app.loadPreparation()">
+                    </div>
+                    <div>
+                        <label class="block text-sm mb-1">Mese</label>
+                        <input type="month" id="prep-month-filter" class="w-full px-3 py-2 border rounded"
+                            onchange="app.applyPrepFilters()">
+                    </div>
+                    <div>
+                        <label class="block text-sm mb-1">Anno</label>
+                        <select id="prep-year-filter" class="w-full px-3 py-2 border rounded"
+                            onchange="app.applyPrepFilters()">
+                            <option value="">Tutti gli anni</option>
+                        </select>
                     </div>
                     <div class="flex items-end">
-                        <button onclick="app.loadPreparation()"
-                            class="w-full bg-orange-600 text-white px-6 py-2 rounded-lg hover:bg-orange-700 font-bold">
-                            🔄 Aggiorna
-                        </button>
+                        <button onclick="app.clearPrepFilters()"
+                            class="w-full bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">🔄 Reset</button>
                     </div>
                 </div>
             </div>
 
             <div id="preparation-list" class="space-y-4"></div>
+        </div>
+
+        <!-- Modifiche Tab -->
+        <div id="modifiche-content" class="tab-content hidden">
+            <div class="bg-gradient-to-r from-orange-500 to-red-500 text-white p-6 rounded-lg shadow-lg mb-4">
+                <h2 class="text-2xl font-bold">⚠️ Modifiche Ordini</h2>
+            </div>
+
+            <!-- FILTRI -->
+            <div class="bg-white rounded-lg shadow p-4 mb-4">
+                <h3 class="font-bold mb-3">🔍 Filtri</h3>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                    <div>
+                        <label class="block text-sm mb-1">Data consegna</label>
+                        <input type="date" id="mod-date-filter" class="w-full px-3 py-2 border rounded"
+                            onchange="app.loadModifications()">
+                    </div>
+                    <div>
+                        <label class="block text-sm mb-1">Mese</label>
+                        <input type="month" id="mod-month-filter" class="w-full px-3 py-2 border rounded"
+                            onchange="app.applyModFilters()">
+                    </div>
+                    <div>
+                        <label class="block text-sm mb-1">Anno</label>
+                        <select id="mod-year-filter" class="w-full px-3 py-2 border rounded"
+                            onchange="app.applyModFilters()">
+                            <option value="">Tutti gli anni</option>
+                        </select>
+                    </div>
+                    <div class="flex items-end">
+                        <button onclick="app.clearModFilters()"
+                            class="w-full bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">🔄 Reset</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="modifications-list" class="space-y-3"></div>
         </div>
 
         <!-- Modal Nuovo Ordine -->
@@ -371,8 +454,114 @@
 
         <!-- Fidelity Tab -->
         <div id="fidelity-content" class="tab-content hidden">
-            <h2 class="text-2xl font-bold mb-6">Sistema Fidelity</h2>
-            <p class="text-gray-500">Contenuto fidelity - da implementare</p>
+            <div class="bg-gradient-to-r from-purple-500 to-pink-500 text-white p-6 rounded-lg shadow-lg mb-4">
+                <h2 class="text-2xl font-bold">🎁 Gestione Clienti Fidelity</h2>
+            </div>
+
+            <button onclick="app.showAllFidelityCustomers()"
+                class="w-full bg-orange-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-orange-600 mb-4">
+                🔥 Azzera Tutti i Dati Fidelity
+            </button>
+
+            <div id="fidelity-customers-list" class="space-y-4"></div>
+        </div>
+
+        <!-- Modal Dettaglio Cliente Fidelity -->
+        <div id="fidelity-detail-modal"
+            class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4 z-50">
+            <div class="bg-white rounded-lg p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold" id="fidelity-customer-name"></h3>
+                    <button onclick="app.closeModal('fidelity-detail-modal')" class="text-gray-500 text-2xl">×</button>
+                </div>
+
+                <p class="text-sm text-gray-600 mb-4" id="fidelity-customer-phone"></p>
+
+                <div class="grid grid-cols-3 gap-3 mb-4">
+                    <div class="bg-blue-50 p-3 rounded text-center">
+                        <p class="text-2xl font-bold text-blue-600" id="fidelity-detail-stamps">0</p>
+                        <p class="text-xs text-gray-600">Bollini Totali</p>
+                    </div>
+                    <div class="bg-green-50 p-3 rounded text-center">
+                        <p class="text-2xl font-bold text-green-600" id="fidelity-detail-available">0</p>
+                        <p class="text-xs text-gray-600">Premi Disponibili</p>
+                    </div>
+                    <div class="bg-gray-50 p-3 rounded text-center">
+                        <p class="text-2xl font-bold text-gray-600" id="fidelity-detail-redeemed">0</p>
+                        <p class="text-xs text-gray-600">Premi Riscattati</p>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <p class="text-sm font-medium mb-2">Progresso verso prossimo premio <span
+                            id="fidelity-detail-progress"></span></p>
+                    <div class="w-full bg-gray-200 rounded-full h-3">
+                        <div id="fidelity-detail-bar" class="bg-blue-600 h-3 rounded-full"></div>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1" id="fidelity-detail-missing"></p>
+                </div>
+
+                <div class="grid grid-cols-4 gap-2 mb-4">
+                    <button onclick="app.quickAddStamps(1)"
+                        class="bg-blue-600 text-white py-2 rounded font-bold">+1</button>
+                    <button onclick="app.quickAddStamps(2)"
+                        class="bg-blue-600 text-white py-2 rounded font-bold">+2</button>
+                    <button onclick="app.quickAddStamps(3)"
+                        class="bg-blue-600 text-white py-2 rounded font-bold">+3</button>
+                    <button onclick="app.openCustomStamps()"
+                        class="bg-blue-600 text-white py-2 rounded font-bold">+N</button>
+                </div>
+
+                <div class="mb-4">
+                    <h4 class="font-bold mb-2">📜 Vedi Cronologia Completa</h4>
+                    <button onclick="app.showHistory()" class="w-full bg-gray-200 py-2 rounded">Mostra
+                        cronologia</button>
+                </div>
+
+                <div id="fidelity-detail-history" class="hidden mb-4">
+                    <div class="bg-gray-50 rounded p-3 max-h-48 overflow-y-auto" id="fidelity-history-list"></div>
+                </div>
+
+                <div id="fidelity-detail-coupons"></div>
+            </div>
+        </div>
+
+        <!-- Modal Bollini Personalizzati -->
+        <div id="custom-stamps-modal"
+            class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4 z-50">
+            <div class="bg-white rounded-lg p-6 w-full max-w-sm">
+                <h3 class="text-xl font-bold mb-4">Bollini Personalizzati</h3>
+                <input type="number" id="custom-stamps-input" min="1" placeholder="Numero bollini"
+                    class="w-full px-3 py-2 border rounded mb-4">
+                <div class="flex gap-3">
+                    <button onclick="app.closeModal('custom-stamps-modal')"
+                        class="flex-1 bg-gray-200 px-4 py-2 rounded">Annulla</button>
+                    <button onclick="app.saveCustomStamps()"
+                        class="flex-1 bg-blue-600 text-white px-4 py-2 rounded">Aggiungi</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Aggiungi Bollini -->
+        <div id="add-stamps-modal"
+            class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4 z-50">
+            <div class="bg-white rounded-lg p-6 w-full max-w-md">
+                <h3 class="text-xl font-bold mb-4">Aggiungi Bollini</h3>
+
+                <select id="stamps-customer" class="w-full px-3 py-2 border rounded mb-3" required>
+                    <option value="">-- Seleziona cliente --</option>
+                </select>
+
+                <input type="number" id="stamps-qty" placeholder="Numero bollini" min="1"
+                    class="w-full px-3 py-2 border rounded mb-3">
+
+                <div class="flex gap-3">
+                    <button onclick="app.closeModal('add-stamps-modal')"
+                        class="flex-1 bg-gray-200 px-4 py-2 rounded">Annulla</button>
+                    <button onclick="app.saveStamps()"
+                        class="flex-1 bg-green-600 text-white px-4 py-2 rounded">Salva</button>
+                </div>
+            </div>
         </div>
 
         <!-- Settings Tab -->

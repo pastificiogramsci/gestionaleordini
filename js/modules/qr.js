@@ -227,56 +227,129 @@ const QRModule = {
     },
 
     drawFidelityCard(qrImg, customer, qrContainer, callback) {
-        console.log('🎨 Disegno card fidelity...');
+        console.log('🎨 Disegno card fidelity orizzontale...');
 
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
 
-        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-        canvas.width = isMobile ? 800 : 1200;
-        canvas.height = isMobile ? 500 : 750;
+        canvas.width = 1200;
+        canvas.height = 750;
 
-        const scale = isMobile ? 0.65 : 1;
-
-        // Sfondo gradiente
-        const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-        gradient.addColorStop(0, '#F8E3C4');
-        gradient.addColorStop(1, '#F2D4A4');
-        ctx.fillStyle = gradient;
+        // Sfondo beige
+        ctx.fillStyle = '#F5E6D3';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Texture
-        ctx.globalAlpha = 0.03;
-        const texturePoints = isMobile ? 50 : 200;
-        for (let i = 0; i < texturePoints; i++) {
+        // Bordo marrone
+        ctx.strokeStyle = '#5D3F24';
+        ctx.lineWidth = 6;
+        ctx.strokeRect(15, 15, canvas.width - 30, canvas.height - 30);
+
+        // Carica logo
+        const logo = new Image();
+        logo.crossOrigin = 'anonymous';
+        logo.onload = () => {
+            // Logo tondo in alto a destra
+            const logoSize = 120;
+            const logoX = canvas.width - logoSize - 40;
+            const logoY = 40;
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(logoX + logoSize / 2, logoY + logoSize / 2, logoSize / 2, 0, Math.PI * 2);
+            ctx.closePath();
+            ctx.clip();
+            ctx.drawImage(logo, logoX, logoY, logoSize, logoSize);
+            ctx.restore();
+
+            // Centrato
+            const centerX = canvas.width / 2;
+            const startY = 180;
+
+            // Nome attività
             ctx.fillStyle = '#5D3F24';
-            ctx.fillRect(Math.random() * canvas.width, Math.random() * canvas.height, 2, 2);
-        }
-        ctx.globalAlpha = 1;
+            ctx.textAlign = 'center';
+            ctx.font = 'bold 48px Georgia';
+            ctx.fillText('PASTIFICIO GRAMSCI', centerX, startY);
 
-        // Intestazione
+            ctx.font = '28px Georgia';
+            ctx.fillText('Tessera Fidelity', centerX, startY + 45);
+
+            // Nome cliente
+            ctx.font = 'bold 42px Arial';
+            ctx.fillText(`${customer.firstName} ${customer.lastName}`, centerX, startY + 110);
+
+            // QR Code
+            const qrSize = 280;
+            const qrX = (canvas.width - qrSize) / 2;
+            const qrY = startY + 140;
+
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(qrX - 10, qrY - 10, qrSize + 20, qrSize + 20);
+            ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
+
+            // Frase
+            ctx.fillStyle = '#5D3F24';
+            ctx.font = 'italic 26px Georgia';
+            ctx.fillText('Grazie per averci scelto', centerX, qrY + qrSize + 45);
+
+            // Data
+            const fidelity = window.FidelityModule.getFidelityCustomer(customer.id);
+            const joinDate = fidelity ? new Date(fidelity.joinedAt).toLocaleDateString('it-IT') : 'N/A';
+
+            ctx.font = '22px Arial';
+            ctx.fillStyle = '#8B6F47';
+            ctx.fillText(`Cliente dal ${joinDate}`, centerX, qrY + qrSize + 80);
+
+            canvas.toBlob((blob) => {
+                console.log('✅ Card generata');
+                document.body.removeChild(qrContainer);
+                if (callback) callback(blob);
+            }, 'image/png', 1.0);
+        };
+
+        logo.onerror = () => {
+            console.error('❌ Logo non trovato');
+            this.drawCardNoLogo(qrImg, customer, qrContainer, callback, canvas, ctx);
+        };
+
+        logo.src = 'img/logo.jpg';
+    },
+
+    drawCardNoLogo(qrImg, customer, qrContainer, callback, canvas, ctx) {
+        const centerX = canvas.width / 2;
+        const startY = 180;
+
         ctx.fillStyle = '#5D3F24';
-        ctx.font = `bold ${Math.floor(60 * scale)}px Georgia`;
         ctx.textAlign = 'center';
-        ctx.fillText('PASTIFICIO GRAMSCI', canvas.width / 2, Math.floor(80 * scale));
+        ctx.font = 'bold 48px Georgia';
+        ctx.fillText('PASTIFICIO GRAMSCI', centerX, startY);
 
-        // Nome cliente
-        ctx.font = `bold ${Math.floor(40 * scale)}px Arial`;
-        ctx.fillText(`${customer.firstName} ${customer.lastName}`, canvas.width / 2, Math.floor(150 * scale));
+        ctx.font = '28px Georgia';
+        ctx.fillText('Tessera Fidelity', centerX, startY + 45);
 
-        // QR Code
-        const qrSize = Math.floor(300 * scale);
+        ctx.font = 'bold 42px Arial';
+        ctx.fillText(`${customer.firstName} ${customer.lastName}`, centerX, startY + 110);
+
+        const qrSize = 280;
         const qrX = (canvas.width - qrSize) / 2;
-        const qrY = Math.floor(200 * scale);
+        const qrY = startY + 140;
+
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(qrX - 10, qrY - 10, qrSize + 20, qrSize + 20);
         ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
 
-        // Testo
-        ctx.font = `${Math.floor(24 * scale)}px Arial`;
-        ctx.fillText('Tessera Fidelity', canvas.width / 2, canvas.height - Math.floor(60 * scale));
+        ctx.fillStyle = '#5D3F24';
+        ctx.font = 'italic 26px Georgia';
+        ctx.fillText('Grazie per averci scelto', centerX, qrY + qrSize + 45);
 
-        // Converti in blob
+        const fidelity = window.FidelityModule.getFidelityCustomer(customer.id);
+        const joinDate = fidelity ? new Date(fidelity.joinedAt).toLocaleDateString('it-IT') : 'N/A';
+
+        ctx.font = '22px Arial';
+        ctx.fillStyle = '#8B6F47';
+        ctx.fillText(`Cliente dal ${joinDate}`, centerX, qrY + qrSize + 80);
+
         canvas.toBlob((blob) => {
-            console.log('✅ Card generata:', blob.size, 'bytes');
             document.body.removeChild(qrContainer);
             if (callback) callback(blob);
         }, 'image/png', 1.0);

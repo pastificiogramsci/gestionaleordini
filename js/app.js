@@ -103,7 +103,26 @@ const App = {
                 this.loadDashboard();
                 break;
             case 'orders':
-                this.loadOrders();
+                const orderDateFilter = document.getElementById('order-date-filter');
+                if (orderDateFilter && !orderDateFilter.value) {
+                    orderDateFilter.value = this.getTomorrowDate();
+                }
+                this.populateYearFilter();
+                this.applyOrderFilters();
+                break;
+            case 'preparation':
+                const prepDate = document.getElementById('prep-date');
+                if (prepDate && !prepDate.value) {
+                    prepDate.value = this.getTomorrowDate();
+                }
+                this.loadPreparation();
+                break;
+            case 'modifiche':
+                const modDate = document.getElementById('mod-date-filter');
+                if (modDate && !modDate.value) {
+                    modDate.value = this.getTomorrowDate();
+                }
+                this.loadModifications();
                 break;
             case 'customers':
                 this.loadCustomers();
@@ -118,6 +137,12 @@ const App = {
                 this.loadSettings();
                 break;
         }
+    },
+
+    getTomorrowDate() {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        return tomorrow.toISOString().split('T')[0];
     },
 
     // ==========================================
@@ -137,6 +162,10 @@ const App = {
             const recentOrders = OrdersModule.getAllOrders('recent').slice(0, 5);
             this.displayRecentOrders(recentOrders);
         }
+
+        // Stats Fidelity
+        const fidelityStats = FidelityModule.getFidelityStats();
+        // Aggiungi card o aggiorna esistente se serve
     },
 
     updateStatsCards(stats) {
@@ -206,6 +235,228 @@ const App = {
 
     loadOrders() {
         this.displayOrders(OrdersModule.getAllOrders('recent'));
+        this.populateYearFilter();
+    },
+
+    loadFidelity() {
+        const fidelityList = FidelityModule.getAllFidelityCustomers();
+        this.displayFidelityCustomers(fidelityList);
+    },
+
+    displayFidelityCustomers(fidelityList) {
+        const container = document.getElementById('fidelity-customers-list');
+        if (!container) return;
+
+        if (fidelityList.length === 0) {
+            container.innerHTML = '<p class="text-center text-gray-500 py-8">Nessun cliente fidelity</p>';
+            return;
+        }
+
+        container.innerHTML = fidelityList.map(f => {
+            const customer = CustomersModule.getCustomerById(f.customerId);
+            if (!customer) return '';
+
+            const progress = FidelityModule.getProgressToNextReward(f.customerId);
+            const available = FidelityModule.getAvailableRewards(f.customerId).length;
+            const redeemed = FidelityModule.getRedeemedRewards(f.customerId).length;
+
+            return `
+            <div class="bg-white rounded-lg shadow-lg p-4">
+                <div class="flex justify-between items-start mb-3">
+                    <div>
+                        <h3 class="text-lg font-bold">${customer.firstName} ${customer.lastName}</h3>
+                        <p class="text-sm text-gray-600">${customer.phone || ''}</p>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-2xl font-bold text-purple-600">${f.stamps} ⭐</span>
+                        ${available > 0 ? `<span class="ml-2 bg-green-500 text-white px-2 py-1 rounded-full text-sm font-bold">${available} 🎁</span>` : ''}
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <p class="text-xs text-gray-600 mb-1">Prossimo premio: ${progress.current}/${progress.needed} bollini</p>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div class="bg-purple-600 h-2 rounded-full" style="width: ${progress.percentage}%"></div>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-3 gap-2 text-xs mb-3">
+                    <div class="bg-green-50 p-2 rounded text-center cursor-pointer" onclick="app.showAvailableRewards('${f.customerId}')">
+                        <p class="font-bold text-green-600">${available}</p>
+                        <p class="text-gray-600">Premi disponibili</p>
+                    </div>
+                    <div class="bg-gray-50 p-2 rounded text-center">
+                        <p class="font-bold">${redeemed}</p>
+                        <p class="text-gray-600">Premi riscattati</p>
+                    </div>
+                    <div class="bg-blue-50 p-2 rounded text-center">
+                        <p class="font-bold text-blue-600">${customer.coupons?.filter(c => !c.used).length || 0}</p>
+                        <p class="text-gray-600">Coupon attivi</p>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-3 gap-2">
+                    <button onclick="app.openFidelityDetail('${f.customerId}')" class="bg-purple-600 text-white py-2 rounded text-sm font-medium">Aggiungi Bollini</button>
+                    <button onclick="app.generateFidelityCard('${f.customerId}')" class="bg-blue-600 text-white py-2 rounded text-sm font-medium">📱 Tessera</button>
+                    <button onclick="app.deleteFidelityCustomer('${f.customerId}')" class="bg-red-600 text-white py-2 rounded text-sm font-medium">🗑️ Elimina</button>
+                </div>
+            </div>
+        `;
+        }).join('');
+    },
+
+    openFidelityDetail(customerId) {
+        this.currentFidelityCustomer = customerId;
+        const customer = CustomersModule.getCustomerById(customerId);
+        const fidelity = FidelityModule.getFidelityCustomer(customerId);
+
+        if (!customer || !fidelity) return;
+
+        document.getElementById('fidelity-customer-name').textContent = `${customer.firstName} ${customer.lastName}`;
+        document.getElementById('fidelity-customer-phone').textContent = customer.phone || '';
+        document.getElementById('fidelity-detail-stamps').textContent = fidelity.totalStamps;
+
+        const available = FidelityModule.getAvailableRewards(customerId);
+        const redeemed = FidelityModule.getRedeemedRewards(customerId);
+
+        document.getElementById('fidelity-detail-available').textContent = available.length;
+        document.getElementById('fidelity-detail-redeemed').textContent = redeemed.length;
+
+        const progress = FidelityModule.getProgressToNextReward(customerId);
+        document.getElementById('fidelity-detail-progress').textContent = `${progress.current}/${progress.needed}`;
+        document.getElementById('fidelity-detail-bar').style.width = `${progress.percentage}%`;
+        document.getElementById('fidelity-detail-missing').textContent = `Mancano ${progress.needed - progress.current} bollini al prossimo premio`;
+
+        // Coupon attivi
+        const coupons = customer.coupons?.filter(c => !c.used) || [];
+        const couponsHtml = coupons.length > 0 ? `
+        <div class="bg-pink-50 border border-pink-200 rounded p-3">
+            <h4 class="font-bold mb-2">🎫 Coupon Attivi (${coupons.length})</h4>
+            ${coupons.map(c => `<p class="text-sm">• ${c.campaignName}</p>`).join('')}
+        </div>
+    ` : '';
+
+        document.getElementById('fidelity-detail-coupons').innerHTML = couponsHtml;
+
+        this.openModal('fidelity-detail-modal');
+    },
+
+    quickAddStamps(qty) {
+        FidelityModule.addStamps(this.currentFidelityCustomer, qty);
+        this.openFidelityDetail(this.currentFidelityCustomer);
+        this.loadFidelity();
+    },
+
+    openCustomStamps() {
+        document.getElementById('custom-stamps-input').value = '';
+        this.openModal('custom-stamps-modal');
+    },
+
+    saveCustomStamps() {
+        const qty = parseInt(document.getElementById('custom-stamps-input').value);
+        if (!qty || qty < 1) {
+            Utils.showToast("Inserisci un numero valido", "error");
+            return;
+        }
+        FidelityModule.addStamps(this.currentFidelityCustomer, qty);
+        this.closeModal('custom-stamps-modal');
+        this.openFidelityDetail(this.currentFidelityCustomer);
+        this.loadFidelity();
+    },
+
+    showHistory() {
+        const history = document.getElementById('fidelity-detail-history');
+        history.classList.toggle('hidden');
+
+        if (!history.classList.contains('hidden')) {
+            const fidelity = FidelityModule.getFidelityCustomer(this.currentFidelityCustomer);
+            const historyHtml = fidelity.history.map(h => `
+            <div class="border-b py-2">
+                <p class="text-sm font-medium">${h.type === 'earned' ? '+ ' + h.stamps + ' bollini' : h.type}</p>
+                <p class="text-xs text-gray-500">${Utils.formatDateTime(h.date)}</p>
+            </div>
+        `).join('');
+            document.getElementById('fidelity-history-list').innerHTML = historyHtml || '<p class="text-sm text-gray-500">Nessuna cronologia</p>';
+        }
+    },
+
+    showAllFidelityCustomers() {
+        if (confirm("ATTENZIONE: Vuoi davvero azzerare tutti i dati fidelity?")) {
+            FidelityModule.fidelityCustomers = [];
+            FidelityModule.saveFidelity();
+            this.loadFidelity();
+        }
+    },
+
+    deleteFidelityCustomer(customerId) {
+        if (confirm("Eliminare questo cliente dal programma fidelity?")) {
+            const idx = FidelityModule.fidelityCustomers.findIndex(f => f.customerId === customerId);
+            if (idx > -1) {
+                FidelityModule.fidelityCustomers.splice(idx, 1);
+                FidelityModule.saveFidelity();
+                this.loadFidelity();
+            }
+        }
+    },
+
+    showAvailableRewards(customerId) {
+        const rewards = FidelityModule.getAvailableRewards(customerId);
+        if (rewards.length === 0) {
+            Utils.showToast("Nessun premio disponibile", "info");
+            return;
+        }
+
+        const customer = CustomersModule.getCustomerById(customerId);
+        const html = `
+        <div class="space-y-2">
+            <h3 class="font-bold">Premi disponibili per ${customer.firstName} ${customer.lastName}</h3>
+            ${rewards.map(r => `
+                <div class="flex justify-between items-center bg-green-50 p-3 rounded">
+                    <span>${r.description}</span>
+                    <button onclick="app.redeemRewardConfirm('${customerId}', '${r.id}')" class="bg-green-600 text-white px-3 py-1 rounded">Riscuoti</button>
+                </div>
+            `).join('')}
+        </div>
+    `;
+
+        // Mostra in un alert temporaneo (o puoi fare un modal dedicato)
+        const div = document.createElement('div');
+        div.innerHTML = `
+        <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onclick="this.remove()">
+            <div class="bg-white rounded-lg p-6 max-w-md" onclick="event.stopPropagation()">
+                ${html}
+                <button onclick="this.parentElement.parentElement.remove()" class="w-full mt-4 bg-gray-200 px-4 py-2 rounded">Chiudi</button>
+            </div>
+        </div>
+    `;
+        document.body.appendChild(div);
+    },
+
+    redeemRewardConfirm(customerId, rewardId) {
+        if (confirm("Confermi il riscatto del premio?")) {
+            FidelityModule.redeemReward(customerId, rewardId);
+            document.querySelector('.fixed.inset-0').remove();
+            this.loadFidelity();
+            Utils.showToast("✅ Premio riscattato!", "success");
+        }
+    },
+
+    generateFidelityCard(customerId) {
+        QRModule.generateFidelityQR(customerId, (blob) => {
+            if (!blob) {
+                Utils.showToast("Errore generazione tessera", "error");
+                return;
+            }
+
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `tessera-fidelity-${customerId}.png`;
+            a.click();
+            URL.revokeObjectURL(url);
+
+            Utils.showToast("✅ Tessera scaricata!", "success");
+        });
     },
 
     loadPreparation() {
@@ -256,41 +507,306 @@ const App = {
 
     displayPreparation(products) {
         const container = document.getElementById('preparation-list');
+        const today = new Date().toISOString().split('T')[0];
 
-        container.innerHTML = products.map((p, idx) => `
-        <div class="bg-gradient-to-r from-orange-50 to-red-50 border-2 border-orange-300 rounded-lg overflow-hidden">
-            <div class="bg-gradient-to-r from-orange-500 to-red-500 text-white p-4 flex justify-between items-center cursor-pointer" onclick="document.getElementById('prep-${idx}').classList.toggle('hidden')">
-                <div>
-                    <h3 class="text-xl font-bold">🍝 ${p.productName}</h3>
-                    <p class="text-sm">${p.orders.length} ordini - Totale: ${p.totalQty.toFixed(2)} kg</p>
+        // Filtra prodotti con ordini preparabili (data non passata)
+        const preparableProducts = products.filter(p => {
+            return p.orders.some(o => {
+                const order = OrdersModule.getOrderById(o.orderId);
+                return order && order.deliveryDate >= today;
+            });
+        }).map(p => {
+            // Filtra solo ordini con data non passata
+            return {
+                ...p,
+                orders: p.orders.filter(o => {
+                    const order = OrdersModule.getOrderById(o.orderId);
+                    return order && order.deliveryDate >= today;
+                })
+            };
+        });
+
+        if (preparableProducts.length === 0) {
+            container.innerHTML = '<p class="text-center text-gray-500 py-8">Nessun ordine da preparare per questa data</p>';
+            return;
+        }
+
+        container.innerHTML = products.map((p, idx) => {
+            const date = document.getElementById('prep-date').value;
+            const allPrepared = p.orders.every(o => {
+                const order = OrdersModule.getOrderById(o.orderId);
+                const item = order.items.find(i => i.productId === p.productId);
+                return item?.prepared;
+            });
+
+            return `
+            <div class="bg-gradient-to-r from-orange-50 to-red-50 border-2 border-orange-300 rounded-lg overflow-hidden ${allPrepared ? 'opacity-50' : ''}">
+                <div class="bg-gradient-to-r from-orange-500 to-red-500 text-white p-4 flex justify-between items-center cursor-pointer" onclick="document.getElementById('prep-${idx}').classList.toggle('hidden')">
+                    <div>
+                        <h3 class="text-xl font-bold">🍝 ${p.productName}</h3>
+                        <p class="text-sm">${p.orders.length} ordini - Totale: ${p.totalQty.toFixed(2)}</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="text-sm">${p.orders.filter(o => {
+                const order = OrdersModule.getOrderById(o.orderId);
+                const item = order.items.find(i => i.productId === p.productId);
+                return item?.prepared;
+            }).length}/${p.orders.length} preparati</span>
+                        <span class="text-2xl">▼</span>
+                    </div>
                 </div>
-                <span class="text-2xl">▼</span>
-            </div>
-            
-            <div id="prep-${idx}" class="p-4 hidden">
-                <table class="w-full text-sm">
-                    <thead class="bg-gray-100">
-                        <tr>
-                            <th class="px-3 py-2 text-left">Cliente</th>
-                            <th class="px-3 py-2 text-right">Quantità</th>
-                            <th class="px-3 py-2 text-center">Azione</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${p.orders.map(o => `
-                            <tr class="border-b">
-                                <td class="px-3 py-2"><span class="bg-blue-600 text-white px-2 py-1 rounded font-bold">#${o.orderNumber}</span> ${o.customerName}</td>
-                                <td class="px-3 py-2 text-right font-bold">${o.quantity.toFixed(2)}</td>
-                                <td class="px-3 py-2 text-center">
-                                    <button onclick="app.viewOrderDetails('${o.orderId}')" class="bg-blue-600 text-white px-3 py-1 rounded text-xs">Vedi</button>
-                                </td>
+                
+                <div id="prep-${idx}" class="p-4 hidden">
+                    <button onclick="app.markAllProduct('${p.productId}')" class="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 mb-3 font-bold">
+                        ✓ Segna tutti
+                    </button>
+                    
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="px-3 py-2 text-left">Ordine</th>
+                                <th class="px-3 py-2 text-left">Cliente</th>
+                                <th class="px-3 py-2 text-right">Quantità</th>
+                                <th class="px-3 py-2 text-center">Stato</th>
+                                <th class="px-3 py-2 text-center">Azione</th>
                             </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            ${p.orders.map(o => {
+                const order = OrdersModule.getOrderById(o.orderId);
+                const itemIdx = order.items.findIndex(i => i.productId === p.productId);
+                const item = order.items[itemIdx];
+                const isPrepared = item?.prepared;
+
+                return `
+                                    <tr class="border-b ${isPrepared ? 'bg-green-50' : ''}">
+                                        <td class="px-3 py-2"><span class="bg-blue-600 text-white px-2 py-1 rounded text-xs">${o.orderNumber}</span></td>
+                                        <td class="px-3 py-2">${o.customerName}</td>
+                                        <td class="px-3 py-2 text-right font-bold">${o.quantity.toFixed(2)}</td>
+                                        <td class="px-3 py-2 text-center">${isPrepared ? '<span class="text-green-600 font-bold">✓</span>' : '-'}</td>
+                                        <td class="px-3 py-2 text-center">
+                                            ${!isPrepared ? `
+                                                <button onclick="app.markItemPrepared('${o.orderId}', ${itemIdx})" class="bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700">Fatto</button>
+                                            ` : '<span class="text-green-600 text-xs">Completato</span>'}
+                                        </td>
+                                    </tr>
+                                `;
+            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
             </div>
-        </div>
-    `).join('');
+        `;
+        }).join('');
+    },
+
+    markItemPrepared(orderId, itemIndex) {
+        const order = OrdersModule.getOrderById(orderId);
+        if (!order) return;
+
+        // Blocca se data passata
+        const today = new Date().toISOString().split('T')[0];
+        if (order.deliveryDate && order.deliveryDate < today) {
+            Utils.showToast("⛔ Non puoi preparare ordini con data passata", "error");
+            return;
+        }
+
+        OrdersModule.markItemPrepared(orderId, itemIndex);
+        this.loadPreparation();
+    },
+
+    markAllProduct(productId) {
+        const date = document.getElementById('prep-date').value;
+
+        // Blocca se data passata
+        const today = new Date().toISOString().split('T')[0];
+        if (date && date < today) {
+            Utils.showToast("⛔ Non puoi preparare ordini con data passata", "error");
+            return;
+        }
+
+        const marked = OrdersModule.markAllItemsOfProductPrepared(productId, date);
+        Utils.showToast(`✅ ${marked} item preparati`, "success");
+        this.loadPreparation();
+    },
+
+    applyPrepFilters() {
+        const monthFilter = document.getElementById('prep-month-filter').value;
+        const yearFilter = document.getElementById('prep-year-filter').value;
+
+        if (monthFilter) {
+            document.getElementById('prep-date').value = '';
+            // Carica tutti ordini del mese
+            const orders = OrdersModule.getAllOrders('recent').filter(o =>
+                o.deliveryDate && o.deliveryDate.startsWith(monthFilter) &&
+                o.status !== 'delivered' && o.status !== 'cancelled'
+            );
+            this.displayPreparationMultiDate(orders);
+        } else if (yearFilter) {
+            document.getElementById('prep-date').value = '';
+            const orders = OrdersModule.getAllOrders('recent').filter(o =>
+                o.deliveryDate && o.deliveryDate.startsWith(yearFilter) &&
+                o.status !== 'delivered' && o.status !== 'cancelled'
+            );
+            this.displayPreparationMultiDate(orders);
+        }
+    },
+
+    clearPrepFilters() {
+        document.getElementById('prep-date').value = '';
+        document.getElementById('prep-month-filter').value = '';
+        document.getElementById('prep-year-filter').value = '';
+        document.getElementById('prep-date').value = this.getTomorrowDate();
+        this.loadPreparation();
+    },
+
+    displayPreparationMultiDate(orders) {
+        // Raggruppa per prodotto (come loadPreparation)
+        const byProduct = {};
+        orders.forEach(order => {
+            order.items.forEach(item => {
+                const product = ProductsModule.getProductById(item.productId);
+                if (!product) return;
+
+                if (!byProduct[item.productId]) {
+                    byProduct[item.productId] = {
+                        productId: item.productId,
+                        productName: product.name,
+                        totalQty: 0,
+                        orders: []
+                    };
+                }
+
+                byProduct[item.productId].totalQty += item.quantity;
+                byProduct[item.productId].orders.push({
+                    orderId: order.id,
+                    orderNumber: order.orderNumber,
+                    customerId: order.customerId,
+                    customerName: CustomersModule.getFullName(order.customerId),
+                    quantity: item.quantity
+                });
+            });
+        });
+
+        this.displayPreparation(Object.values(byProduct));
+    },
+
+    applyModFilters() {
+        const monthFilter = document.getElementById('mod-month-filter').value;
+        const yearFilter = document.getElementById('mod-year-filter').value;
+
+        let orders = OrdersModule.orders.filter(o => o.modifications);
+
+        if (monthFilter) {
+            document.getElementById('mod-date-filter').value = '';
+            orders = orders.filter(o => o.deliveryDate && o.deliveryDate.startsWith(monthFilter));
+        } else if (yearFilter) {
+            document.getElementById('mod-date-filter').value = '';
+            orders = orders.filter(o => o.deliveryDate && o.deliveryDate.startsWith(yearFilter));
+        }
+
+        this.displayModifications(orders);
+    },
+
+    clearModFilters() {
+        document.getElementById('mod-date-filter').value = '';
+        document.getElementById('mod-month-filter').value = '';
+        document.getElementById('mod-year-filter').value = '';
+        document.getElementById('mod-date-filter').value = this.getTomorrowDate();
+        this.loadModifications();
+    },
+
+    loadModifications() {
+        const date = document.getElementById('mod-date-filter').value;
+        const orders = OrdersModule.getOrdersWithModifications(date || null);
+        this.displayModifications(orders);
+    },
+
+    displayModifications(orders) {
+        const container = document.getElementById('modifications-list');
+        if (!container) return;
+
+        if (orders.length === 0) {
+            container.innerHTML = '<p class="text-center text-gray-500 py-8">Nessuna modifica da effettuare</p>';
+            return;
+        }
+
+        container.innerHTML = orders.map(o => {
+            const customer = CustomersModule.getCustomerById(o.customerId);
+            const customerName = customer ? `${customer.firstName} ${customer.lastName}` : 'N/A';
+
+            const toAddCount = o.modifications.toAdd.filter(m => !m.completed).length;
+            const toRemoveCount = o.modifications.toRemove.filter(m => !m.completed).length;
+
+            return `
+            <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+                <div class="bg-orange-500 text-white p-4 flex justify-between items-center">
+                    <div>
+                        <h3 class="font-bold text-lg">Ordine #${o.orderNumber || o.id.slice(-6)}</h3>
+                        <p class="text-sm">${customerName}</p>
+                    </div>
+                    <span class="bg-white text-orange-600 px-3 py-1 rounded-full font-bold">${toAddCount + toRemoveCount} modifiche</span>
+                </div>
+                
+                <div class="p-4">
+                    ${o.modifications.toAdd.length > 0 ? `
+                        <div class="mb-4">
+                            <div class="bg-orange-100 border-l-4 border-orange-500 p-3 mb-2">
+                                <h4 class="font-bold text-orange-700">➕ DA AGGIUNGERE</h4>
+                            </div>
+                            ${o.modifications.toAdd.map((item, idx) => {
+                const product = ProductsModule.getProductById(item.productId);
+                return `
+                                    <div class="flex justify-between items-center p-2 border-b ${item.completed ? 'opacity-50 line-through' : ''}">
+                                        <span>${product?.name || 'N/A'} - ${item.quantity} kg</span>
+                                        ${!item.completed ? `
+                                            <button onclick="app.completeModification('${o.id}', 'add', ${idx})" class="bg-orange-600 text-white px-3 py-1 rounded text-sm">✓ Aggiunto</button>
+                                        ` : '<span class="text-green-600">✓</span>'}
+                                    </div>
+                                `;
+            }).join('')}
+                        </div>
+                    ` : ''}
+                    
+                    ${o.modifications.toRemove.length > 0 ? `
+                        <div>
+                            <div class="bg-red-100 border-l-4 border-red-500 p-3 mb-2">
+                                <h4 class="font-bold text-red-700">➖ DA RIMUOVERE</h4>
+                            </div>
+                            ${o.modifications.toRemove.map((item, idx) => {
+                const product = ProductsModule.getProductById(item.productId);
+                return `
+                                    <div class="flex justify-between items-center p-2 border-b ${item.completed ? 'opacity-50 line-through' : ''}">
+                                        <span>${product?.name || 'N/A'} - ${item.quantity} kg</span>
+                                        ${!item.completed ? `
+                                            <button onclick="app.completeModification('${o.id}', 'remove', ${idx})" class="bg-red-600 text-white px-3 py-1 rounded text-sm">✓ Rimosso</button>
+                                        ` : '<span class="text-green-600">✓</span>'}
+                                    </div>
+                                `;
+            }).join('')}
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+        }).join('');
+    },
+
+    completeModification(orderId, type, index) {
+        const order = OrdersModule.getOrderById(orderId);
+
+        // Marca item come preparato quando completi modifica
+        if (type === 'add' && order.modifications) {
+            const modItem = order.modifications.toAdd[index];
+            const orderItem = order.items.find(i => i.productId === modItem.productId);
+            if (orderItem) {
+                orderItem.prepared = true;
+            }
+        }
+
+        OrdersModule.markModificationComplete(orderId, type, index);
+        this.loadModifications();
+        this.loadOrders();
     },
 
     displayOrders(orders) {
@@ -303,19 +819,21 @@ const App = {
         }
 
         const statusColors = {
-            pending: 'bg-yellow-100 text-yellow-800',
-            confirmed: 'bg-blue-100 text-blue-800',
-            ready: 'bg-green-100 text-green-800',
-            delivered: 'bg-gray-100 text-gray-800',
-            cancelled: 'bg-red-100 text-red-800'
+            pending: "bg-yellow-100 text-yellow-800",
+            confirmed: "bg-blue-100 text-blue-800",
+            in_preparation: "bg-purple-100 text-purple-800",  // ← NUOVO
+            ready: "bg-green-100 text-green-800",
+            delivered: "bg-gray-100 text-gray-800",
+            cancelled: "bg-red-100 text-red-800"
         };
 
         const statusNames = {
-            pending: 'In attesa',
-            confirmed: 'Confermato',
-            ready: 'Pronto',
-            delivered: 'Consegnato',
-            cancelled: 'Annullato'
+            pending: "In attesa",
+            confirmed: "Confermato",
+            in_preparation: "In preparazione",  // ← NUOVO
+            ready: "Pronto",
+            delivered: "Consegnato",
+            cancelled: "Annullato"
         };
 
         container.innerHTML = orders.map(o => {
@@ -323,22 +841,29 @@ const App = {
             const customerName = customer ? `${customer.firstName} ${customer.lastName}` : 'Cliente sconosciuto';
 
             return `
-                <div class="bg-white p-4 rounded-lg shadow cursor-pointer" onclick="app.viewOrderDetails('${o.id}')">                <div class="flex justify-between items-start mb-2">
-                    <div>
-                        <h3 class="font-bold text-lg">#${o.orderNumber || 'N/A'} - ${customerName}</h3>                        <p class="text-sm text-gray-600">${o.items.length} prodotti</p>
-                        ${o.deliveryDate ? `<p class="text-sm text-gray-600">📅 Consegna: ${Utils.formatDate(o.deliveryDate)} ${o.deliveryTime || ''}</p>` : ''}
-                        <p class="text-xs text-gray-500">Creato: ${Utils.formatDateTime(o.createdAt)}</p>                    </div>
-                    <div class="text-right">
-                        <p class="text-2xl font-bold text-blue-600">${Utils.formatPrice(o.totalAmount)}</p>
-                        <span class="text-xs px-2 py-1 rounded ${statusColors[o.status]}">${statusNames[o.status]}</span>
+                <div class="bg-white p-4 rounded-lg shadow cursor-pointer" onclick="app.viewOrderDetails('${o.id}')">
+                    <div class="flex justify-between items-start mb-2">
+                        <div>
+                            <h3 class="font-bold text-lg">
+                                #${o.orderNumber || 'N/A'} - ${customerName}
+                                ${o.modifications ? '<span class="ml-2 bg-orange-500 text-white px-2 py-1 rounded-full text-xs">⚠️ Da modificare</span>' : ''}
+                                ${o.deliveryDate && o.deliveryDate < new Date().toISOString().split('T')[0] && o.status !== 'delivered' ? '<span class="ml-2 bg-red-500 text-white px-2 py-1 rounded-full text-xs">📅 Data passata</span>' : ''}
+                            </h3>
+                            <p class="text-sm text-gray-600">${o.items.length} prodotti</p>
+                            ${o.deliveryDate ? `<p class="text-sm text-gray-600">📅 Consegna: ${Utils.formatDate(o.deliveryDate)} ${o.deliveryTime || ''}</p>` : ''}
+                            <p class="text-xs text-gray-500">Creato: ${Utils.formatDateTime(o.createdAt)}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-2xl font-bold text-blue-600">${Utils.formatPrice(o.totalAmount)}</p>
+                            <span class="text-xs px-2 py-1 rounded ${statusColors[o.status]}">${statusNames[o.status]}</span>
+                        </div>
                     </div>
-                </div>
                 
                 <div class="flex gap-2 mt-3">
-                    ${o.status === 'pending' ? `<button onclick="OrdersModule.changeOrderStatus('${o.id}', 'confirmed'); app.loadOrders()" class="text-xs px-3 py-1 bg-blue-600 text-white rounded">Conferma</button>` : ''}
-                    ${o.status === 'confirmed' ? `<button onclick="OrdersModule.changeOrderStatus('${o.id}', 'ready'); app.loadOrders()" class="text-xs px-3 py-1 bg-green-600 text-white rounded">Pronto</button>` : ''}
+                    ${o.status === 'pending' ? `<button onclick="OrdersModule.changeOrderStatus('${o.id}', 'in_preparation'); app.loadOrders()" class="text-xs px-3 py-1 bg-blue-600 text-white rounded">Conferma</button>` : ''}
                     ${o.status === 'ready' ? `<button onclick="OrdersModule.changeOrderStatus('${o.id}', 'delivered'); app.loadOrders()" class="text-xs px-3 py-1 bg-gray-600 text-white rounded">Consegnato</button>` : ''}
-                    <button onclick="app.editOrder('${o.id}')" class="text-xs px-3 py-1 bg-gray-200 rounded">✏️ Modifica</button>
+                    ${o.status === 'delivered' ? `<button onclick="app.undoDelivery('${o.id}')" class="text-xs px-3 py-1 bg-orange-600 text-white rounded">↩️ Annulla consegna</button>` : ''}
+                    ${o.status !== 'delivered' ? `<button onclick="app.editOrder('${o.id}')" class="text-xs px-3 py-1 bg-gray-200 rounded">✏️ Modifica</button>` : ''}
                     <button onclick="app.deleteOrder('${o.id}')" class="text-red-600 text-sm ml-auto">🗑️</button>
                 </div>
             </div>
@@ -347,11 +872,73 @@ const App = {
     },
 
     filterOrders(status) {
+        this.currentOrderFilter = status;
         if (status === 'all') {
-            this.displayOrders(OrdersModule.getAllOrders('recent'));
+            this.applyOrderFilters();
         } else {
-            this.displayOrders(OrdersModule.getOrdersByStatus(status));
+            let orders = OrdersModule.getAllOrders('recent').filter(o => o.status === status);
+
+            // Applica anche filtri data se attivi
+            const dateFilter = document.getElementById('order-date-filter').value;
+            const monthFilter = document.getElementById('order-month-filter').value;
+            const yearFilter = document.getElementById('order-year-filter').value;
+
+            if (dateFilter) {
+                orders = orders.filter(o => o.deliveryDate === dateFilter);
+            } else if (monthFilter) {
+                orders = orders.filter(o => o.deliveryDate && o.deliveryDate.startsWith(monthFilter));
+            } else if (yearFilter) {
+                orders = orders.filter(o => o.deliveryDate && o.deliveryDate.startsWith(yearFilter));
+            }
+
+            this.displayOrders(orders);
         }
+    },
+
+    applyOrderFilters() {
+        const dateFilter = document.getElementById('order-date-filter').value;
+        const monthFilter = document.getElementById('order-month-filter').value;
+        const yearFilter = document.getElementById('order-year-filter').value;
+
+        let orders = OrdersModule.getAllOrders('recent');
+
+        // Filtra per data specifica
+        if (dateFilter) {
+            orders = orders.filter(o => o.deliveryDate === dateFilter);
+        }
+        // Filtra per mese (formato YYYY-MM)
+        else if (monthFilter) {
+            orders = orders.filter(o => o.deliveryDate && o.deliveryDate.startsWith(monthFilter));
+        }
+        // Filtra per anno
+        else if (yearFilter) {
+            orders = orders.filter(o => o.deliveryDate && o.deliveryDate.startsWith(yearFilter));
+        }
+
+        // Applica anche filtro stato se attivo
+        if (this.currentOrderFilter && this.currentOrderFilter !== 'all') {
+            orders = orders.filter(o => o.status === this.currentOrderFilter);
+        }
+
+        this.displayOrders(orders);
+    },
+
+    clearOrderFilters() {
+        document.getElementById('order-date-filter').value = '';
+        document.getElementById('order-month-filter').value = '';
+        document.getElementById('order-year-filter').value = '';
+        this.currentOrderFilter = null;
+        this.loadOrders();
+    },
+
+    populateYearFilter() {
+        const select = document.getElementById('order-year-filter');
+        const orders = OrdersModule.getAllOrders('recent');
+
+        const years = [...new Set(orders.map(o => o.deliveryDate?.substring(0, 4)).filter(y => y))].sort().reverse();
+
+        select.innerHTML = '<option value="">Tutti gli anni</option>' +
+            years.map(y => `<option value="${y}">${y}</option>`).join('');
     },
 
     openNewOrderModal() {
@@ -427,10 +1014,13 @@ const App = {
             const qty = parseFloat(item.querySelector('input').value) || 0;
             if (select.value && qty > 0) {
                 const option = select.selectedOptions[0];
+                const price = parseFloat(option.dataset.price);
+                const weight = parseFloat(option.dataset.weight) || 0;
+
                 items.push({
                     productId: select.value,
-                    quantity: parseFloat(option.dataset.weight) > 0 ? parseFloat(option.dataset.weight) * qty : qty,
-                    price: parseFloat(option.dataset.price)
+                    quantity: weight > 0 ? weight * qty : qty,
+                    price: price
                 });
             }
         });
@@ -449,6 +1039,19 @@ const App = {
         };
 
         if (this.editingOrderId) {
+            const oldOrder = OrdersModule.getOrderById(this.editingOrderId);
+            if (oldOrder && (oldOrder.status === 'confirmed' || oldOrder.status === 'in_preparation' || oldOrder.status === 'ready')) {
+                const modifications = this.compareOrders(oldOrder.items, items);
+                if (modifications.toAdd.length > 0 || modifications.toRemove.length > 0) {
+                    OrdersModule.addModification(this.editingOrderId, modifications);
+
+                    // Se era pronto, torna in preparazione
+                    if (oldOrder.status === 'ready') {
+                        OrdersModule.changeOrderStatus(this.editingOrderId, 'in_preparation');
+                    }
+                }
+            }
+
             OrdersModule.updateOrder(this.editingOrderId, orderData);
             this.editingOrderId = null;
         } else {
@@ -459,9 +1062,50 @@ const App = {
         this.loadOrders();
     },
 
+    compareOrders(oldItems, newItems) {
+        const toAdd = [];
+        const toRemove = [];
+
+        // Prodotti aggiunti o aumentati
+        newItems.forEach(newItem => {
+            const oldItem = oldItems.find(i => i.productId === newItem.productId);
+            if (!oldItem) {
+                toAdd.push(newItem);
+            } else if (newItem.quantity > oldItem.quantity) {
+                toAdd.push({
+                    productId: newItem.productId,
+                    quantity: newItem.quantity - oldItem.quantity,
+                    price: newItem.price
+                });
+            }
+        });
+
+        // Prodotti rimossi o diminuiti
+        oldItems.forEach(oldItem => {
+            const newItem = newItems.find(i => i.productId === oldItem.productId);
+            if (!newItem) {
+                toRemove.push(oldItem);
+            } else if (newItem.quantity < oldItem.quantity) {
+                toRemove.push({
+                    productId: oldItem.productId,
+                    quantity: oldItem.quantity - newItem.quantity,
+                    price: oldItem.price
+                });
+            }
+        });
+
+        return { toAdd, toRemove };
+    },
+
     editOrder(orderId) {
         const order = OrdersModule.getOrderById(orderId);
         if (!order) return;
+
+        // Blocca modifica ordini consegnati
+        if (order.status === 'delivered') {
+            Utils.showToast("⛔ Ordine già consegnato, non modificabile", "error");
+            return;
+        }
 
         // Prima apri modal
         this.openModal('new-order-modal');
@@ -493,6 +1137,29 @@ const App = {
     deleteOrder(orderId) {
         if (OrdersModule.deleteOrder(orderId)) {
             this.loadOrders();
+        }
+    },
+
+    undoDelivery(orderId) {
+        if (confirm("⚠️ Annullare la consegna e riportare l'ordine a 'Pronto'?")) {
+            OrdersModule.changeOrderStatus(orderId, 'ready');
+
+            // Rimuovi bollini fidelity se erano stati aggiunti
+            const order = OrdersModule.getOrderById(orderId);
+            if (order && FidelityModule) {
+                const stampsToRemove = Math.floor(order.totalAmount / 10);
+                if (stampsToRemove > 0) {
+                    const fidelity = FidelityModule.getFidelityCustomer(order.customerId);
+                    if (fidelity) {
+                        fidelity.stamps = Math.max(0, fidelity.stamps - stampsToRemove);
+                        fidelity.totalStamps = Math.max(0, fidelity.totalStamps - stampsToRemove);
+                        FidelityModule.saveFidelity();
+                    }
+                }
+            }
+
+            this.loadOrders();
+            Utils.showToast("↩️ Consegna annullata", "success");
         }
     },
 
@@ -698,7 +1365,8 @@ const App = {
 
     loadFidelity() {
         console.log("🎁 Caricamento fidelity...");
-        // TODO: Implementare gestione fidelity
+        const fidelityList = FidelityModule.getAllFidelityCustomers();
+        this.displayFidelityCustomers(fidelityList);
     },
 
     loadSettings() {
