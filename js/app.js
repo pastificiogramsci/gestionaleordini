@@ -326,8 +326,8 @@ const App = {
                 <div class="bg-white p-4 rounded-lg shadow cursor-pointer" onclick="app.viewOrderDetails('${o.id}')">                <div class="flex justify-between items-start mb-2">
                     <div>
                         <h3 class="font-bold text-lg">#${o.orderNumber || 'N/A'} - ${customerName}</h3>                        <p class="text-sm text-gray-600">${o.items.length} prodotti</p>
-                        ${o.deliveryDate ? `<p class="text-sm text-gray-600">📅 ${Utils.formatDate(o.deliveryDate)} ${o.deliveryTime || ''}</p>` : ''}
-                    </div>
+                        ${o.deliveryDate ? `<p class="text-sm text-gray-600">📅 Consegna: ${Utils.formatDate(o.deliveryDate)} ${o.deliveryTime || ''}</p>` : ''}
+                        <p class="text-xs text-gray-500">Creato: ${Utils.formatDateTime(o.createdAt)}</p>                    </div>
                     <div class="text-right">
                         <p class="text-2xl font-bold text-blue-600">${Utils.formatPrice(o.totalAmount)}</p>
                         <span class="text-xs px-2 py-1 rounded ${statusColors[o.status]}">${statusNames[o.status]}</span>
@@ -338,6 +338,7 @@ const App = {
                     ${o.status === 'pending' ? `<button onclick="OrdersModule.changeOrderStatus('${o.id}', 'confirmed'); app.loadOrders()" class="text-xs px-3 py-1 bg-blue-600 text-white rounded">Conferma</button>` : ''}
                     ${o.status === 'confirmed' ? `<button onclick="OrdersModule.changeOrderStatus('${o.id}', 'ready'); app.loadOrders()" class="text-xs px-3 py-1 bg-green-600 text-white rounded">Pronto</button>` : ''}
                     ${o.status === 'ready' ? `<button onclick="OrdersModule.changeOrderStatus('${o.id}', 'delivered'); app.loadOrders()" class="text-xs px-3 py-1 bg-gray-600 text-white rounded">Consegnato</button>` : ''}
+                    <button onclick="app.editOrder('${o.id}')" class="text-xs px-3 py-1 bg-gray-200 rounded">✏️ Modifica</button>
                     <button onclick="app.deleteOrder('${o.id}')" class="text-red-600 text-sm ml-auto">🗑️</button>
                 </div>
             </div>
@@ -426,13 +427,10 @@ const App = {
             const qty = parseFloat(item.querySelector('input').value) || 0;
             if (select.value && qty > 0) {
                 const option = select.selectedOptions[0];
-                const price = parseFloat(option.dataset.price);
-                const weight = parseFloat(option.dataset.weight) || 0;
-
                 items.push({
                     productId: select.value,
-                    quantity: weight > 0 ? weight * qty : qty,
-                    price: price
+                    quantity: parseFloat(option.dataset.weight) > 0 ? parseFloat(option.dataset.weight) * qty : qty,
+                    price: parseFloat(option.dataset.price)
                 });
             }
         });
@@ -442,16 +440,54 @@ const App = {
             return;
         }
 
-        OrdersModule.createOrder({
+        const orderData = {
             customerId: customerId,
             items: items,
             deliveryDate: document.getElementById('order-delivery-date').value,
             deliveryTime: document.getElementById('order-delivery-time').value,
             notes: document.getElementById('order-notes').value
-        });
+        };
+
+        if (this.editingOrderId) {
+            OrdersModule.updateOrder(this.editingOrderId, orderData);
+            this.editingOrderId = null;
+        } else {
+            OrdersModule.createOrder(orderData);
+        }
 
         this.closeModal('new-order-modal');
         this.loadOrders();
+    },
+
+    editOrder(orderId) {
+        const order = OrdersModule.getOrderById(orderId);
+        if (!order) return;
+
+        // Prima apri modal
+        this.openModal('new-order-modal');
+
+        // Popola select clienti
+        const select = document.getElementById('order-customer');
+        const customers = CustomersModule.getAllCustomers('name');
+        select.innerHTML = '<option value="">-- Seleziona cliente --</option>' +
+            customers.map(c => `<option value="${c.id}">${c.firstName} ${c.lastName}</option>`).join('');
+
+        // Poi imposta valori
+        select.value = order.customerId;
+        document.getElementById('order-delivery-date').value = order.deliveryDate;
+        document.getElementById('order-delivery-time').value = order.deliveryTime || '';
+        document.getElementById('order-notes').value = order.notes || '';
+
+        document.getElementById('order-items').innerHTML = '';
+        order.items.forEach(item => {
+            this.addOrderItem();
+            const lastItem = document.querySelectorAll('.order-item')[document.querySelectorAll('.order-item').length - 1];
+            lastItem.querySelector('select').value = item.productId;
+            lastItem.querySelector('input').value = item.quantity;
+        });
+
+        this.updateOrderTotal();
+        this.editingOrderId = orderId;
     },
 
     deleteOrder(orderId) {
