@@ -144,8 +144,71 @@
 
         <!-- Orders Tab -->
         <div id="orders-content" class="tab-content hidden">
-            <h2 class="text-2xl font-bold mb-6">Ordini</h2>
-            <p class="text-gray-500">Contenuto ordini - da implementare</p>
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold">Ordini</h2>
+                <button onclick="app.openNewOrderModal()"
+                    class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">+ Nuovo Ordine</button>
+            </div>
+
+            <div class="flex gap-2 mb-4 overflow-x-auto">
+                <button onclick="app.filterOrders('all')"
+                    class="px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 whitespace-nowrap">Tutti</button>
+                <button onclick="app.filterOrders('pending')"
+                    class="px-4 py-2 rounded-lg bg-yellow-100 hover:bg-yellow-200 whitespace-nowrap">In attesa</button>
+                <button onclick="app.filterOrders('confirmed')"
+                    class="px-4 py-2 rounded-lg bg-blue-100 hover:bg-blue-200 whitespace-nowrap">Confermati</button>
+                <button onclick="app.filterOrders('ready')"
+                    class="px-4 py-2 rounded-lg bg-green-100 hover:bg-green-200 whitespace-nowrap">Pronti</button>
+                <button onclick="app.filterOrders('delivered')"
+                    class="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 whitespace-nowrap">Consegnati</button>
+            </div>
+
+            <div id="orders-list" class="space-y-3"></div>
+        </div>
+
+        <!-- Modal Nuovo Ordine -->
+        <div id="new-order-modal"
+            class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4 z-50">
+            <div class="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                <h3 class="text-xl font-bold mb-4">Nuovo Ordine</h3>
+
+                <select id="order-customer" class="w-full px-3 py-2 border rounded mb-3" required>
+                    <option value="">-- Seleziona cliente --</option>
+                </select>
+
+                <input type="date" id="order-delivery-date" class="w-full px-3 py-2 border rounded mb-3">
+                <input type="time" id="order-delivery-time" class="w-full px-3 py-2 border rounded mb-3">
+
+                <h4 class="font-bold mb-2">Prodotti</h4>
+                <div id="order-items" class="mb-3"></div>
+                <button onclick="app.addOrderItem()" class="bg-gray-200 px-3 py-1 rounded text-sm mb-3">+ Aggiungi
+                    prodotto</button>
+
+                <textarea id="order-notes" placeholder="Note" class="w-full px-3 py-2 border rounded mb-3"></textarea>
+
+                <div class="text-right mb-3">
+                    <p class="text-2xl font-bold">Totale: <span id="order-total">€0,00</span></p>
+                </div>
+
+                <div class="flex gap-3">
+                    <button onclick="app.closeModal('new-order-modal')"
+                        class="flex-1 bg-gray-200 px-4 py-2 rounded">Annulla</button>
+                    <button onclick="app.saveOrder()" class="flex-1 bg-blue-600 text-white px-4 py-2 rounded">Salva
+                        Ordine</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Dettagli Ordine -->
+        <div id="order-details-modal"
+            class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4 z-50">
+            <div class="bg-white rounded-lg p-6 w-full max-w-lg">
+                <div class="flex justify-between mb-4">
+                    <h3 class="text-xl font-bold">Dettagli Ordine</h3>
+                    <button onclick="app.closeModal('order-details-modal')" class="text-gray-500">✕</button>
+                </div>
+                <div id="order-details-content"></div>
+            </div>
         </div>
 
         <!-- Customers Tab -->
@@ -262,17 +325,17 @@
                     weightInput.required = false;
                     weightInput.value = '';
                 }
+            }
 
-                function checkNewCategory() {
-                    const sel = document.getElementById('product-category');
-                    const newInput = document.getElementById('product-category-new');
-                    if (sel.value === '__new__') {
-                        newInput.classList.remove('hidden');
-                        newInput.required = true;
-                    } else {
-                        newInput.classList.add('hidden');
-                        newInput.required = false;
-                    }
+            function checkNewCategory() {
+                const sel = document.getElementById('product-category');
+                const newInput = document.getElementById('product-category-new');
+                if (sel.value === '__new__') {
+                    newInput.classList.remove('hidden');
+                    newInput.required = true;
+                } else {
+                    newInput.classList.add('hidden');
+                    newInput.required = false;
                 }
             }
         </script>

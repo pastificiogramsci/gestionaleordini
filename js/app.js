@@ -205,8 +205,203 @@ const App = {
     },
 
     loadOrders() {
-        console.log("📦 Caricamento ordini...");
-        // TODO: Implementare visualizzazione lista ordini
+        this.displayOrders(OrdersModule.getAllOrders('recent'));
+    },
+
+    displayOrders(orders) {
+        const container = document.getElementById('orders-list');
+        if (!container) return;
+
+        if (orders.length === 0) {
+            container.innerHTML = '<p class="text-gray-500 text-center py-8">Nessun ordine</p>';
+            return;
+        }
+
+        const statusColors = {
+            pending: 'bg-yellow-100 text-yellow-800',
+            confirmed: 'bg-blue-100 text-blue-800',
+            ready: 'bg-green-100 text-green-800',
+            delivered: 'bg-gray-100 text-gray-800',
+            cancelled: 'bg-red-100 text-red-800'
+        };
+
+        const statusNames = {
+            pending: 'In attesa',
+            confirmed: 'Confermato',
+            ready: 'Pronto',
+            delivered: 'Consegnato',
+            cancelled: 'Annullato'
+        };
+
+        container.innerHTML = orders.map(o => {
+            const customer = CustomersModule.getCustomerById(o.customerId);
+            const customerName = customer ? `${customer.firstName} ${customer.lastName}` : 'Cliente sconosciuto';
+
+            return `
+                <div class="bg-white p-4 rounded-lg shadow cursor-pointer" onclick="app.viewOrderDetails('${o.id}')">                <div class="flex justify-between items-start mb-2">
+                    <div>
+                        <h3 class="font-bold text-lg">${customerName}</h3>
+                        <p class="text-sm text-gray-600">${o.items.length} prodotti</p>
+                        ${o.deliveryDate ? `<p class="text-sm text-gray-600">📅 ${Utils.formatDate(o.deliveryDate)} ${o.deliveryTime || ''}</p>` : ''}
+                    </div>
+                    <div class="text-right">
+                        <p class="text-2xl font-bold text-blue-600">${Utils.formatPrice(o.totalAmount)}</p>
+                        <span class="text-xs px-2 py-1 rounded ${statusColors[o.status]}">${statusNames[o.status]}</span>
+                    </div>
+                </div>
+                
+                <div class="flex gap-2 mt-3">
+                    ${o.status === 'pending' ? `<button onclick="OrdersModule.changeOrderStatus('${o.id}', 'confirmed'); app.loadOrders()" class="text-xs px-3 py-1 bg-blue-600 text-white rounded">Conferma</button>` : ''}
+                    ${o.status === 'confirmed' ? `<button onclick="OrdersModule.changeOrderStatus('${o.id}', 'ready'); app.loadOrders()" class="text-xs px-3 py-1 bg-green-600 text-white rounded">Pronto</button>` : ''}
+                    ${o.status === 'ready' ? `<button onclick="OrdersModule.changeOrderStatus('${o.id}', 'delivered'); app.loadOrders()" class="text-xs px-3 py-1 bg-gray-600 text-white rounded">Consegnato</button>` : ''}
+                    <button onclick="app.deleteOrder('${o.id}')" class="text-red-600 text-sm ml-auto">🗑️</button>
+                </div>
+            </div>
+        `;
+        }).join('');
+    },
+
+    filterOrders(status) {
+        if (status === 'all') {
+            this.displayOrders(OrdersModule.getAllOrders('recent'));
+        } else {
+            this.displayOrders(OrdersModule.getOrdersByStatus(status));
+        }
+    },
+
+    openNewOrderModal() {
+        console.log("🔵 openNewOrderModal chiamata");
+        this.openModal('new-order-modal');
+
+        const select = document.getElementById('order-customer');
+        console.log("🔵 Select trovato:", select);
+
+        const customers = CustomersModule.getAllCustomers('name');
+        console.log("🔵 Clienti:", customers.length);
+
+        select.innerHTML = '<option value="">-- Seleziona cliente --</option>' +
+            customers.map(c => `<option value="${c.id}">${c.firstName} ${c.lastName}</option>`).join('');
+
+        console.log("🔵 Select popolato, innerHTML length:", select.innerHTML.length);
+
+        // Reset form
+        document.getElementById('order-items').innerHTML = '';
+        document.getElementById('order-delivery-date').value = new Date().toISOString().split('T')[0];
+        document.getElementById('order-notes').value = '';
+        this.orderItems = [];
+        this.updateOrderTotal();
+    },
+
+    orderItems: [],
+
+    addOrderItem() {
+        const products = ProductsModule.getActiveProducts();
+        const itemHtml = `
+        <div class="flex gap-2 mb-2 order-item">
+            <select class="flex-1 px-2 py-1 border rounded" onchange="app.updateOrderTotal()">
+                <option value="">-- Prodotto --</option>
+                ${products.map(p => `<option value="${p.id}" data-price="${p.price}" data-weight="${p.averageWeight || 0}">${p.name} - ${Utils.formatPrice(p.price)}/${p.unit || 'kg'}</option>`).join('')}
+            </select>
+            <input type="number" step="0.01" placeholder="Qtà" class="w-20 px-2 py-1 border rounded" onchange="app.updateOrderTotal()">
+            <button onclick="this.parentElement.remove(); app.updateOrderTotal()" class="text-red-600">✕</button>
+        </div>
+    `;
+        document.getElementById('order-items').insertAdjacentHTML('beforeend', itemHtml);
+    },
+
+    updateOrderTotal() {
+        let total = 0;
+        document.querySelectorAll('.order-item').forEach(item => {
+            const select = item.querySelector('select');
+            const qty = parseFloat(item.querySelector('input').value) || 0;
+            if (select.value && qty > 0) {
+                const option = select.selectedOptions[0];
+                const price = parseFloat(option.dataset.price);
+                const weight = parseFloat(option.dataset.weight) || 0;
+
+                if (weight > 0) {
+                    total += price * weight * qty;
+                } else {
+                    total += price * qty;
+                }
+            }
+        });
+        document.getElementById('order-total').textContent = Utils.formatPrice(total);
+    },
+
+    saveOrder() {
+        const customerId = document.getElementById('order-customer').value;
+        if (!customerId) {
+            Utils.showToast("Seleziona un cliente", "error");
+            return;
+        }
+
+        const items = [];
+        document.querySelectorAll('.order-item').forEach(item => {
+            const select = item.querySelector('select');
+            const qty = parseFloat(item.querySelector('input').value) || 0;
+            if (select.value && qty > 0) {
+                const option = select.selectedOptions[0];
+                const price = parseFloat(option.dataset.price);
+                const weight = parseFloat(option.dataset.weight) || 0;
+
+                items.push({
+                    productId: select.value,
+                    quantity: weight > 0 ? weight * qty : qty,
+                    price: price
+                });
+            }
+        });
+
+        if (items.length === 0) {
+            Utils.showToast("Aggiungi almeno un prodotto", "error");
+            return;
+        }
+
+        OrdersModule.createOrder({
+            customerId: customerId,
+            items: items,
+            deliveryDate: document.getElementById('order-delivery-date').value,
+            deliveryTime: document.getElementById('order-delivery-time').value,
+            notes: document.getElementById('order-notes').value
+        });
+
+        this.closeModal('new-order-modal');
+        this.loadOrders();
+    },
+
+    deleteOrder(orderId) {
+        if (OrdersModule.deleteOrder(orderId)) {
+            this.loadOrders();
+        }
+    },
+
+    viewOrderDetails(orderId) {
+        const order = OrdersModule.formatOrderDetails(orderId);
+        if (!order) return;
+
+        const content = document.getElementById('order-details-content');
+        content.innerHTML = `
+        <p class="mb-2"><strong>Cliente:</strong> ${order.customerName}</p>
+        <p class="mb-2"><strong>Data consegna:</strong> ${order.deliveryDate ? Utils.formatDate(order.deliveryDate) : '-'} ${order.deliveryTime || ''}</p>
+        <p class="mb-4"><strong>Note:</strong> ${order.notes || '-'}</p>
+        
+        <h4 class="font-bold mb-2">Prodotti:</h4>
+        <div class="space-y-1 mb-4">
+            ${order.items.map(item => `
+                <div class="flex justify-between text-sm">
+                    <span>${item.productName} x${item.quantity}</span>
+                    <span>${Utils.formatPrice(item.price * item.quantity)}</span>
+                </div>
+            `).join('')}
+        </div>
+        
+        <div class="text-right">
+            <p class="text-2xl font-bold">Totale: ${Utils.formatPrice(order.totalAmount)}</p>
+        </div>
+    `;
+
+        this.openModal('order-details-modal');
     },
 
     loadCustomers() {
@@ -355,7 +550,18 @@ const App = {
         document.getElementById('product-id').value = product.id;
         document.getElementById('product-name').value = product.name;
         document.getElementById('product-price').value = product.price;
-        document.getElementById('product-category').value = product.category;
+
+        // Gestione categoria
+        const categorySelect = document.getElementById('product-category');
+        categorySelect.value = product.category;
+
+        // Se la categoria non esiste nel select, usa "Nuova categoria"
+        if (categorySelect.value === '' && product.category) {
+            categorySelect.value = '__new__';
+            document.getElementById('product-category-new').value = product.category;
+            checkNewCategory();
+        }
+
         document.getElementById('product-unit').value = product.unit || 'kg';
         document.getElementById('product-weight').value = product.averageWeight || '';
         document.getElementById('product-description').value = product.description || '';
@@ -413,10 +619,21 @@ const App = {
     // ACTIONS
     // ==========================================
 
-    // Crea nuovo ordine
     openNewOrderModal() {
         this.openModal('new-order-modal');
-        // TODO: Popola form nuovo ordine
+
+        // Popola select clienti
+        const select = document.getElementById('order-customer');
+        const customers = CustomersModule.getAllCustomers('name');
+        select.innerHTML = '<option value="">-- Seleziona cliente --</option>' +
+            customers.map(c => `<option value="${c.id}">${c.firstName} ${c.lastName}</option>`).join('');
+
+        // Reset form
+        document.getElementById('order-items').innerHTML = '';
+        document.getElementById('order-delivery-date').value = new Date().toISOString().split('T')[0];
+        document.getElementById('order-notes').value = '';
+        this.orderItems = [];
+        this.updateOrderTotal();
     },
 
     // Visualizza dettagli ordine
