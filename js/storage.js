@@ -29,7 +29,8 @@ const Storage = {
     },
 
     startDropboxAuth() {
-        const authUrl = `https://www.dropbox.com/oauth2/authorize?client_id=${DROPBOX_CONFIG.clientId}&response_type=code&redirect_uri=${encodeURIComponent(DROPBOX_CONFIG.redirectUri)}&token_access_type=offline`;
+        const config = CONFIG.getDropboxConfig();
+        const authUrl = `https://www.dropbox.com/oauth2/authorize?client_id=${config.clientId}&response_type=code&redirect_uri=${encodeURIComponent(config.redirectUri)}&token_access_type=offline`;
         window.location.href = authUrl;
     },
 
@@ -39,14 +40,15 @@ const Storage = {
 
         if (code) {
             try {
+                const config = CONFIG.getDropboxConfig();
                 const response = await fetch('https://api.dropboxapi.com/oauth2/token', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                     body: new URLSearchParams({
                         code: code,
                         grant_type: 'authorization_code',
-                        client_id: DROPBOX_CONFIG.clientId,
-                        redirect_uri: DROPBOX_CONFIG.redirectUri
+                        client_id: config.clientId,
+                        redirect_uri: config.redirectUri
                     })
                 });
 
@@ -56,7 +58,6 @@ const Storage = {
                     this.dropboxAccessToken = data.access_token;
                     localStorage.setItem('dropboxAccessToken', data.access_token);
 
-                    // ← AGGIUNGI: Salva refresh token
                     if (data.refresh_token) {
                         this.dropboxRefreshToken = data.refresh_token;
                         localStorage.setItem('dropboxRefreshToken', data.refresh_token);
@@ -86,13 +87,14 @@ const Storage = {
         }
 
         try {
+            const config = CONFIG.getDropboxConfig();
             const response = await fetch("https://api.dropboxapi.com/oauth2/token", {
                 method: "POST",
                 headers: { "Content-Type": "application/x-www-form-urlencoded" },
                 body: new URLSearchParams({
                     grant_type: "refresh_token",
                     refresh_token: this.dropboxRefreshToken,
-                    client_id: DROPBOX_CONFIG.clientId
+                    client_id: config.clientId
                 })
             });
 
@@ -182,6 +184,7 @@ const Storage = {
     },
 
     disconnectDropbox() {
+        this.stopAutoSync();
         localStorage.removeItem('dropboxAccessToken');
         localStorage.removeItem('dropboxRefreshToken');
         this.dropboxClient = null;
@@ -190,12 +193,10 @@ const Storage = {
         Utils.showToast("📦 Dropbox disconnesso", "info");
     },
 
-
     // ==========================================
     // SALVATAGGIO DATI
     // ==========================================
 
-    // Salva dati in localStorage
     saveLocal(key, data) {
         try {
             localStorage.setItem(key, JSON.stringify(data));
@@ -208,7 +209,6 @@ const Storage = {
         }
     },
 
-    // Carica dati da localStorage
     loadLocal(key, defaultValue = null) {
         try {
             const data = localStorage.getItem(key);
@@ -219,12 +219,10 @@ const Storage = {
         }
     },
 
-    // Salva su Dropbox
     async saveDropbox(key, data) {
         if (!this.dropboxClient) return;
 
         try {
-            // Cripta i dati
             const encryptedData = AuthManager.encrypt(data);
             if (!encryptedData) {
                 console.error('❌ Errore crittografia');
@@ -260,8 +258,6 @@ const Storage = {
         }
     },
 
-
-    // Carica da Dropbox
     async loadDropbox(key) {
         if (!this.dropboxClient) return null;
 
@@ -275,7 +271,6 @@ const Storage = {
                     try {
                         const parsedData = JSON.parse(reader.result);
 
-                        // Se criptato, decripta
                         if (parsedData.encrypted) {
                             const decrypted = AuthManager.decrypt(parsedData.data);
                             if (!decrypted) {
@@ -286,7 +281,6 @@ const Storage = {
                             console.log(`📦 Caricato e decriptato: ${key}`);
                             resolve(decrypted);
                         } else {
-                            // Formato vecchio non criptato
                             resolve(parsedData);
                         }
                     } catch (e) {
@@ -313,84 +307,65 @@ const Storage = {
         }
     },
 
-
     // ==========================================
-    // FUNZIONI COMODE (salvano sia locale che cloud)
+    // FUNZIONI COMODE
     // ==========================================
 
-    // Salva ordini
     async saveOrders(orders) {
         this.saveLocal(CONFIG.STORAGE_KEYS.ORDERS, orders);
         await this.saveDropbox(CONFIG.DROPBOX_PATHS.ORDERS, orders);
     },
 
-    // Carica ordini
     async loadOrders() {
-        // Prova prima da Dropbox, poi da localStorage
         const cloudData = await this.loadDropbox(CONFIG.DROPBOX_PATHS.ORDERS);
         if (cloudData) return cloudData;
-
         return this.loadLocal(CONFIG.STORAGE_KEYS.ORDERS, []);
     },
 
-    // Salva clienti
     async saveCustomers(customers) {
         this.saveLocal(CONFIG.STORAGE_KEYS.CUSTOMERS, customers);
         await this.saveDropbox(CONFIG.DROPBOX_PATHS.CUSTOMERS, customers);
     },
 
-    // Carica clienti
     async loadCustomers() {
         const cloudData = await this.loadDropbox(CONFIG.DROPBOX_PATHS.CUSTOMERS);
         if (cloudData) return cloudData;
-
         return this.loadLocal(CONFIG.STORAGE_KEYS.CUSTOMERS, []);
     },
 
-    // Salva prodotti
     async saveProducts(products) {
         this.saveLocal(CONFIG.STORAGE_KEYS.PRODUCTS, products);
         await this.saveDropbox(CONFIG.DROPBOX_PATHS.PRODUCTS, products);
     },
 
-    // Carica prodotti
     async loadProducts() {
         const cloudData = await this.loadDropbox(CONFIG.DROPBOX_PATHS.PRODUCTS);
         if (cloudData) return cloudData;
-
         return this.loadLocal(CONFIG.STORAGE_KEYS.PRODUCTS, []);
     },
 
-    // Salva fidelity
     async saveFidelity(fidelityData) {
         this.saveLocal(CONFIG.STORAGE_KEYS.FIDELITY, fidelityData);
         await this.saveDropbox(CONFIG.DROPBOX_PATHS.FIDELITY, fidelityData);
     },
 
-    // Carica fidelity
     async loadFidelity() {
         const cloudData = await this.loadDropbox(CONFIG.DROPBOX_PATHS.FIDELITY);
         if (cloudData) return cloudData;
-
         return this.loadLocal(CONFIG.STORAGE_KEYS.FIDELITY, []);
     },
 
-    // Salva campagne
     async saveCampaigns(campaigns) {
         this.saveLocal(CONFIG.STORAGE_KEYS.CAMPAIGNS, campaigns);
         await this.saveDropbox(CONFIG.DROPBOX_PATHS.CAMPAIGNS, campaigns);
     },
 
-    // Carica campagne
     async loadCampaigns() {
         const cloudData = await this.loadDropbox(CONFIG.DROPBOX_PATHS.CAMPAIGNS);
         if (cloudData) return cloudData;
-
         return this.loadLocal(CONFIG.STORAGE_KEYS.CAMPAIGNS, []);
     }
 };
 
-// Rendi Storage disponibile globalmente
 window.Storage = Storage;
-
 console.log("✅ Storage caricato");

@@ -6,7 +6,15 @@
 const CONFIG = {
     // Dropbox
     DROPBOX_APP_KEY: "jxj7rn2nzrs3y0p",
-    
+
+    // Dropbox Config per OAuth
+    getDropboxConfig() {
+        return {
+            clientId: this.DROPBOX_APP_KEY,
+            redirectUri: this.getRedirectUri()
+        };
+    },
+
     // Rileva automaticamente l'ambiente (locale o online)
     getRedirectUri() {
         const hostname = window.location.hostname;
@@ -16,7 +24,7 @@ const CONFIG = {
             return `${window.location.origin}${window.location.pathname}`;
         }
     },
-    
+
     // File su Dropbox
     DROPBOX_PATHS: {
         ORDERS: "/ordini.json",
@@ -25,7 +33,7 @@ const CONFIG = {
         FIDELITY: "/fidelity.json",
         CAMPAIGNS: "/campagne.json"
     },
-    
+
     // LocalStorage Keys
     STORAGE_KEYS: {
         ORDERS: "orders",
@@ -35,7 +43,7 @@ const CONFIG = {
         CAMPAIGNS: "campaigns",
         DROPBOX_TOKEN: "dropboxAccessToken"
     },
-    
+
     // Impostazioni Fidelity
     FIDELITY: {
         STAMPS_FOR_REWARD: 10,
