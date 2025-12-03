@@ -137,21 +137,47 @@ const OrdersModule = {
             order.deliveredAt = new Date().toISOString();
         }
 
-        this.saveOrders();
-
-        // Auto-converti confirmed → in_preparation quando confermi
-        if (newStatus === this.ORDER_STATUS.CONFIRMED) {
-            setTimeout(() => {
-                order.status = this.ORDER_STATUS.IN_PREPARATION;
-                this.saveOrders();
-            }, 100);
+        // Se passa a in_preparation e tutto è già preparato → vai direttamente a ready
+        if (newStatus === this.ORDER_STATUS.IN_PREPARATION) {
+            const allPrepared = order.items.every(item => item.prepared);
+            if (allPrepared) {
+                order.status = this.ORDER_STATUS.READY;
+                newStatus = this.ORDER_STATUS.READY;
+            }
         }
 
-        // Fidelity bollini
+        this.saveOrders();
+
+        // Fidelity - SOLO se NON c'è campagna coupon attiva
         if (newStatus === this.ORDER_STATUS.DELIVERED && FidelityModule) {
-            const stampsToAdd = Math.floor(order.totalAmount / 10);
-            if (stampsToAdd > 0) {
-                FidelityModule.addStamps(order.customerId, stampsToAdd, order.id);
+            const hasCouponCampaign = CouponsModule.campaigns.some(c =>
+                c.active &&
+                this.isDateInCampaign(order.deliveryDate, c)
+            );
+
+            if (!hasCouponCampaign) {
+                const stampsToAdd = Math.floor(order.totalAmount / 10);
+                if (stampsToAdd > 0) {
+                    FidelityModule.addStamps(order.customerId, stampsToAdd, order.id);
+                }
+            } else {
+                console.log('🎫 Coupon attivo - bollini non assegnati');
+            }
+        }
+
+        // Assegna coupon automaticamente se consegna rientra in campagna attiva
+        if (newStatus === this.ORDER_STATUS.DELIVERED && CouponsModule) {
+            const activeCampaign = CouponsModule.campaigns.find(c =>
+                c.active && this.isDateInCampaign(order.deliveryDate, c)
+            );
+
+            if (activeCampaign) {
+                const customer = CustomersModule.getCustomerById(order.customerId);
+                // Controlla se ha già questo coupon
+                if (!customer?.coupons?.some(cp => cp.campaignId === activeCampaign.id)) {
+                    CouponsModule.assignCoupon(order.customerId, activeCampaign.id);
+                    console.log('🎫 Coupon assegnato automaticamente');
+                }
             }
         }
 
@@ -166,6 +192,18 @@ const OrdersModule = {
 
         Utils.showToast(`✅ Ordine → ${statusNames[newStatus]}`, "success");
         return order;
+    },
+
+    isDateInCampaign(deliveryDate, campaign) {
+        if (!deliveryDate) return false;
+
+        if (campaign.dateType === 'single' || campaign.dateType === 'multiple') {
+            return campaign.dates.includes(deliveryDate);
+        } else if (campaign.dateType === 'range') {
+            return deliveryDate >= campaign.dateFrom && deliveryDate <= campaign.dateTo;
+        }
+
+        return false;
     },
 
     addModification(orderId, modifications) {
@@ -293,7 +331,7 @@ const OrdersModule = {
 
     markAllItemsOfProductPrepared(productId, date) {
         const orders = this.getOrdersByDeliveryDate(date).filter(o =>
-            o.status === 'in_preparation' || o.status === 'confirmed'
+            o.status === 'pending' || o.status === 'in_preparation' || o.status === 'confirmed'
         );
 
         let marked = 0;
@@ -305,9 +343,12 @@ const OrdersModule = {
                 }
             });
 
-            // Controlla se ordine completo
-            if (order.items.every(i => i.prepared) && order.status === this.ORDER_STATUS.IN_PREPARATION) {
-                this.changeOrderStatus(order.id, this.ORDER_STATUS.READY);
+            // Se tutto preparato E ordine confermato/in_preparation, vai a ready
+            if (order.items.every(i => i.prepared)) {
+                if (order.status === this.ORDER_STATUS.IN_PREPARATION) {
+                    this.changeOrderStatus(order.id, this.ORDER_STATUS.READY);
+                }
+                // Se pending, non fare nulla - passerà automaticamente a ready quando confermi
             }
         });
 

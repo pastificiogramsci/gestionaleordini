@@ -136,6 +136,9 @@ const App = {
             case 'settings':
                 this.loadSettings();
                 break;
+            case 'coupon':
+                this.loadCoupons();
+                break;
         }
     },
 
@@ -396,6 +399,250 @@ const App = {
                 FidelityModule.saveFidelity();
                 this.loadFidelity();
             }
+        }
+    },
+
+    loadCoupons() {
+        const campaigns = CouponsModule.getAllCampaigns();
+        this.displayCampaigns(campaigns);
+    },
+
+    displayCampaigns(campaigns) {
+        const container = document.getElementById('campaigns-list');
+        if (!container) return;
+
+        if (campaigns.length === 0) {
+            container.innerHTML = '<p class="text-center text-gray-500 py-8">Nessuna campagna attiva</p>';
+            return;
+        }
+
+        container.innerHTML = campaigns.map(c => {
+            if (!c || !c.id) return '';
+            const eligible = this.getEligibleCustomers(c); const assigned = eligible.filter(cust => {
+                const customer = CustomersModule.getCustomerById(cust.customerId);
+                return customer?.coupons?.some(cp => cp.campaignId === c.id);
+            }).length;
+
+            return `
+            <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+                <div class="bg-gradient-to-r from-pink-500 to-purple-500 text-white p-4">
+                    <h3 class="text-xl font-bold">${c.name}</h3>
+                    <p class="text-sm">${c.description}</p>
+                </div>
+                
+                <div class="p-4">
+                    <div class="grid grid-cols-2 gap-3 mb-3">
+                        <div class="bg-gray-50 p-3 rounded">
+                            <p class="text-xs text-gray-600">Clienti idonei</p>
+                            <p class="text-2xl font-bold">${eligible.length}</p>
+                        </div>
+                        <div class="bg-green-50 p-3 rounded">
+                            <p class="text-xs text-gray-600">Coupon assegnati</p>
+                            <p class="text-2xl font-bold text-green-600">${assigned}</p>
+                        </div>
+                    </div>
+                    
+                    <p class="text-sm text-gray-600 mb-2">📅 ${this.formatCampaignDates(c)}</p>
+                    <p class="text-sm text-gray-600 mb-3">⏰ Scade: ${Utils.formatDate(c.expiryDate)}</p>
+                    
+                    <div class="flex gap-2">
+                        <button onclick="app.assignCoupons('${c.id}')" class="flex-1 bg-pink-600 text-white px-4 py-2 rounded hover:bg-pink-700">
+                            Assegna Coupon
+                        </button>
+                        <button onclick="app.viewCampaignDetails('${c.id}')" class="flex-1 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                            Dettagli
+                        </button>
+                        <button onclick="app.deleteCampaign('${c.id}')" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">
+                            🗑️
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        }).join('');
+    },
+
+    getEligibleCustomers(campaign) {
+        if (!campaign || !campaign.dateType) {
+            console.warn('Campagna senza dateType:', campaign);
+            return [];
+        }
+
+        let orders = [];
+
+        if (campaign.dateType === 'single' || campaign.dateType === 'multiple') {
+            orders = OrdersModule.getAllOrders('recent').filter(o =>
+                campaign.dates && campaign.dates.includes(o.deliveryDate)
+            );
+        } else if (campaign.dateType === 'range') {
+            orders = OrdersModule.getAllOrders('recent').filter(o =>
+                o.deliveryDate >= campaign.dateFrom && o.deliveryDate <= campaign.dateTo
+            );
+        }
+
+        const customerIds = [...new Set(orders.map(o => o.customerId))];
+        return customerIds.map(id => ({ customerId: id }));
+    },
+
+    openNewCampaignModal() {
+        document.getElementById('campaign-name').value = '';
+        document.getElementById('campaign-description').value = '';
+        document.getElementById('campaign-date-from').value = '';
+        document.getElementById('campaign-date-to').value = '';
+        document.getElementById('campaign-expiry').value = '';
+        this.openModal('new-campaign-modal');
+    },
+
+    toggleCampaignDateInputs() {
+        const type = document.getElementById('campaign-date-type').value;
+
+        document.getElementById('date-single-input').classList.add('hidden');
+        document.getElementById('date-multiple-input').classList.add('hidden');
+        document.getElementById('date-range-input').classList.add('hidden');
+
+        if (type === 'single') {
+            document.getElementById('date-single-input').classList.remove('hidden');
+        } else if (type === 'multiple') {
+            document.getElementById('date-multiple-input').classList.remove('hidden');
+        } else if (type === 'range') {
+            document.getElementById('date-range-input').classList.remove('hidden');
+        }
+    },
+
+    saveCampaign() {
+        const name = document.getElementById('campaign-name').value;
+        const description = document.getElementById('campaign-description').value;
+        const dateType = document.getElementById('campaign-date-type').value;
+        const expiryDate = document.getElementById('campaign-expiry').value;
+
+        if (!name || !description || !expiryDate) {
+            Utils.showToast("Compila tutti i campi obbligatori", "error");
+            return;
+        }
+
+        let campaignData = {
+            name,
+            description,
+            dateType,
+            expiryDate
+        };
+
+        // Gestisci date in base al tipo
+        if (dateType === 'single') {
+            const date = document.getElementById('campaign-date-single').value;
+            if (!date) {
+                Utils.showToast("Seleziona una data", "error");
+                return;
+            }
+            campaignData.dates = [date];
+        } else if (dateType === 'multiple') {
+            const datesStr = document.getElementById('campaign-dates-multiple').value;
+            if (!datesStr) {
+                Utils.showToast("Inserisci almeno una data", "error");
+                return;
+            }
+            campaignData.dates = datesStr.split(',').map(d => d.trim()).filter(d => d);
+        } else if (dateType === 'range') {
+            const dateFrom = document.getElementById('campaign-date-from').value;
+            const dateTo = document.getElementById('campaign-date-to').value;
+            if (!dateFrom || !dateTo) {
+                Utils.showToast("Seleziona entrambe le date", "error");
+                return;
+            }
+            campaignData.dateFrom = dateFrom;
+            campaignData.dateTo = dateTo;
+        }
+
+        CouponsModule.createCampaign(campaignData);
+        this.closeModal('new-campaign-modal');
+        this.loadCoupons();
+    },
+
+    assignCoupons(campaignId) {
+        const campaign = CouponsModule.getCampaignById(campaignId);
+        if (!campaign) return;
+
+        const eligible = this.getEligibleCustomers(campaign);
+
+        if (eligible.length === 0) {
+            Utils.showToast("Nessun cliente idoneo", "info");
+            return;
+        }
+
+        if (confirm(`Assegnare coupon a ${eligible.length} clienti?`)) {
+            let assigned = 0;
+            eligible.forEach(e => {
+                const customer = CustomersModule.getCustomerById(e.customerId);
+                if (!customer) return;
+
+                // Controlla se ha già questo coupon
+                if (customer.coupons?.some(c => c.campaignId === campaignId)) return;
+
+                CouponsModule.assignCoupon(e.customerId, campaignId);
+                assigned++;
+            });
+
+            Utils.showToast(`✅ ${assigned} coupon assegnati!`, "success");
+            this.loadCoupons();
+        }
+    },
+
+    viewCampaignDetails(campaignId) {
+        const campaign = CouponsModule.getCampaignById(campaignId);
+        if (!campaign) {
+            Utils.showToast("Campagna non trovata", "error");
+            return;
+        }
+
+        const eligible = this.getEligibleCustomers(campaign);
+
+        const html = `
+        <div class="space-y-3">
+            <h3 class="font-bold text-lg">${campaign.name}</h3>
+            <p class="text-sm text-gray-600">${campaign.description}</p>
+            
+            <div class="bg-gray-50 p-3 rounded">
+                <h4 class="font-bold mb-2">Clienti idonei (${eligible.length})</h4>
+                ${eligible.map(e => {
+            const customer = CustomersModule.getCustomerById(e.customerId);
+            const hasCoupon = customer?.coupons?.some(c => c.campaignId === campaignId);
+            return `
+                        <div class="flex justify-between items-center py-1 border-b">
+                            <span class="text-sm">${customer?.firstName} ${customer?.lastName}</span>
+                            ${hasCoupon ? '<span class="text-green-600 text-xs">✓ Assegnato</span>' : '<span class="text-gray-400 text-xs">Non assegnato</span>'}
+                        </div>
+                    `;
+        }).join('')}
+            </div>
+        </div>
+    `;
+
+        const div = document.createElement('div');
+        div.innerHTML = `
+        <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onclick="this.remove()">
+            <div class="bg-white rounded-lg p-6 max-w-2xl max-h-[80vh] overflow-y-auto" onclick="event.stopPropagation()">
+                ${html}
+                <button onclick="this.parentElement.parentElement.remove()" class="w-full mt-4 bg-gray-200 px-4 py-2 rounded">Chiudi</button>
+            </div>
+        </div>
+    `;
+        document.body.appendChild(div);
+    },
+
+    deleteCampaign(campaignId) {
+        if (confirm("Eliminare questa campagna? I coupon già assegnati rimarranno validi.")) {
+            CouponsModule.deleteCampaign(campaignId);
+            this.loadCoupons();
+        }
+    },
+
+    formatCampaignDates(campaign) {
+        if (campaign.dateType === 'single') {
+            return `Ritiro: ${Utils.formatDate(campaign.dates[0])}`;
+        } else if (campaign.dateType === 'multiple') {
+            return `Ritiri: ${campaign.dates.map(d => Utils.formatDate(d)).join(', ')}`;
+        } else {
+            return `Ritiri dal ${Utils.formatDate(campaign.dateFrom)} al ${Utils.formatDate(campaign.dateTo)}`;
         }
     },
 
