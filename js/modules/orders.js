@@ -173,11 +173,30 @@ const OrdersModule = {
 
             if (activeCampaign) {
                 const customer = CustomersModule.getCustomerById(order.customerId);
-                // Controlla se ha già questo coupon
+                let couponAssigned = false;
+
                 if (!customer?.coupons?.some(cp => cp.campaignId === activeCampaign.id)) {
                     CouponsModule.assignCoupon(order.customerId, activeCampaign.id);
+                    couponAssigned = true;
                     console.log('🎫 Coupon assegnato automaticamente');
                 }
+
+                // Manda messaggio WhatsApp con coupon
+                if (WhatsAppModule && couponAssigned) {
+                    setTimeout(() => {
+                        if (confirm("Mandare notifica consegna + coupon su WhatsApp?")) {
+                            WhatsAppModule.sendDeliveryNotification(order, true);
+                        }
+                    }, 500);
+                }
+            } else if (WhatsAppModule) {
+                
+                // Solo notifica consegna senza coupon
+                setTimeout(() => {
+                    if (confirm("Mandare notifica consegna su WhatsApp?")) {
+                        WhatsAppModule.sendDeliveryNotification(order, false);
+                    }
+                }, 500);
             }
         }
 

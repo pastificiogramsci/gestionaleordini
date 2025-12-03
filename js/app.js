@@ -1292,7 +1292,6 @@ const App = {
                 if (modifications.toAdd.length > 0 || modifications.toRemove.length > 0) {
                     OrdersModule.addModification(this.editingOrderId, modifications);
 
-                    // Se era pronto, torna in preparazione
                     if (oldOrder.status === 'ready') {
                         OrdersModule.changeOrderStatus(this.editingOrderId, 'in_preparation');
                     }
@@ -1302,7 +1301,12 @@ const App = {
             OrdersModule.updateOrder(this.editingOrderId, orderData);
             this.editingOrderId = null;
         } else {
-            OrdersModule.createOrder(orderData);
+            const newOrder = OrdersModule.createOrder(orderData);
+
+            // Chiedi se mandare conferma ordine
+            if (newOrder && confirm("Mandare conferma ordine su WhatsApp?")) {
+                WhatsAppModule.sendOrderConfirmation(newOrder);
+            }
         }
 
         this.closeModal('new-order-modal');
@@ -1488,15 +1492,31 @@ const App = {
             address: document.getElementById('customer-address').value
         };
 
-        CustomersModule.addCustomer(data);
+        const newCustomer = CustomersModule.addCustomer(data);
         this.closeModal('new-customer-modal');
-        event.target.reset();
         this.loadCustomers();
+
+        // Chiedi se mandare messaggio benvenuto
+        if (confirm("Mandare messaggio di benvenuto su WhatsApp con tessera fidelity?")) {
+            WhatsAppModule.sendWelcomeMessage(newCustomer, true);
+        }
     },
 
     deleteCustomer(customerId) {
-        if (CustomersModule.deleteCustomer(customerId)) {
-            this.loadCustomers();
+        // Controlla se ha ordini attivi
+        const hasOrders = OrdersModule.getAllOrders('recent').some(o =>
+            o.customerId === customerId && o.status !== 'delivered' && o.status !== 'cancelled'
+        );
+
+        if (hasOrders) {
+            Utils.showToast("⛔ Impossibile eliminare: cliente ha ordini attivi", "error");
+            return;
+        }
+
+        if (confirm("Eliminare questo cliente? Questa azione è irreversibile.")) {
+            if (CustomersModule.deleteCustomer(customerId)) {
+                this.loadCustomers();
+            }
         }
     },
 

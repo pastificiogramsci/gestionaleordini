@@ -35,6 +35,15 @@ const CustomersModule = {
     
     // Aggiungi nuovo cliente
     addCustomer(customerData) {
+    // Controlla duplicati per telefono
+    if (customerData.phone) {
+        const existing = this.customers.find(c => c.phone === customerData.phone);
+        if (existing) {
+            Utils.showToast("⚠️ Cliente con questo numero già esistente", "error");
+            return null;
+        }
+    }
+    
         const customer = {
             id: Utils.generateId(),
             firstName: customerData.firstName,
