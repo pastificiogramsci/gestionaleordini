@@ -18,7 +18,7 @@ const AuthManager = {
 
     login(password, remember = false) {
         // Password fissa (puoi cambiarla)
-        const correctPassword = 'pastificio2025'; // ← CAMBIA QUESTA
+        const correctPassword = '22gennaio92Nadia!'; // ← CAMBIA QUESTA
 
         if (password === correctPassword) {
             this.password = password;
