@@ -15,13 +15,22 @@ const App = {
         console.log("🚀 Inizializzazione App...");
 
         try {
+            // 0. Controlla autenticazione
+            if (!AuthManager.init()) {
+                console.log("🔒 Autenticazione richiesta");
+                return; // Mostra schermata login e aspetta
+            }
+
+            console.log("✅ Autenticato");
+            this.hideAuthScreen();
+
             // 1. Controlla callback Dropbox
             if (window.location.hash.includes('access_token')) {
                 Storage.handleDropboxCallback();
             }
 
             // 2. Inizializza Storage e Dropbox
-            Storage.initDropbox();
+            await Storage.initDropbox();
 
             // 3. Inizializza tutti i moduli
             await this.initModules();
@@ -56,6 +65,31 @@ const App = {
         if (QRModule) QRModule.init();
 
         console.log("✅ Tutti i moduli caricati");
+    },
+
+    handleLogin(event) {
+        event.preventDefault();
+
+        const password = document.getElementById('login-password').value;
+        const remember = document.getElementById('remember-me').checked;
+
+        if (AuthManager.login(password, remember)) {
+            this.hideAuthScreen();
+            this.init();
+        } else {
+            document.getElementById('login-error').textContent = '❌ Password errata';
+            document.getElementById('login-error').classList.remove('hidden');
+        }
+    },
+
+    hideAuthScreen() {
+        document.getElementById('auth-screen').style.display = 'none';
+    },
+
+    logout() {
+        if (confirm('Sei sicuro di voler uscire?')) {
+            AuthManager.logout();
+        }
     },
 
     // ==========================================
@@ -1638,16 +1672,44 @@ const App = {
 
     loadSettings() {
         console.log("⚙️ Caricamento impostazioni...");
+        this.updateDropboxStatus();
+    },
 
-        // Mostra stato Dropbox
-        const statusEl = document.getElementById('dropbox-status');
-        if (statusEl) {
-            if (Storage.isDropboxConnected) {
-                statusEl.innerHTML = '<span class="text-green-600">✅ Connesso</span>';
-            } else {
-                statusEl.innerHTML = '<span class="text-red-600">❌ Non connesso</span>';
-            }
+    updateDropboxStatus() {
+        const statusDiv = document.getElementById('dropbox-status');
+        const actionsDiv = document.getElementById('dropbox-actions');
+
+        if (!statusDiv || !actionsDiv) return;
+
+        if (Storage.dropboxClient) {
+            statusDiv.innerHTML = '<p class="text-green-600 font-bold">✅ Connesso</p>';
+            actionsDiv.innerHTML = `
+            <button onclick="app.manualSync()" class="bg-blue-600 text-white px-4 py-2 rounded mr-2 hover:bg-blue-700">🔄 Sincronizza ora</button>
+            <button onclick="app.disconnectDropbox()" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">Disconnetti</button>
+        `;
+        } else {
+            statusDiv.innerHTML = '<p class="text-gray-600">Non connesso</p>';
+            actionsDiv.innerHTML = `
+            <button onclick="app.connectDropbox()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Connetti Dropbox</button>
+        `;
         }
+    },
+
+    connectDropbox() {
+        Storage.startDropboxAuth();
+    },
+
+    disconnectDropbox() {
+        if (confirm("Disconnettere Dropbox? I dati rimarranno salvati localmente.")) {
+            Storage.disconnectDropbox();
+            this.updateDropboxStatus();
+        }
+    },
+
+    async manualSync() {
+        Utils.showToast("🔄 Sincronizzazione in corso...", "info");
+        await Storage.syncAllToDropbox();
+        Utils.showToast("✅ Sincronizzazione completata!", "success");
     },
 
     // ==========================================
@@ -1728,10 +1790,6 @@ const App = {
     // ==========================================
     // DROPBOX
     // ==========================================
-
-    async connectDropbox() {
-        await Storage.connectDropbox();
-    },
 
     disconnectDropbox() {
         if (confirm("Disconnettere Dropbox?")) {

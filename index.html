@@ -14,6 +14,7 @@
     <script src="https://unpkg.com/dropbox@10.34.0/dist/Dropbox-sdk.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
 
     <style>
         body {
@@ -62,6 +63,34 @@
 </head>
 
 <body class="bg-gray-50">
+
+    <!-- Schermata Login -->
+    <div id="auth-screen"
+        class="fixed inset-0 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-2xl p-8 max-w-md w-full">
+            <h1 class="text-3xl font-bold text-center mb-6">🍝 Pastificio Gramsci</h1>
+            <h2 class="text-xl text-center mb-6 text-gray-600">Gestionale Ordini</h2>
+
+            <form id="login-form" onsubmit="app.handleLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">Password</label>
+                    <input type="password" id="login-password" class="w-full px-4 py-2 border rounded-lg" required
+                        autofocus>
+                </div>
+
+                <div class="flex items-center">
+                    <input type="checkbox" id="remember-me" class="mr-2">
+                    <label for="remember-me" class="text-sm">Ricordami per 30 giorni</label>
+                </div>
+
+                <button type="submit" class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700">
+                    Accedi
+                </button>
+
+                <p id="login-error" class="text-red-600 text-sm text-center hidden"></p>
+            </form>
+        </div>
+    </div>
 
     <!-- Header -->
     <header class="bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg sticky top-0 z-40">
@@ -639,7 +668,26 @@
 
         <!-- Settings Tab -->
         <div id="settings-content" class="tab-content hidden">
-            <h2 class="text-2xl font-bold mb-6">Impostazioni</h2>
+            <div class="bg-gradient-to-r from-gray-500 to-gray-700 text-white p-6 rounded-lg shadow-lg mb-6">
+                <h2 class="text-2xl font-bold">⚙️ Impostazioni</h2>
+            </div>
+
+            <!-- DROPBOX SYNC -->
+            <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+                <h3 class="text-xl font-bold mb-4">📦 Sincronizzazione Dropbox</h3>
+
+                <div id="dropbox-status" class="mb-4">
+                    <p class="text-gray-600">Caricamento...</p>
+                </div>
+
+                <div id="dropbox-actions">
+                    <!-- Popolato dinamicamente -->
+                </div>
+
+                <div id="dropbox-sync-info" class="mt-4 text-sm text-gray-600">
+                    <!-- Info ultimo sync -->
+                </div>
+            </div>
 
             <!-- Backup e Ripristino -->
             <div class="bg-white rounded-lg shadow p-6 mb-6">
@@ -755,6 +803,7 @@
     <script src="js/test-data.js"></script>
 
     <!-- 5. App Principale (deve essere l'ultimo!) -->
+    <script src="js/modules/auth.js"></script>
     <script src="js/app.js"></script>
 
 </body>
