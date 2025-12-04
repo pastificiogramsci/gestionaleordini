@@ -160,7 +160,7 @@ const Storage = {
         }
 
         try {
-            if (!silent) console.log("🔄 Sync tutti i dati su Dropbox...");
+            if (!silent) console.log("🔄 Sync Dropbox...");
 
             const customers = CustomersModule.getAllCustomers();
             const products = ProductsModule.getAllProducts();
@@ -168,13 +168,20 @@ const Storage = {
             const fidelity = FidelityModule.fidelityCustomers;
             const campaigns = CouponsModule.campaigns;
 
-            await Promise.all([
-                this.saveDropbox(CONFIG.DROPBOX_PATHS.CUSTOMERS, customers),
-                this.saveDropbox(CONFIG.DROPBOX_PATHS.PRODUCTS, products),
-                this.saveDropbox(CONFIG.DROPBOX_PATHS.ORDERS, orders),
-                this.saveDropbox(CONFIG.DROPBOX_PATHS.FIDELITY, fidelity),
-                this.saveDropbox(CONFIG.DROPBOX_PATHS.CAMPAIGNS, campaigns)
-            ]);
+            // ✅ SALVA CON DELAY per evitare rate limit
+            await this.saveDropbox(CONFIG.DROPBOX_PATHS.CUSTOMERS, customers);
+            await this.delay(500); // 500ms tra ogni salvataggio
+
+            await this.saveDropbox(CONFIG.DROPBOX_PATHS.PRODUCTS, products);
+            await this.delay(500);
+
+            await this.saveDropbox(CONFIG.DROPBOX_PATHS.ORDERS, orders);
+            await this.delay(500);
+
+            await this.saveDropbox(CONFIG.DROPBOX_PATHS.FIDELITY, fidelity);
+            await this.delay(500);
+
+            await this.saveDropbox(CONFIG.DROPBOX_PATHS.CAMPAIGNS, campaigns);
 
             if (!silent) {
                 console.log("✅ Sync completato");
@@ -183,6 +190,10 @@ const Storage = {
         } catch (error) {
             console.error("❌ Errore sync:", error);
         }
+    },
+
+    delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
     },
 
     disconnectDropbox() {
