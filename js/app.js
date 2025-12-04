@@ -2063,7 +2063,7 @@ const App = {
             <div class="p-5">
                 <div class="mb-4">
                     <p class="text-3xl font-bold text-blue-600">${Utils.formatPrice(product.price)}/${product.unit}</p>
-                    ${product.averageWeight ? `<p class="text-sm text-gray-600">Peso medio: ${product.averageWeight}g</p>` : ''}
+                    ${product.averageWeight ? `<p class="text-sm text-gray-600">Peso medio: ${product.averageWeight} kg</p>` : ''}
                 </div>
                 
                 ${product.description ? `<p class="text-sm text-gray-600 mb-4">${product.description}</p>` : ''}
