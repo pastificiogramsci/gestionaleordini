@@ -58,6 +58,11 @@ const FidelityModule = {
         return fidelityData;
     },
 
+    // Alias per compatibilità
+    addCustomerToFidelity(customerId) {
+        return this.registerCustomer(customerId);
+    },
+
     // Ottieni dati fidelity di un cliente
     getFidelityCustomer(customerId) {
         return this.fidelityCustomers.find(f => f.customerId === customerId);
@@ -105,7 +110,7 @@ const FidelityModule = {
 
         return fidelity;
     },
-    
+
     // Rimuovi bollini (raramente usato, ma utile per correzioni)
     removeStamps(customerId, stampsToRemove) {
         const fidelity = this.getFidelityCustomer(customerId);
