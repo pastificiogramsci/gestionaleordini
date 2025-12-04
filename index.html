@@ -341,7 +341,7 @@
             <!-- FILTRI DATA -->
             <div class="bg-white rounded-lg shadow p-4 mb-4">
                 <h3 class="font-bold mb-3">🔍 Filtri</h3>
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
                     <div>
                         <label class="block text-sm mb-1">Data specifica</label>
                         <input type="date" id="order-date-filter" class="w-full px-3 py-2 border rounded"
@@ -358,6 +358,10 @@
                             onchange="app.applyOrderFilters()">
                             <option value="">Tutti gli anni</option>
                         </select>
+                    </div>
+                    <div class="flex items-end">
+                        <button onclick="app.showAllOrders()"
+                            class="w-full bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">📋 Tutti</button>
                     </div>
                     <div class="flex items-end">
                         <button onclick="app.clearOrderFilters()"
