@@ -37,10 +37,44 @@ const App = {
             // 4. Inizializza tutti i moduli
             await this.initModules();
 
-            // 5. Sync iniziale con Dropbox (se connesso)
+            // 5. Auto-download da Dropbox se connesso
             if (Storage.dropboxClient) {
-                console.log("🔄 Sincronizzazione iniziale...");
-                await Storage.syncAllToDropbox(true); // true = silent (no toast)
+                console.log("📥 Download automatico da Dropbox...");
+
+                try {
+                    // Carica dati da Dropbox
+                    const cloudCustomers = await Storage.loadDropbox(CONFIG.DROPBOX_PATHS.CUSTOMERS);
+                    const cloudProducts = await Storage.loadDropbox(CONFIG.DROPBOX_PATHS.PRODUCTS);
+                    const cloudOrders = await Storage.loadDropbox(CONFIG.DROPBOX_PATHS.ORDERS);
+                    const cloudFidelity = await Storage.loadDropbox(CONFIG.DROPBOX_PATHS.FIDELITY);
+                    const cloudCampaigns = await Storage.loadDropbox(CONFIG.DROPBOX_PATHS.CAMPAIGNS);
+
+                    // Aggiorna solo se ci sono dati remoti
+                    if (cloudCustomers && cloudCustomers.length > 0) {
+                        CustomersModule.customers = cloudCustomers;
+                        Storage.saveLocal(CONFIG.STORAGE_KEYS.CUSTOMERS, cloudCustomers);
+                    }
+                    if (cloudProducts && cloudProducts.length > 0) {
+                        ProductsModule.products = cloudProducts;
+                        Storage.saveLocal(CONFIG.STORAGE_KEYS.PRODUCTS, cloudProducts);
+                    }
+                    if (cloudOrders && cloudOrders.length > 0) {
+                        OrdersModule.orders = cloudOrders;
+                        Storage.saveLocal(CONFIG.STORAGE_KEYS.ORDERS, cloudOrders);
+                    }
+                    if (cloudFidelity && cloudFidelity.length > 0) {
+                        FidelityModule.fidelityCustomers = cloudFidelity;
+                        Storage.saveLocal(CONFIG.STORAGE_KEYS.FIDELITY, cloudFidelity);
+                    }
+                    if (cloudCampaigns && cloudCampaigns.length > 0) {
+                        CouponsModule.campaigns = cloudCampaigns;
+                        Storage.saveLocal(CONFIG.STORAGE_KEYS.CAMPAIGNS, cloudCampaigns);
+                    }
+
+                    console.log("✅ Dati sincronizzati da Dropbox");
+                } catch (error) {
+                    console.error("⚠️ Errore download Dropbox:", error);
+                }
             }
 
             // 6. Setup UI
