@@ -530,50 +530,109 @@
         <!-- Modal Nuovo Ordine -->
         <div id="new-order-modal"
             class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4 z-50">
-            <div class="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-                <h3 class="text-xl font-bold mb-4">Nuovo Ordine</h3>
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
 
-                <select id="order-customer" class="w-full px-3 py-2 border rounded mb-3" required>
-                    <option value="">-- Seleziona cliente --</option>
-                </select>
+                <!-- Header Colorato -->
+                <div class="bg-gradient-to-r from-orange-500 to-red-500 text-white p-6 rounded-t-xl">
+                    <h3 class="text-2xl font-bold">📦 Nuovo Ordine</h3>
+                    <p class="text-sm opacity-90 mt-1">Crea un nuovo ordine per un cliente</p>
+                </div>
 
-                <input type="date" id="order-delivery-date" class="w-full px-3 py-2 border rounded mb-3">
-                <input type="time" id="order-delivery-time" class="w-full px-3 py-2 border rounded mb-3">
+                <!-- Form -->
+                <div class="p-6">
 
-                <h4 class="font-bold mb-2">Prodotti</h4>
-                <div id="order-items" class="mb-3"></div>
-                <button onclick="app.addOrderItem()" class="bg-gray-200 px-3 py-1 rounded text-sm mb-3">+ Aggiungi
-                    prodotto</button>
+                    <!-- Cliente -->
+                    <div class="bg-blue-50 border-2 border-blue-200 rounded-xl p-4 mb-6">
+                        <label class="block text-sm font-bold mb-2 text-gray-700">
+                            <span class="text-red-500">*</span> 👤 Cliente
+                        </label>
+                        <select id="order-customer" required
+                            class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-orange-500 focus:outline-none text-lg">
+                            <option value="">-- Seleziona cliente --</option>
+                        </select>
+                    </div>
 
-                <textarea id="order-notes" placeholder="Note" class="w-full px-3 py-2 border rounded mb-3"></textarea>
-
-                <!-- ACCONTO -->
-                <div class="mb-4">
-                    <label class="block text-sm font-medium mb-2">💰 Acconto</label>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <input type="number" step="0.01" id="order-deposit" placeholder="0.00"
-                                class="w-full px-3 py-2 border rounded">
-                            <p class="text-xs text-gray-500 mt-1">Importo acconto richiesto</p>
-                        </div>
-                        <div class="flex items-center">
-                            <label class="flex items-center cursor-pointer">
-                                <input type="checkbox" id="order-deposit-paid" class="mr-2">
-                                <span class="text-sm">✓ Acconto ricevuto</span>
-                            </label>
+                    <!-- Data e Ora Consegna -->
+                    <div class="bg-green-50 border-2 border-green-200 rounded-xl p-4 mb-6">
+                        <h4 class="font-bold text-gray-700 mb-3">📅 Consegna</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-2 text-gray-700">Data</label>
+                                <input type="date" id="order-delivery-date"
+                                    class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-2 text-gray-700">Ora</label>
+                                <input type="time" id="order-delivery-time"
+                                    class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:outline-none">
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <div class="text-right mb-3">
-                    <p class="text-2xl font-bold">Totale: <span id="order-total">€0,00</span></p>
-                </div>
+                    <!-- Prodotti -->
+                    <div class="bg-purple-50 border-2 border-purple-200 rounded-xl p-4 mb-6">
+                        <div class="flex justify-between items-center mb-3">
+                            <h4 class="font-bold text-gray-700">🍝 Prodotti</h4>
+                            <button type="button" onclick="app.addOrderItem()"
+                                class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 font-bold text-sm">
+                                ➕ Aggiungi Prodotto
+                            </button>
+                        </div>
 
-                <div class="flex gap-3">
-                    <button onclick="app.closeModal('new-order-modal')"
-                        class="flex-1 bg-gray-200 px-4 py-2 rounded">Annulla</button>
-                    <button onclick="app.saveOrder()" class="flex-1 bg-blue-600 text-white px-4 py-2 rounded">Salva
-                        Ordine</button>
+                        <div id="order-items" class="space-y-3">
+                            <!-- Prodotti aggiunti dinamicamente -->
+                        </div>
+
+                        <p class="text-xs text-gray-500 mt-2" id="order-items-empty">
+                            Nessun prodotto aggiunto. Clicca "Aggiungi Prodotto" per iniziare.
+                        </p>
+                    </div>
+
+                    <!-- Note -->
+                    <div class="mb-6">
+                        <label class="block text-sm font-bold mb-2 text-gray-700">📝 Note</label>
+                        <textarea id="order-notes" rows="3"
+                            class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-orange-500 focus:outline-none"
+                            placeholder="Note aggiuntive per l'ordine..."></textarea>
+                    </div>
+
+                    <!-- Acconto -->
+                    <div class="bg-yellow-50 border-2 border-yellow-200 rounded-xl p-4 mb-6">
+                        <label class="block text-sm font-bold mb-3 text-gray-700">💰 Acconto</label>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <input type="number" step="0.01" id="order-deposit" placeholder="0.00"
+                                    class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-yellow-500 focus:outline-none">
+                                <p class="text-xs text-gray-500 mt-1">Importo acconto richiesto</p>
+                            </div>
+                            <div class="flex items-center">
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="checkbox" id="order-deposit-paid" class="w-5 h-5 mr-2">
+                                    <span class="text-sm font-medium">✓ Acconto ricevuto</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Totale -->
+                    <div class="bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl p-6 mb-6">
+                        <div class="flex justify-between items-center">
+                            <span class="text-xl font-bold">Totale Ordine:</span>
+                            <span class="text-4xl font-bold" id="order-total">€0,00</span>
+                        </div>
+                    </div>
+
+                    <!-- Bottoni -->
+                    <div class="flex gap-3">
+                        <button type="button" onclick="app.closeModal('new-order-modal')"
+                            class="flex-1 bg-gray-200 text-gray-700 px-6 py-4 rounded-xl hover:bg-gray-300 font-bold text-lg">
+                            ✕ Annulla
+                        </button>
+                        <button type="button" onclick="app.saveOrder()"
+                            class="flex-1 bg-gradient-to-r from-orange-500 to-red-500 text-white px-6 py-4 rounded-xl hover:from-orange-600 hover:to-red-600 font-bold text-lg shadow-lg">
+                            ✓ Salva Ordine
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

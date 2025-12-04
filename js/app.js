@@ -1449,67 +1449,165 @@ const App = {
 
     orderItems: [],
 
+    openNewOrderModal() {
+        this.editingOrderId = null;
+        this.openModal('new-order-modal');
+
+        // Popola dropdown clienti
+        const customerSelect = document.getElementById('order-customer');
+        const customers = CustomersModule.getAllCustomers('name')
+            .filter(c => c.type !== 'fornitore'); // Escludi fornitori
+
+        customerSelect.innerHTML = '<option value="">-- Seleziona cliente --</option>' +
+            customers.map(c => `<option value="${c.id}">${c.firstName} ${c.lastName}</option>`).join('');
+
+        // Reset campi
+        document.getElementById('order-delivery-date').value = new Date().toISOString().split('T')[0];
+        document.getElementById('order-delivery-time').value = '';
+        document.getElementById('order-notes').value = '';
+        document.getElementById('order-deposit').value = '';
+        document.getElementById('order-deposit-paid').checked = false;
+
+        // Reset prodotti
+        const container = document.getElementById('order-items');
+        container.innerHTML = '';
+        const emptyMessage = document.getElementById('order-items-empty');
+        if (emptyMessage) emptyMessage.classList.remove('hidden');
+
+        // Reset totale
+        document.getElementById('order-total').textContent = '€0,00';
+
+        const modalTitle = document.querySelector('#new-order-modal h3');
+        if (modalTitle) {
+            modalTitle.textContent = '📦 Nuovo Ordine';
+        }
+    },
+
     addOrderItem() {
-        const products = ProductsModule.getActiveProducts();
-        const itemHtml = `
-        <div class="flex gap-2 mb-2 order-item">
-            <select class="flex-1 px-2 py-1 border rounded" onchange="app.updateOrderTotal()">
-                <option value="">-- Prodotto --</option>
-                ${products.map(p => `<option value="${p.id}" data-price="${p.price}" data-weight="${p.averageWeight || 0}">${p.name} - ${Utils.formatPrice(p.price)}/${p.unit || 'kg'}</option>`).join('')}
-            </select>
-            <input type="number" step="0.01" placeholder="Qtà" class="w-20 px-2 py-1 border rounded" onchange="app.updateOrderTotal()">
-            <button onclick="this.parentElement.remove(); app.updateOrderTotal()" class="text-red-600">✕</button>
+        const container = document.getElementById('order-items');
+        const emptyMessage = document.getElementById('order-items-empty');
+
+        if (emptyMessage) emptyMessage.classList.add('hidden');
+
+        const itemId = 'item-' + Date.now();
+
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'bg-white border-2 border-gray-200 rounded-lg p-4';
+        itemDiv.id = itemId;
+        itemDiv.innerHTML = `
+        <div class="flex gap-3">
+            <div class="flex-1">
+                <label class="block text-xs font-medium text-gray-600 mb-1">Prodotto</label>
+                <select class="order-item-product w-full px-3 py-2 border rounded-lg" 
+                        onchange="app.updateOrderItemPrice('${itemId}')">
+                    <option value="">-- Seleziona --</option>
+                    ${ProductsModule.getAllProducts()
+                .filter(p => p.active)
+                .map(p => `<option value="${p.id}" data-price="${p.price}" data-unit="${p.unit}">${p.name} - ${Utils.formatPrice(p.price)}/${p.unit}</option>`)
+                .join('')}
+                </select>
+            </div>
+            
+            <div class="w-32">
+                <label class="block text-xs font-medium text-gray-600 mb-1">Quantità</label>
+                <input type="number" step="0.01" value="1" min="0.01" 
+                       class="order-item-quantity w-full px-3 py-2 border rounded-lg" 
+                       oninput="app.updateOrderTotal()">
+            </div>
+            
+            <div class="w-32">
+                <label class="block text-xs font-medium text-gray-600 mb-1">Prezzo €</label>
+                <input type="number" step="0.01" value="0" 
+                       class="order-item-price w-full px-3 py-2 border rounded-lg" 
+                       oninput="app.updateOrderTotal()">
+            </div>
+            
+            <div class="flex items-end">
+                <button type="button" onclick="app.removeOrderItem('${itemId}')" 
+                        class="bg-red-500 text-white px-3 py-2 rounded-lg hover:bg-red-600">
+                    🗑️
+                </button>
+            </div>
         </div>
     `;
-        document.getElementById('order-items').insertAdjacentHTML('beforeend', itemHtml);
+
+        container.appendChild(itemDiv);
+    },
+
+    removeOrderItem(itemId) {
+        const itemDiv = document.getElementById(itemId);
+        if (itemDiv) {
+            itemDiv.remove();
+        }
+
+        const container = document.getElementById('order-items');
+        const emptyMessage = document.getElementById('order-items-empty');
+
+        if (container && container.children.length === 0 && emptyMessage) {
+            emptyMessage.classList.remove('hidden');
+        }
+
+        this.updateOrderTotal();
+    },
+
+    updateOrderItemPrice(itemId) {
+        const itemDiv = document.getElementById(itemId);
+        if (!itemDiv) return;
+
+        const select = itemDiv.querySelector('.order-item-product');
+        const priceInput = itemDiv.querySelector('.order-item-price');
+
+        const selectedOption = select.options[select.selectedIndex];
+        if (selectedOption && selectedOption.dataset.price) {
+            priceInput.value = selectedOption.dataset.price;
+            this.updateOrderTotal();
+        }
     },
 
     updateOrderTotal() {
         let total = 0;
-        document.querySelectorAll('.order-item').forEach(item => {
-            const select = item.querySelector('select');
-            const qty = parseFloat(item.querySelector('input').value) || 0;
-            if (select.value && qty > 0) {
-                const option = select.selectedOptions[0];
-                const price = parseFloat(option.dataset.price);
-                const weight = parseFloat(option.dataset.weight) || 0;
 
-                if (weight > 0) {
-                    total += price * weight * qty;
-                } else {
-                    total += price * qty;
-                }
+        document.querySelectorAll('#order-items > div').forEach(itemDiv => {
+            const quantity = parseFloat(itemDiv.querySelector('.order-item-quantity').value) || 0;
+            const price = parseFloat(itemDiv.querySelector('.order-item-price').value) || 0;
+
+            if (quantity > 0 && price > 0) {
+                total += quantity * price;
             }
         });
-        document.getElementById('order-total').textContent = Utils.formatPrice(total);
+
+        const totalElement = document.getElementById('order-total');
+        if (totalElement) {
+            totalElement.textContent = Utils.formatPrice(total);
+        }
     },
 
     saveOrder() {
         const customerId = document.getElementById('order-customer').value;
         if (!customerId) {
-            Utils.showToast("Seleziona un cliente", "error");
+            Utils.showToast("❌ Seleziona un cliente", "error");
             return;
         }
 
         const items = [];
-        document.querySelectorAll('.order-item').forEach(item => {
-            const select = item.querySelector('select');
-            const qty = parseFloat(item.querySelector('input').value) || 0;
-            if (select.value && qty > 0) {
-                const option = select.selectedOptions[0];
-                const price = parseFloat(option.dataset.price);
-                const weight = parseFloat(option.dataset.weight) || 0;
 
+        document.querySelectorAll('#order-items > div').forEach(itemDiv => {
+            const select = itemDiv.querySelector('.order-item-product');
+            const quantity = parseFloat(itemDiv.querySelector('.order-item-quantity').value) || 0;
+            const price = parseFloat(itemDiv.querySelector('.order-item-price').value) || 0;
+
+            if (select && select.value && quantity > 0) {
                 items.push({
                     productId: select.value,
-                    quantity: weight > 0 ? weight * qty : qty,
-                    price: price
+                    quantity: quantity,
+                    price: price,
+                    prepared: false
                 });
             }
         });
 
         if (items.length === 0) {
-            Utils.showToast("Aggiungi almeno un prodotto", "error");
+            Utils.showToast("❌ Aggiungi almeno un prodotto", "error");
             return;
         }
 
@@ -1518,14 +1616,18 @@ const App = {
             items: items,
             deliveryDate: document.getElementById('order-delivery-date').value,
             deliveryTime: document.getElementById('order-delivery-time').value,
-            notes: document.getElementById('order-notes').value
+            notes: document.getElementById('order-notes').value,
+            deposit: parseFloat(document.getElementById('order-deposit').value) || 0,
+            depositPaid: document.getElementById('order-deposit-paid').checked
         };
 
         if (this.editingOrderId) {
+            // Modifica ordine esistente
             const oldOrder = OrdersModule.getOrderById(this.editingOrderId);
+
             if (oldOrder && (oldOrder.status === 'confirmed' || oldOrder.status === 'in_preparation' || oldOrder.status === 'ready')) {
                 const modifications = this.compareOrders(oldOrder.items, items);
-                if (modifications.toAdd.length > 0 || modifications.toRemove.length > 0) {
+                if (modifications && (modifications.toAdd.length > 0 || modifications.toRemove.length > 0)) {
                     OrdersModule.addModification(this.editingOrderId, modifications);
 
                     if (oldOrder.status === 'ready') {
@@ -1535,12 +1637,14 @@ const App = {
             }
 
             OrdersModule.updateOrder(this.editingOrderId, orderData);
+            Utils.showToast("✅ Ordine modificato!", "success");
             this.editingOrderId = null;
+
         } else {
+            // Nuovo ordine
             const newOrder = OrdersModule.createOrder(orderData);
 
-            // Chiedi se mandare conferma ordine
-            if (newOrder && confirm("Mandare conferma ordine su WhatsApp?")) {
+            if (newOrder && confirm("💬 Mandare conferma ordine su WhatsApp?")) {
                 WhatsAppModule.sendOrderConfirmation(newOrder);
             }
         }
@@ -1553,36 +1657,35 @@ const App = {
         const toAdd = [];
         const toRemove = [];
 
-        // Prodotti aggiunti o aumentati
+        // Trova prodotti aggiunti
         newItems.forEach(newItem => {
-            const oldItem = oldItems.find(i => i.productId === newItem.productId);
+            const oldItem = oldItems.find(oi => oi.productId === newItem.productId);
             if (!oldItem) {
                 toAdd.push(newItem);
             } else if (newItem.quantity > oldItem.quantity) {
                 toAdd.push({
-                    productId: newItem.productId,
-                    quantity: newItem.quantity - oldItem.quantity,
-                    price: newItem.price
+                    ...newItem,
+                    quantity: newItem.quantity - oldItem.quantity
                 });
             }
         });
 
-        // Prodotti rimossi o diminuiti
+        // Trova prodotti rimossi
         oldItems.forEach(oldItem => {
-            const newItem = newItems.find(i => i.productId === oldItem.productId);
+            const newItem = newItems.find(ni => ni.productId === oldItem.productId);
             if (!newItem) {
                 toRemove.push(oldItem);
             } else if (newItem.quantity < oldItem.quantity) {
                 toRemove.push({
-                    productId: oldItem.productId,
-                    quantity: oldItem.quantity - newItem.quantity,
-                    price: oldItem.price
+                    ...oldItem,
+                    quantity: oldItem.quantity - newItem.quantity
                 });
             }
         });
 
         return { toAdd, toRemove };
     },
+
 
     editOrder(orderId) {
         const order = OrdersModule.getOrderById(orderId);
