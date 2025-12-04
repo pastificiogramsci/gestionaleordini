@@ -368,6 +368,31 @@ const App = {
     loadOrders() {
         this.displayOrders(OrdersModule.getAllOrders('recent'));
         this.populateYearFilter();
+        this.updateOrdersStats();
+    },
+
+    updateOrdersStats() {
+        const orders = OrdersModule.getAllOrders('recent');
+        const today = new Date().toISOString().split('T')[0];
+
+        // Stats header
+        const todayOrders = orders.filter(o => o.deliveryDate === today).length;
+        const pending = orders.filter(o => o.status === 'pending').length;
+        const preparation = orders.filter(o => o.status === 'in_preparation').length;
+        const ready = orders.filter(o => o.status === 'ready').length;
+        const delivered = orders.filter(o => o.status === 'delivered').length;
+
+        this.updateElement('orders-stat-today', todayOrders);
+        this.updateElement('orders-stat-pending', pending);
+        this.updateElement('orders-stat-preparation', preparation);
+        this.updateElement('orders-stat-ready', ready);
+
+        // Contatori bottoni filtro
+        this.updateElement('count-all', orders.length);
+        this.updateElement('count-pending', pending);
+        this.updateElement('count-in_preparation', preparation);
+        this.updateElement('count-ready', ready);
+        this.updateElement('count-delivered', delivered);
     },
 
     loadFidelity() {

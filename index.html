@@ -332,59 +332,124 @@
 
         <!-- Orders Tab -->
         <div id="orders-content" class="tab-content hidden">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-2xl font-bold">Ordini</h2>
-                <button onclick="app.openNewOrderModal()"
-                    class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">+ Nuovo Ordine</button>
-            </div>
 
-            <!-- FILTRI DATA -->
-            <div class="bg-white rounded-lg shadow p-4 mb-4">
-                <h3 class="font-bold mb-3">🔍 Filtri</h3>
-                <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
-                    <div>
-                        <label class="block text-sm mb-1">Data specifica</label>
-                        <input type="date" id="order-date-filter" class="w-full px-3 py-2 border rounded"
-                            onchange="app.applyOrderFilters()">
+            <!-- Header con Statistiche -->
+            <div class="bg-gradient-to-r from-orange-500 to-red-500 text-white p-6 rounded-lg shadow-lg mb-6">
+                <h2 class="text-3xl font-bold mb-4">📦 Gestione Ordini</h2>
+
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="bg-white/20 backdrop-blur rounded-lg p-3">
+                        <p class="text-sm opacity-90">Oggi</p>
+                        <p class="text-3xl font-bold" id="orders-stat-today">0</p>
                     </div>
-                    <div>
-                        <label class="block text-sm mb-1">Mese</label>
-                        <input type="month" id="order-month-filter" class="w-full px-3 py-2 border rounded"
-                            onchange="app.applyOrderFilters()">
+                    <div class="bg-white/20 backdrop-blur rounded-lg p-3">
+                        <p class="text-sm opacity-90">In attesa</p>
+                        <p class="text-3xl font-bold" id="orders-stat-pending">0</p>
                     </div>
-                    <div>
-                        <label class="block text-sm mb-1">Anno</label>
-                        <select id="order-year-filter" class="w-full px-3 py-2 border rounded"
-                            onchange="app.applyOrderFilters()">
-                            <option value="">Tutti gli anni</option>
-                        </select>
+                    <div class="bg-white/20 backdrop-blur rounded-lg p-3">
+                        <p class="text-sm opacity-90">In prep.</p>
+                        <p class="text-3xl font-bold" id="orders-stat-preparation">0</p>
                     </div>
-                    <div class="flex items-end">
-                        <button onclick="app.showAllOrders()"
-                            class="w-full bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">📋 Tutti</button>
-                    </div>
-                    <div class="flex items-end">
-                        <button onclick="app.clearOrderFilters()"
-                            class="w-full bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">🔄 Reset</button>
+                    <div class="bg-white/20 backdrop-blur rounded-lg p-3">
+                        <p class="text-sm opacity-90">Pronti</p>
+                        <p class="text-3xl font-bold" id="orders-stat-ready">0</p>
                     </div>
                 </div>
             </div>
 
-            <!-- FILTRI STATO -->
-            <div class="flex gap-2 mb-4 overflow-x-auto">
-                <button onclick="app.filterOrders('all')"
-                    class="px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 whitespace-nowrap">Tutti</button>
-                <button onclick="app.filterOrders('pending')"
-                    class="px-4 py-2 rounded-lg bg-yellow-100 hover:bg-yellow-200 whitespace-nowrap">In attesa</button>
-                <button onclick="app.filterOrders('confirmed')"
-                    class="px-4 py-2 rounded-lg bg-blue-100 hover:bg-blue-200 whitespace-nowrap">Confermati</button>
-                <button onclick="app.filterOrders('ready')"
-                    class="px-4 py-2 rounded-lg bg-green-100 hover:bg-green-200 whitespace-nowrap">Pronti</button>
-                <button onclick="app.filterOrders('delivered')"
-                    class="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 whitespace-nowrap">Consegnati</button>
+            <!-- Azioni Rapide -->
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold">Ordini</h3>
+                <button onclick="app.openNewOrderModal()"
+                    class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 font-bold shadow-lg">
+                    ➕ Nuovo Ordine
+                </button>
             </div>
 
-            <div id="orders-list" class="space-y-3"></div>
+            <!-- Filtri Compatti -->
+            <div class="bg-white rounded-lg shadow-lg p-4 mb-6">
+                <details open>
+                    <summary class="font-bold cursor-pointer mb-3">🔍 Filtri</summary>
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+                        <div>
+                            <label class="block text-xs text-gray-600 mb-1">Data specifica</label>
+                            <input type="date" id="order-date-filter" class="w-full px-3 py-2 border rounded text-sm"
+                                onchange="app.applyOrderFilters()">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-600 mb-1">Mese</label>
+                            <input type="month" id="order-month-filter" class="w-full px-3 py-2 border rounded text-sm"
+                                onchange="app.applyOrderFilters()">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-600 mb-1">Anno</label>
+                            <select id="order-year-filter" class="w-full px-3 py-2 border rounded text-sm"
+                                onchange="app.applyOrderFilters()">
+                                <option value="">Tutti</option>
+                            </select>
+                        </div>
+                        <div class="flex items-end">
+                            <button onclick="app.showAllOrders()"
+                                class="w-full bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm font-bold">
+                                📋 Tutti
+                            </button>
+                        </div>
+                        <div class="flex items-end">
+                            <button onclick="app.clearOrderFilters()"
+                                class="w-full bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 text-sm font-bold">
+                                🔄 Reset
+                            </button>
+                        </div>
+                    </div>
+                </details>
+            </div>
+
+            <!-- Filtri per Stato (Grandi) -->
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+                <button onclick="app.filterByStatus('all')" id="filter-all"
+                    class="bg-white border-2 border-gray-300 px-4 py-4 rounded-xl hover:shadow-lg transition font-bold text-left">
+                    <div class="flex justify-between items-center">
+                        <span>📦 Tutti</span>
+                        <span class="text-2xl text-gray-600" id="count-all">0</span>
+                    </div>
+                </button>
+
+                <button onclick="app.filterByStatus('pending')" id="filter-pending"
+                    class="bg-yellow-50 border-2 border-yellow-300 px-4 py-4 rounded-xl hover:shadow-lg transition font-bold text-left">
+                    <div class="flex justify-between items-center">
+                        <span>⏳ In attesa</span>
+                        <span class="text-2xl text-yellow-600" id="count-pending">0</span>
+                    </div>
+                </button>
+
+                <button onclick="app.filterByStatus('in_preparation')" id="filter-in_preparation"
+                    class="bg-purple-50 border-2 border-purple-300 px-4 py-4 rounded-xl hover:shadow-lg transition font-bold text-left">
+                    <div class="flex justify-between items-center">
+                        <span>🍝 In prep.</span>
+                        <span class="text-2xl text-purple-600" id="count-in_preparation">0</span>
+                    </div>
+                </button>
+
+                <button onclick="app.filterByStatus('ready')" id="filter-ready"
+                    class="bg-green-50 border-2 border-green-300 px-4 py-4 rounded-xl hover:shadow-lg transition font-bold text-left">
+                    <div class="flex justify-between items-center">
+                        <span>✅ Pronti</span>
+                        <span class="text-2xl text-green-600" id="count-ready">0</span>
+                    </div>
+                </button>
+
+                <button onclick="app.filterByStatus('delivered')" id="filter-delivered"
+                    class="bg-gray-50 border-2 border-gray-300 px-4 py-4 rounded-xl hover:shadow-lg transition font-bold text-left">
+                    <div class="flex justify-between items-center">
+                        <span>🚚 Consegnati</span>
+                        <span class="text-2xl text-gray-600" id="count-delivered">0</span>
+                    </div>
+                </button>
+            </div>
+
+            <!-- Lista Ordini -->
+            <div id="orders-list" class="space-y-4"></div>
+
         </div>
 
         <!-- Preparation Tab -->
