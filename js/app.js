@@ -1768,9 +1768,32 @@ const App = {
     },
 
     async manualSync() {
-        Utils.showToast("🔄 Sincronizzazione in corso...", "info");
-        await Storage.syncAllToDropbox();
-        Utils.showToast("✅ Sincronizzazione completata!", "success");
+        if (!Storage.dropboxClient) {
+            Utils.showToast("⚠️ Dropbox non connesso", "warning");
+            return;
+        }
+
+        const choice = confirm("Vuoi:\n\nOK = Scaricare dati DA Dropbox\nAnnulla = Caricare dati SU Dropbox");
+
+        if (choice) {
+            // SCARICA da Dropbox
+            Utils.showToast("📥 Caricamento da Dropbox...", "info");
+
+            await CustomersModule.init();
+            await ProductsModule.init();
+            await OrdersModule.init();
+            await FidelityModule.init();
+            await CouponsModule.init();
+
+            Utils.showToast("✅ Dati caricati da Dropbox!", "success");
+
+            setTimeout(() => window.location.reload(), 1000);
+        } else {
+            // CARICA su Dropbox
+            Utils.showToast("📤 Caricamento su Dropbox...", "info");
+            await Storage.syncAllToDropbox(false);
+            Utils.showToast("✅ Dati caricati su Dropbox!", "success");
+        }
     },
 
     // ==========================================
