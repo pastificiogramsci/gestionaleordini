@@ -11,6 +11,7 @@ const CONFIG = {
     getDropboxConfig() {
         return {
             clientId: this.DROPBOX_APP_KEY,
+            clientSecret: atob('OWNhMnoxZjl5NDc3cnJu'),
             redirectUri: this.getRedirectUri()
         };
     },
