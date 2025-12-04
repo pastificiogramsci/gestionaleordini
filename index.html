@@ -153,34 +153,181 @@
     <main class="max-w-7xl mx-auto px-4 py-6">
 
         <!-- Dashboard Tab -->
+        <!-- Dashboard Tab -->
         <div id="dashboard-content" class="tab-content">
-            <h2 class="text-2xl font-bold mb-6">Dashboard</h2>
 
-            <!-- Stats Cards -->
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                <div class="bg-white rounded-lg shadow p-4">
-                    <p class="text-gray-500 text-sm">Clienti</p>
-                    <p class="text-2xl font-bold" id="stat-customers">0</p>
-                </div>
-                <div class="bg-white rounded-lg shadow p-4">
-                    <p class="text-gray-500 text-sm">Ordini Attivi</p>
-                    <p class="text-2xl font-bold text-blue-600" id="stat-active-orders">0</p>
-                </div>
-                <div class="bg-white rounded-lg shadow p-4">
-                    <p class="text-gray-500 text-sm">Oggi</p>
-                    <p class="text-2xl font-bold text-green-600" id="stat-today-orders">0</p>
-                </div>
-                <div class="bg-white rounded-lg shadow p-4">
-                    <p class="text-gray-500 text-sm">Fatturato</p>
-                    <p class="text-xl font-bold text-green-600" id="stat-revenue">€0,00</p>
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 rounded-lg shadow-lg mb-6">
+                <h1 class="text-3xl font-bold flex items-center">
+                    📋 Gestionale Ordini
+                </h1>
+                <p class="text-sm opacity-90 mt-1">Pastificio Gramsci</p>
+            </div>
+
+            <!-- Azioni Rapide -->
+            <div class="mb-6">
+                <h2 class="text-xl font-bold mb-4 flex items-center">⚡ Azioni Rapide</h2>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <button onclick="app.openNewOrderModal()"
+                        class="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-6 rounded-xl shadow-lg hover:shadow-xl transition flex flex-col items-center gap-3">
+                        <span class="text-4xl">📦</span>
+                        <span class="font-bold">Nuovo Ordine</span>
+                    </button>
+
+                    <button onclick="app.openNewCustomerModal()"
+                        class="bg-gradient-to-br from-purple-500 to-purple-600 text-white p-6 rounded-xl shadow-lg hover:shadow-xl transition flex flex-col items-center gap-3">
+                        <span class="text-4xl">👤</span>
+                        <span class="font-bold">Nuovo Cliente</span>
+                    </button>
+
+                    <button onclick="app.switchTab('preparation')"
+                        class="bg-gradient-to-br from-orange-500 to-orange-600 text-white p-6 rounded-xl shadow-lg hover:shadow-xl transition flex flex-col items-center gap-3">
+                        <span class="text-4xl">🍝</span>
+                        <span class="font-bold">Preparazione</span>
+                    </button>
+
+                    <button onclick="app.switchTab('modifiche')"
+                        class="bg-gradient-to-br from-yellow-500 to-yellow-600 text-white p-6 rounded-xl shadow-lg hover:shadow-xl transition flex flex-col items-center gap-3">
+                        <span class="text-4xl">✏️</span>
+                        <span class="font-bold">Modifiche</span>
+                    </button>
                 </div>
             </div>
 
-            <!-- Ordini Recenti -->
-            <div class="bg-white rounded-lg shadow p-6">
-                <h3 class="text-lg font-bold mb-4">Ordini Recenti</h3>
-                <div id="recent-orders-list"></div>
+            <!-- Panoramica Completa -->
+            <div class="mb-6">
+                <h2 class="text-xl font-bold mb-4 flex items-center">📊 Panoramica Completa</h2>
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+
+                    <!-- Ordini Totali -->
+                    <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-xl border-2 border-blue-200 cursor-pointer hover:shadow-lg transition"
+                        onclick="app.switchTab('orders')">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-2xl">📦</span>
+                            <span class="text-sm font-medium text-gray-700">Ordini Totali</span>
+                        </div>
+                        <div class="text-3xl font-bold text-blue-600" id="stat-orders">0</div>
+                        <div class="text-xs text-gray-600 mt-1">Clicca per gestire</div>
+                    </div>
+
+                    <!-- Clienti Registrati -->
+                    <div class="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-xl border-2 border-purple-200 cursor-pointer hover:shadow-lg transition"
+                        onclick="app.switchTab('customers')">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-2xl">👥</span>
+                            <span class="text-sm font-medium text-gray-700">Clienti Registrati</span>
+                        </div>
+                        <div class="text-3xl font-bold text-purple-600" id="stat-customers">0</div>
+                        <div class="text-xs text-gray-600 mt-1">Clicca per gestire</div>
+                    </div>
+
+                    <!-- Prodotti Attivi -->
+                    <div class="bg-gradient-to-br from-orange-50 to-orange-100 p-4 rounded-xl border-2 border-orange-200 cursor-pointer hover:shadow-lg transition"
+                        onclick="app.switchTab('products')">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-2xl">📦</span>
+                            <span class="text-sm font-medium text-gray-700">Prodotti Attivi</span>
+                        </div>
+                        <div class="text-3xl font-bold text-orange-600" id="stat-active-products">0</div>
+                        <div class="text-xs text-gray-600 mt-1">Clicca per gestire</div>
+                    </div>
+
+                    <!-- Clienti Fidelity -->
+                    <div class="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-xl border-2 border-green-200 cursor-pointer hover:shadow-lg transition"
+                        onclick="app.switchTab('fidelity')">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-2xl">🎁</span>
+                            <span class="text-sm font-medium text-gray-700">Clienti Fidelity</span>
+                        </div>
+                        <div class="text-3xl font-bold text-green-600" id="stat-fidelity-customers">0</div>
+                        <div class="text-xs text-gray-600 mt-1">Clicca per gestire</div>
+                    </div>
+
+                    <!-- Da Preparare Oggi -->
+                    <div
+                        class="bg-gradient-to-br from-yellow-50 to-yellow-100 p-4 rounded-xl border-2 border-yellow-200">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-2xl">📝</span>
+                            <span class="text-sm font-medium text-gray-700">Da Preparare Oggi</span>
+                        </div>
+                        <div class="text-3xl font-bold text-yellow-600" id="stat-to-prepare">0</div>
+                        <div class="text-xs text-gray-600 mt-1">Vai a preparazione</div>
+                    </div>
+
+                    <!-- Fatturato Totale -->
+                    <div
+                        class="bg-gradient-to-br from-emerald-50 to-emerald-100 p-4 rounded-xl border-2 border-emerald-200">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-2xl">💰</span>
+                            <span class="text-sm font-medium text-gray-700">Fatturato Totale</span>
+                        </div>
+                        <div class="text-2xl font-bold text-emerald-600" id="stat-revenue">€0</div>
+                        <div class="text-xs text-gray-600 mt-1">Solo ordini pagati</div>
+                    </div>
+
+                </div>
             </div>
+
+            <!-- Analisi Rapida -->
+            <div class="mb-6">
+                <h2 class="text-xl font-bold mb-4">📈 Analisi Rapida</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                    <!-- Stati Ordini -->
+                    <div class="bg-white rounded-xl shadow-lg p-4">
+                        <h3 class="font-bold mb-3 text-gray-700">Stati Ordini</h3>
+                        <table class="w-full text-sm">
+                            <tr class="border-b">
+                                <td class="py-2 text-gray-600">Da Preparare</td>
+                                <td class="py-2 text-right font-bold" id="stat-pending-orders">0</td>
+                                <td class="py-2 text-right text-gray-500" id="stat-pending-percent">(0%)</td>
+                            </tr>
+                            <tr class="border-b">
+                                <td class="py-2 text-gray-600">In Preparazione</td>
+                                <td class="py-2 text-right font-bold" id="stat-preparation-orders">0</td>
+                                <td class="py-2 text-right text-gray-500" id="stat-preparation-percent">(0%)</td>
+                            </tr>
+                            <tr class="border-b">
+                                <td class="py-2 text-gray-600">Pronti</td>
+                                <td class="py-2 text-right font-bold" id="stat-ready-orders">0</td>
+                                <td class="py-2 text-right text-gray-500" id="stat-ready-percent">(0%)</td>
+                            </tr>
+                            <tr>
+                                <td class="py-2 text-gray-600">Consegnati</td>
+                                <td class="py-2 text-right font-bold" id="stat-delivered-orders">0</td>
+                                <td class="py-2 text-right text-gray-500" id="stat-delivered-percent">(0%)</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <!-- Pagamenti (placeholder per futuro) -->
+                    <div class="bg-white rounded-xl shadow-lg p-4">
+                        <h3 class="font-bold mb-3 text-gray-700">Pagamenti</h3>
+                        <table class="w-full text-sm">
+                            <tr class="border-b">
+                                <td class="py-2 text-gray-600">Non Pagato</td>
+                                <td class="py-2 text-right font-bold">-</td>
+                                <td class="py-2 text-right text-gray-500">(-%)</td>
+                            </tr>
+                            <tr>
+                                <td class="py-2 text-gray-600">Pagato</td>
+                                <td class="py-2 text-right font-bold">-</td>
+                                <td class="py-2 text-right text-gray-500">(-%)</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Top 5 Clienti -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h2 class="text-xl font-bold mb-4 flex items-center">⭐ Top 5 Clienti</h2>
+                <div id="top-customers-list">
+                    <p class="text-center text-gray-500 py-4">Nessun ordine ancora</p>
+                </div>
+            </div>
+
         </div>
 
         <!-- Orders Tab -->
@@ -709,20 +856,20 @@
                 <input type="file" id="import-file-input" accept=".json" class="hidden">
             </div>
 
-            <!-- Dropbox -->
-            <div class="bg-white rounded-lg shadow p-6 mb-6">
-                <h3 class="text-lg font-bold mb-4">☁️ Dropbox</h3>
-                <p class="mb-4">Stato: <span id="dropbox-status">Controllo...</span></p>
+            <!-- Sincronizzazione Dropbox -->
+            <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+                <h3 class="text-xl font-bold mb-4">📦 Sincronizzazione Dropbox</h3>
 
-                <div class="flex flex-col md:flex-row gap-3">
-                    <button onclick="app.connectDropbox()"
-                        class="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
-                        Connetti Dropbox
-                    </button>
-                    <button onclick="app.disconnectDropbox()"
-                        class="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300">
-                        Disconnetti
-                    </button>
+                <div id="dropbox-status" class="mb-4">
+                    <p class="text-gray-600">Caricamento...</p>
+                </div>
+
+                <div id="dropbox-actions">
+                    <!-- Popolato dinamicamente -->
+                </div>
+
+                <div id="dropbox-sync-info" class="mt-4 text-sm text-gray-600">
+                    <!-- Info ultimo sync -->
                 </div>
             </div>
 

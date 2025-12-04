@@ -214,16 +214,37 @@ const App = {
     },
 
     updateStatsCards(stats) {
-        // Clienti
-        if (stats.customers) {
-            this.updateElement('stat-customers', stats.customers.total);
-        }
-
         // Ordini
         if (stats.orders) {
             this.updateElement('stat-orders', stats.orders.total);
             this.updateElement('stat-active-orders', stats.orders.active);
             this.updateElement('stat-today-orders', stats.orders.todayOrders);
+
+            // Stati ordini con percentuali
+            const total = stats.orders.total || 1; // evita divisione per 0
+            this.updateElement('stat-pending-orders', stats.orders.byStatus?.pending || 0);
+            this.updateElement('stat-pending-percent', `(${((stats.orders.byStatus?.pending || 0) / total * 100).toFixed(0)}%)`);
+
+            this.updateElement('stat-preparation-orders', stats.orders.byStatus?.in_preparation || 0);
+            this.updateElement('stat-preparation-percent', `(${((stats.orders.byStatus?.in_preparation || 0) / total * 100).toFixed(0)}%)`);
+
+            this.updateElement('stat-ready-orders', stats.orders.byStatus?.ready || 0);
+            this.updateElement('stat-ready-percent', `(${((stats.orders.byStatus?.ready || 0) / total * 100).toFixed(0)}%)`);
+
+            this.updateElement('stat-delivered-orders', stats.orders.byStatus?.delivered || 0);
+            this.updateElement('stat-delivered-percent', `(${((stats.orders.byStatus?.delivered || 0) / total * 100).toFixed(0)}%)`);
+
+            this.updateElement('stat-to-prepare', stats.orders.byStatus?.pending || 0);
+        }
+
+        // Clienti
+        if (stats.customers) {
+            this.updateElement('stat-customers', stats.customers.total);
+        }
+
+        // Prodotti
+        if (stats.products) {
+            this.updateElement('stat-active-products', stats.products.active);
         }
 
         // Fatturato
@@ -242,6 +263,38 @@ const App = {
         if (stats.coupons) {
             this.updateElement('stat-active-coupons', stats.coupons.activeCoupons);
         }
+
+        // Top clienti
+        this.updateTopCustomers();
+    },
+
+    updateTopCustomers() {
+        const customers = CustomersModule.getAllCustomers()
+            .sort((a, b) => (b.totalSpent || 0) - (a.totalSpent || 0))
+            .slice(0, 5);
+
+        const container = document.getElementById('top-customers-list');
+        if (!container) return;
+
+        if (customers.length === 0) {
+            container.innerHTML = '<p class="text-center text-gray-500 py-4">Nessun ordine ancora</p>';
+            return;
+        }
+
+        container.innerHTML = customers.map((c, i) => `
+        <div class="flex items-center justify-between py-3 border-b last:border-b-0">
+            <div class="flex items-center gap-3">
+                <span class="text-2xl font-bold text-gray-300">${i + 1}</span>
+                <div>
+                    <p class="font-bold">${c.firstName} ${c.lastName}</p>
+                    <p class="text-sm text-gray-600">${c.totalOrders || 0} ordini</p>
+                </div>
+            </div>
+            <div class="text-right">
+                <p class="font-bold text-green-600">${Utils.formatPrice(c.totalSpent || 0)}</p>
+            </div>
+        </div>
+    `).join('');
     },
 
     displayRecentOrders(orders) {
