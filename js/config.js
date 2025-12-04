@@ -21,7 +21,8 @@ const CONFIG = {
         if (hostname === "127.0.0.1" || hostname === "localhost") {
             return "http://127.0.0.1:5500/";
         } else {
-            return `${window.location.origin}${window.location.pathname}`;
+            // Per GitHub Pages
+            return "https://pastificiogramsci.github.io/gestionaleordini/";
         }
     },
 
