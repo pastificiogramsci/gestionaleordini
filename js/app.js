@@ -2180,27 +2180,57 @@ const App = {
         const product = ProductsModule.getProductById(productId);
         if (!product) return;
 
-        document.getElementById('product-id').value = product.id;
-        document.getElementById('product-name').value = product.name;
-        document.getElementById('product-price').value = product.price;
+        this.openModal('new-product-modal');
 
-        // Gestione categoria
-        const categorySelect = document.getElementById('product-category');
-        categorySelect.value = product.category;
+        // Popola campi base (controllo esistenza)
+        const nameField = document.getElementById('product-name');
+        if (nameField) nameField.value = product.name || '';
 
-        // Se la categoria non esiste nel select, usa "Nuova categoria"
-        if (categorySelect.value === '' && product.category) {
-            categorySelect.value = '__new__';
-            document.getElementById('product-category-new').value = product.category;
-            checkNewCategory();
+        const categoryField = document.getElementById('product-category');
+        if (categoryField) categoryField.value = product.category || '';
+
+        const priceField = document.getElementById('product-price');
+        if (priceField) priceField.value = product.price || '';
+
+        const unitField = document.getElementById('product-unit');
+        if (unitField) unitField.value = product.unit || 'kg';
+
+        const weightField = document.getElementById('product-weight');
+        if (weightField) weightField.value = product.averageWeight || '';
+
+        const descField = document.getElementById('product-description');
+        if (descField) descField.value = product.description || '';
+
+        // Popola nuovi campi (con controllo)
+        const ingredientsField = document.getElementById('product-ingredients');
+        if (ingredientsField) ingredientsField.value = product.ingredients || '';
+
+        const customAllergensField = document.getElementById('product-custom-allergens');
+        if (customAllergensField) customAllergensField.value = '';
+
+        // Popola checkbox allergeni
+        document.querySelectorAll('.allergen-checkbox').forEach(cb => {
+            cb.checked = product.allergens && product.allergens.includes(cb.value);
+        });
+
+        // Allergeni custom (quelli non nelle checkbox)
+        if (product.allergens && customAllergensField) {
+            const standardAllergens = Array.from(document.querySelectorAll('.allergen-checkbox'))
+                .map(cb => cb.value);
+            const customAllergens = product.allergens.filter(a => !standardAllergens.includes(a));
+            if (customAllergens.length > 0) {
+                customAllergensField.value = customAllergens.join(', ');
+            }
         }
 
-        document.getElementById('product-unit').value = product.unit || 'kg';
-        document.getElementById('product-weight').value = product.averageWeight || '';
-        document.getElementById('product-description').value = product.description || '';
+        // Cambia titolo modal
+        const modalTitle = document.querySelector('#new-product-modal h3');
+        if (modalTitle) {
+            modalTitle.textContent = `Modifica: ${product.name}`;
+        }
 
-        toggleWeightInput();
-        this.openModal('new-product-modal');
+        // Salva ID per update
+        this.editingProductId = productId;
     },
 
     deleteProduct(productId) {
