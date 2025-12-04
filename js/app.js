@@ -15,8 +15,12 @@ const App = {
         console.log("🚀 Inizializzazione App...");
 
         try {
-            // 1. PRIMA controlla callback Dropbox (se c'è ?code= nell'URL)
-            await Storage.checkDropboxCallback();
+            // 1. PRIMA controlla callback Dropbox
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('code')) {
+                console.log("🔵 Trovato code Dropbox, processo callback...");
+                await Storage.checkDropboxCallback();
+            }
 
             // 2. Controlla autenticazione
             if (!AuthManager.init()) {
