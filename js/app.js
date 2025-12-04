@@ -1794,7 +1794,44 @@ const App = {
     },
 
     openNewCustomerModal() {
+        this.editingCustomerId = null; // Reset per nuova creazione
         this.openModal('new-customer-modal');
+
+        // Reset campi
+        document.getElementById('customer-firstname').value = '';
+        document.getElementById('customer-lastname').value = '';
+        document.getElementById('customer-phone').value = '';
+        document.getElementById('customer-email').value = '';
+        document.getElementById('customer-address').value = '';
+
+        // Reset titolo
+        const modalTitle = document.querySelector('#new-customer-modal h3');
+        if (modalTitle) {
+            modalTitle.textContent = 'Nuovo Cliente';
+        }
+    },
+
+    viewCustomerDetails(customerId) {
+        const customer = CustomersModule.getCustomerById(customerId);
+        if (!customer) return;
+
+        // Apri modal e riempi con dati esistenti
+        this.openModal('new-customer-modal');
+
+        document.getElementById('customer-firstname').value = customer.firstName || '';
+        document.getElementById('customer-lastname').value = customer.lastName || '';
+        document.getElementById('customer-phone').value = customer.phone || '';
+        document.getElementById('customer-email').value = customer.email || '';
+        document.getElementById('customer-address').value = customer.address || '';
+
+        // Cambia titolo modal
+        const modalTitle = document.querySelector('#new-customer-modal h3');
+        if (modalTitle) {
+            modalTitle.textContent = `Modifica: ${customer.firstName} ${customer.lastName}`;
+        }
+
+        // Salva ID per update
+        this.editingCustomerId = customerId;
     },
 
     saveCustomer(event) {
@@ -1808,13 +1845,24 @@ const App = {
             address: document.getElementById('customer-address').value
         };
 
-        const newCustomer = CustomersModule.addCustomer(data);
-        this.closeModal('new-customer-modal');
-        this.loadCustomers();
+        // MODIFICA o CREA
+        if (this.editingCustomerId) {
+            // MODIFICA esistente
+            CustomersModule.updateCustomer(this.editingCustomerId, data);
+            this.editingCustomerId = null;
+            this.closeModal('new-customer-modal');
+            this.loadCustomers();
+            Utils.showToast("✅ Cliente modificato!", "success");
+        } else {
+            // CREA nuovo
+            const newCustomer = CustomersModule.addCustomer(data);
+            this.closeModal('new-customer-modal');
+            this.loadCustomers();
 
-        // Chiedi se mandare messaggio benvenuto
-        if (confirm("Mandare messaggio di benvenuto su WhatsApp con tessera fidelity?")) {
-            WhatsAppModule.sendWelcomeMessage(newCustomer, true);
+            // Chiedi se mandare messaggio benvenuto
+            if (confirm("Mandare messaggio di benvenuto su WhatsApp con tessera fidelity?")) {
+                WhatsAppModule.sendWelcomeMessage(newCustomer, true);
+            }
         }
     },
 
