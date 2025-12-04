@@ -336,7 +336,7 @@ const TestData = {
         await FidelityModule.init();
 
         console.log('✅ Importazione completata!');
-    }
+    },
     
     async importProducts(oldProducts) {
         console.log(`📦 Importazione ${oldProducts.length} prodotti...`);
