@@ -169,8 +169,6 @@ const App = {
         // Carica contenuto del tab
         this.loadTabContent(tabName);
 
-        // Nascondi floating buttons in alcune tab
-        this.updateFloatingButtons(tabName);
     },
 
     loadTabContent(tabName) {
@@ -1885,39 +1883,198 @@ const App = {
     },
 
     loadProducts() {
-        this.displayProducts(ProductsModule.getAllProducts());
+        console.log("🍝 Caricamento prodotti...");
+        this.displayProductsByCategory();
+        this.updateProductsStats();
+        this.populateCategoryFilters();
     },
 
-    displayProducts(products) {
-        const container = document.getElementById('products-list');
-        if (!container) return;
+    loadProducts() {
+        console.log("🍝 Caricamento prodotti...");
+        this.displayProductsByCategory();
+        this.updateProductsStats();
+        this.populateCategoryFilters();
+    },
 
-        // Raggruppa per categoria
-        const byCategory = {};
-        products.forEach(p => {
-            if (!byCategory[p.category]) byCategory[p.category] = [];
-            byCategory[p.category].push(p);
-        });
+    // ← SOSTITUISCI displayProducts() CON TUTTE QUESTE FUNZIONI 👇
 
-        container.innerHTML = Object.keys(byCategory).sort().map(cat => `
-        <div class="col-span-full">
-            <h3 class="text-xl font-bold mb-3 text-blue-600">${cat}</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                ${byCategory[cat].map(p => `
-                    <div class="bg-white p-4 rounded-lg shadow">
-                        <h4 class="font-bold">${p.name}</h4>
-                        <p class="text-2xl text-blue-600 font-bold mt-2">${Utils.formatPrice(p.price)}/${p.unit || 'kg'}</p>
-                        ${p.averageWeight ? `<p class="text-xs text-gray-500">Peso medio: ${(p.averageWeight * 1000).toFixed(0)}g</p>` : ''}
-                        <div class="flex gap-2 mt-3">
-                            <button onclick="ProductsModule.toggleProductActive('${p.id}'); app.loadProducts()" class="text-xs px-2 py-1 rounded ${p.active ? 'bg-green-100 text-green-700' : 'bg-gray-100'}">${p.active ? '✓' : '✗'}</button>
-                            <button onclick="app.editProduct('${p.id}')" class="text-blue-600 text-sm">✏️</button>
-                            <button onclick="app.deleteProduct('${p.id}')" class="text-red-600 text-sm">🗑️</button>
-                        </div>
-                    </div>
-                `).join('')}
+    updateProductsStats() {
+        const products = ProductsModule.getAllProducts();
+        const active = products.filter(p => p.active).length;
+        const categories = new Set(products.map(p => p.category)).size;
+        const avgPrice = products.length > 0
+            ? products.reduce((sum, p) => sum + p.price, 0) / products.length
+            : 0;
+
+        this.updateElement('products-stat-total', products.length);
+        this.updateElement('products-stat-active', active);
+        this.updateElement('products-stat-categories', categories);
+        this.updateElement('products-stat-avg-price', Utils.formatPrice(avgPrice));
+    },
+
+    searchProducts() {
+        const query = document.getElementById('product-search').value.toLowerCase();
+
+        if (!query) {
+            this.displayProductsByCategory();
+            return;
+        }
+
+        const products = ProductsModule.getAllProducts().filter(p =>
+            p.name.toLowerCase().includes(query) ||
+            p.category.toLowerCase().includes(query) ||
+            (p.description && p.description.toLowerCase().includes(query))
+        );
+
+        const container = document.getElementById('products-by-category');
+        if (products.length === 0) {
+            container.innerHTML = '<p class="text-gray-500 text-center py-8">Nessun prodotto trovato</p>';
+            return;
+        }
+
+        container.innerHTML = `
+        <div class="mb-6">
+            <h3 class="text-xl font-bold mb-4">🔍 Risultati ricerca (${products.length})</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                ${products.map(p => this.renderProductCard(p)).join('')}
             </div>
         </div>
-    `).join('');
+    `;
+    },
+
+    populateCategoryFilters() {
+        const products = ProductsModule.getAllProducts();
+        const categories = [...new Set(products.map(p => p.category))].sort();
+
+        const container = document.getElementById('category-filters');
+        if (!container) return;
+
+        container.innerHTML = `
+        <button onclick="app.filterProductsByCategory('all')" 
+                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm category-filter active"
+                data-category="all">
+            📋 Tutte (${products.length})
+        </button>
+        ${categories.map(cat => {
+            const count = products.filter(p => p.category === cat).length;
+            return `
+                <button onclick="app.filterProductsByCategory('${cat}')" 
+                        class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 font-medium text-sm category-filter"
+                        data-category="${cat}">
+                    ${cat} (${count})
+                </button>
+            `;
+        }).join('')}
+    `;
+    },
+
+    displayProductsByCategory() {
+        const products = ProductsModule.getAllProducts();
+        const categories = [...new Set(products.map(p => p.category))].sort();
+
+        const container = document.getElementById('products-by-category');
+        if (!container) return;
+
+        if (products.length === 0) {
+            container.innerHTML = '<p class="text-gray-500 text-center py-8">Nessun prodotto</p>';
+            return;
+        }
+
+        container.innerHTML = categories.map(category => {
+            const categoryProducts = products.filter(p => p.category === category);
+
+            return `
+            <div class="mb-8">
+                <h3 class="text-2xl font-bold mb-4 text-blue-600">${category}</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    ${categoryProducts.map(p => this.renderProductCard(p)).join('')}
+                </div>
+            </div>
+        `;
+        }).join('');
+    },
+
+    renderProductCard(product) {
+        const categoryIcons = {
+            'Pasta': '🍝',
+            'Pane': '🍞',
+            'Dolci': '🍰',
+            'Gastronomia': '🍲',
+            'Altro': '📦'
+        };
+
+        const icon = categoryIcons[product.category] || '📦';
+
+        return `
+        <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition border-2 ${product.active ? 'border-green-200' : 'border-gray-200'}">
+            <div class="bg-gradient-to-br from-orange-50 to-red-50 p-6 rounded-t-xl">
+                <div class="flex justify-between items-start mb-2">
+                    <span class="text-5xl">${icon}</span>
+                    ${!product.active ? '<span class="bg-gray-500 text-white text-xs px-2 py-1 rounded-full">Non attivo</span>' : ''}
+                </div>
+                <h4 class="font-bold text-xl mt-2">${product.name}</h4>
+            </div>
+            
+            <div class="p-5">
+                <div class="mb-4">
+                    <p class="text-3xl font-bold text-blue-600">${Utils.formatPrice(product.price)}/${product.unit}</p>
+                    ${product.averageWeight ? `<p class="text-sm text-gray-600">Peso medio: ${product.averageWeight}g</p>` : ''}
+                </div>
+                
+                ${product.description ? `<p class="text-sm text-gray-600 mb-4">${product.description}</p>` : ''}
+                
+                <div class="flex gap-2">
+                    <button onclick="app.toggleProductActive('${product.id}')" 
+                            class="flex-1 ${product.active ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-green-500 hover:bg-green-600'} text-white px-3 py-2 rounded-lg text-sm font-bold">
+                        ${product.active ? '❌ Disattiva' : '✅ Attiva'}
+                    </button>
+                    <button onclick="app.editProduct('${product.id}')" 
+                            class="bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 text-sm font-bold">
+                        ✏️
+                    </button>
+                    <button onclick="app.deleteProduct('${product.id}')" 
+                            class="bg-red-500 text-white px-3 py-2 rounded-lg hover:bg-red-600 text-sm font-bold">
+                        🗑️
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    },
+
+    filterProductsByCategory(category) {
+        document.querySelectorAll('.category-filter').forEach(btn => {
+            btn.classList.remove('bg-blue-600', 'text-white');
+            btn.classList.add('bg-gray-200');
+        });
+
+        const activeBtn = document.querySelector(`[data-category="${category}"]`);
+        if (activeBtn) {
+            activeBtn.classList.add('bg-blue-600', 'text-white');
+            activeBtn.classList.remove('bg-gray-200');
+        }
+
+        if (category === 'all') {
+            this.displayProductsByCategory();
+            return;
+        }
+
+        const products = ProductsModule.getAllProducts().filter(p => p.category === category);
+
+        const container = document.getElementById('products-by-category');
+        container.innerHTML = `
+        <div class="mb-6">
+            <h3 class="text-2xl font-bold mb-4 text-blue-600">${category}</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                ${products.map(p => this.renderProductCard(p)).join('')}
+            </div>
+        </div>
+    `;
+    },
+
+    toggleProductActive(productId) {
+        ProductsModule.toggleProductActive(productId);
+        this.loadProducts();
     },
 
     searchProducts() {

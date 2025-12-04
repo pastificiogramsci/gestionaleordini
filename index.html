@@ -672,24 +672,74 @@
         <!-- Modal Nuovo Cliente -->
         <div id="new-customer-modal"
             class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4 z-50">
-            <div class="bg-white rounded-lg p-6 w-full max-w-md">
-                <h3 class="text-xl font-bold mb-4">Nuovo Cliente</h3>
-                <form onsubmit="app.saveCustomer(event)">
-                    <input type="text" id="customer-firstname" placeholder="Nome *" required
-                        class="w-full px-3 py-2 border rounded mb-3">
-                    <input type="text" id="customer-lastname" placeholder="Cognome *" required
-                        class="w-full px-3 py-2 border rounded mb-3">
-                    <input type="tel" id="customer-phone" placeholder="Telefono"
-                        class="w-full px-3 py-2 border rounded mb-3">
-                    <input type="email" id="customer-email" placeholder="Email"
-                        class="w-full px-3 py-2 border rounded mb-3">
-                    <textarea id="customer-address" placeholder="Indirizzo"
-                        class="w-full px-3 py-2 border rounded mb-3"></textarea>
-                    <div class="flex gap-3 mt-4">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+
+                <!-- Header Colorato -->
+                <div class="bg-gradient-to-r from-purple-500 to-blue-500 text-white p-6 rounded-t-xl">
+                    <h3 class="text-2xl font-bold">👤 Nuovo Cliente</h3>
+                </div>
+
+                <!-- Form -->
+                <form onsubmit="app.saveCustomer(event)" class="p-6">
+
+                    <!-- Nome e Cognome -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-sm font-bold mb-2 text-gray-700">
+                                <span class="text-red-500">*</span> Nome
+                            </label>
+                            <input type="text" id="customer-firstname" required
+                                class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold mb-2 text-gray-700">
+                                <span class="text-red-500">*</span> Cognome
+                            </label>
+                            <input type="text" id="customer-lastname" required
+                                class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none">
+                        </div>
+                    </div>
+
+                    <!-- Telefono -->
+                    <div class="mb-4">
+                        <label class="block text-sm font-bold mb-2 text-gray-700">
+                            📞 Telefono
+                        </label>
+                        <input type="tel" id="customer-phone"
+                            class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
+                            placeholder="+39 123 456 7890">
+                    </div>
+
+                    <!-- Email -->
+                    <div class="mb-4">
+                        <label class="block text-sm font-bold mb-2 text-gray-700">
+                            📧 Email
+                        </label>
+                        <input type="email" id="customer-email"
+                            class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
+                            placeholder="email@esempio.com">
+                    </div>
+
+                    <!-- Indirizzo -->
+                    <div class="mb-6">
+                        <label class="block text-sm font-bold mb-2 text-gray-700">
+                            📍 Indirizzo
+                        </label>
+                        <textarea id="customer-address" rows="3"
+                            class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
+                            placeholder="Via, numero civico, città..."></textarea>
+                    </div>
+
+                    <!-- Bottoni -->
+                    <div class="flex gap-3">
                         <button type="button" onclick="app.closeModal('new-customer-modal')"
-                            class="flex-1 bg-gray-200 px-4 py-2 rounded">Annulla</button>
+                            class="flex-1 bg-gray-200 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-300 font-bold">
+                            ✕ Annulla
+                        </button>
                         <button type="submit"
-                            class="flex-1 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Salva</button>
+                            class="flex-1 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 font-bold shadow-lg">
+                            ✓ Salva Cliente
+                        </button>
                     </div>
                 </form>
             </div>
@@ -697,14 +747,57 @@
 
         <!-- Products Tab -->
         <div id="products-content" class="tab-content hidden">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-2xl font-bold">Prodotti</h2>
-                <button onclick="app.openNewProductModal()"
-                    class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">+ Nuovo Prodotto</button>
+
+            <!-- Header con Statistiche -->
+            <div class="bg-gradient-to-r from-orange-500 to-red-500 text-white p-6 rounded-lg shadow-lg mb-6">
+                <h2 class="text-3xl font-bold mb-4">🍝 Gestione Prodotti</h2>
+
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="bg-white/20 backdrop-blur rounded-lg p-3">
+                        <p class="text-sm opacity-90">Totali</p>
+                        <p class="text-3xl font-bold" id="products-stat-total">0</p>
+                    </div>
+                    <div class="bg-white/20 backdrop-blur rounded-lg p-3">
+                        <p class="text-sm opacity-90">Attivi</p>
+                        <p class="text-3xl font-bold" id="products-stat-active">0</p>
+                    </div>
+                    <div class="bg-white/20 backdrop-blur rounded-lg p-3">
+                        <p class="text-sm opacity-90">Categorie</p>
+                        <p class="text-3xl font-bold" id="products-stat-categories">0</p>
+                    </div>
+                    <div class="bg-white/20 backdrop-blur rounded-lg p-3">
+                        <p class="text-sm opacity-90">Prezzo Medio</p>
+                        <p class="text-2xl font-bold" id="products-stat-avg-price">€0</p>
+                    </div>
+                </div>
             </div>
-            <input type="text" id="product-search" placeholder="Cerca prodotto..." onkeyup="app.searchProducts()"
-                class="w-full px-4 py-2 border rounded-lg mb-4">
-            <div id="products-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+
+            <!-- Azioni Rapide -->
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold">Catalogo Prodotti</h3>
+                <button onclick="app.openNewProductModal()"
+                    class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 font-bold shadow-lg">
+                    ➕ Nuovo Prodotto
+                </button>
+            </div>
+
+            <!-- Ricerca e Filtri -->
+            <div class="bg-white rounded-lg shadow-lg p-4 mb-6">
+                <div class="flex gap-3 mb-4">
+                    <input type="text" id="product-search" placeholder="🔍 Cerca prodotto per nome..."
+                        class="flex-1 px-4 py-3 border-2 border-gray-300 rounded-lg text-lg"
+                        oninput="app.searchProducts()">
+                </div>
+
+                <!-- Filtri per Categoria -->
+                <div class="flex flex-wrap gap-2" id="category-filters">
+                    <!-- Popolato dinamicamente -->
+                </div>
+            </div>
+
+            <!-- Lista Prodotti per Categoria -->
+            <div id="products-by-category"></div>
+
         </div>
 
         <!-- Modal Nuovo Prodotto -->
