@@ -592,18 +592,81 @@
 
         <!-- Customers Tab -->
         <div id="customers-content" class="tab-content hidden">
+
+            <!-- Header con Statistiche -->
+            <div class="bg-gradient-to-r from-purple-500 to-blue-500 text-white p-6 rounded-lg shadow-lg mb-6">
+                <h2 class="text-3xl font-bold mb-4">👥 Gestione Clienti</h2>
+
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="bg-white/20 backdrop-blur rounded-lg p-3">
+                        <p class="text-sm opacity-90">Totali</p>
+                        <p class="text-3xl font-bold" id="customers-stat-total">0</p>
+                    </div>
+                    <div class="bg-white/20 backdrop-blur rounded-lg p-3">
+                        <p class="text-sm opacity-90">Con Ordini</p>
+                        <p class="text-3xl font-bold" id="customers-stat-with-orders">0</p>
+                    </div>
+                    <div class="bg-white/20 backdrop-blur rounded-lg p-3">
+                        <p class="text-sm opacity-90">Fidelity</p>
+                        <p class="text-3xl font-bold" id="customers-stat-fidelity">0</p>
+                    </div>
+                    <div class="bg-white/20 backdrop-blur rounded-lg p-3">
+                        <p class="text-sm opacity-90">Fatturato</p>
+                        <p class="text-2xl font-bold" id="customers-stat-revenue">€0</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Azioni Rapide -->
             <div class="flex justify-between items-center mb-6">
-                <h2 class="text-2xl font-bold">Clienti</h2>
+                <h3 class="text-xl font-bold">Clienti</h3>
                 <button onclick="app.openNewCustomerModal()"
-                    class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
-                    + Nuovo Cliente
+                    class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 font-bold shadow-lg">
+                    ➕ Nuovo Cliente
                 </button>
             </div>
 
-            <input type="text" id="customer-search" placeholder="Cerca cliente..." onkeyup="app.searchCustomers()"
-                class="w-full px-4 py-2 border rounded-lg mb-4">
+            <!-- Ricerca e Filtri -->
+            <div class="bg-white rounded-lg shadow-lg p-4 mb-6">
+                <div class="flex gap-3 mb-4">
+                    <input type="text" id="customer-search" placeholder="🔍 Cerca per nome, telefono, email..."
+                        class="flex-1 px-4 py-3 border-2 border-gray-300 rounded-lg text-lg"
+                        oninput="app.searchCustomers()">
+                </div>
 
-            <div id="customers-list" class="space-y-2"></div>
+                <!-- Filtri Rapidi -->
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="app.filterCustomers('all')"
+                        class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 font-medium text-sm filter-btn active"
+                        data-filter="all">
+                        📋 Tutti
+                    </button>
+                    <button onclick="app.filterCustomers('top')"
+                        class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 font-medium text-sm filter-btn"
+                        data-filter="top">
+                        ⭐ Top 10
+                    </button>
+                    <button onclick="app.filterCustomers('with-orders')"
+                        class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 font-medium text-sm filter-btn"
+                        data-filter="with-orders">
+                        📦 Con Ordini
+                    </button>
+                    <button onclick="app.filterCustomers('fidelity')"
+                        class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 font-medium text-sm filter-btn"
+                        data-filter="fidelity">
+                        🎁 Fidelity
+                    </button>
+                    <button onclick="app.filterCustomers('recent')"
+                        class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 font-medium text-sm filter-btn"
+                        data-filter="recent">
+                        🆕 Recenti
+                    </button>
+                </div>
+            </div>
+
+            <!-- Lista Clienti -->
+            <div id="customers-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+
         </div>
 
         <!-- Modal Nuovo Cliente -->

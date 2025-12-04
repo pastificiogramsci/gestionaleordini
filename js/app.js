@@ -1663,7 +1663,77 @@ const App = {
 
     loadCustomers() {
         console.log("👥 Caricamento clienti...");
-        this.displayCustomers(CustomersModule.getAllCustomers());
+        const customers = CustomersModule.getAllCustomers('name');
+        this.displayCustomers(customers);
+        this.updateCustomersStats(); // ← AGGIUNGI
+    },
+
+    updateCustomersStats() {
+        const customers = CustomersModule.getAllCustomers();
+        const withOrders = customers.filter(c => c.totalOrders > 0).length;
+        const fidelity = FidelityModule.fidelityCustomers.length;
+        const totalRevenue = customers.reduce((sum, c) => sum + (c.totalSpent || 0), 0);
+
+        this.updateElement('customers-stat-total', customers.length);
+        this.updateElement('customers-stat-with-orders', withOrders);
+        this.updateElement('customers-stat-fidelity', fidelity);
+        this.updateElement('customers-stat-revenue', Utils.formatPrice(totalRevenue));
+    },
+
+    searchCustomers() {
+        const query = document.getElementById('customer-search').value.toLowerCase();
+        const customers = CustomersModule.getAllCustomers('name');
+
+        if (!query) {
+            this.displayCustomers(customers);
+            return;
+        }
+
+        const filtered = customers.filter(c =>
+            c.firstName.toLowerCase().includes(query) ||
+            c.lastName.toLowerCase().includes(query) ||
+            (c.phone && c.phone.includes(query)) ||
+            (c.email && c.email.toLowerCase().includes(query))
+        );
+
+        this.displayCustomers(filtered);
+    },
+
+    filterCustomers(type) {
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.classList.remove('active', 'bg-blue-600', 'text-white');
+            btn.classList.add('bg-gray-200');
+        });
+
+        const activeBtn = document.querySelector(`[data-filter="${type}"]`);
+        if (activeBtn) {
+            activeBtn.classList.add('active', 'bg-blue-600', 'text-white');
+            activeBtn.classList.remove('bg-gray-200');
+        }
+
+        let customers = CustomersModule.getAllCustomers('name');
+
+        switch (type) {
+            case 'top':
+                customers = customers
+                    .sort((a, b) => (b.totalSpent || 0) - (a.totalSpent || 0))
+                    .slice(0, 10);
+                break;
+            case 'with-orders':
+                customers = customers.filter(c => c.totalOrders > 0);
+                break;
+            case 'fidelity':
+                const fidelityIds = FidelityModule.fidelityCustomers.map(fc => fc.customerId);
+                customers = customers.filter(c => fidelityIds.includes(c.id));
+                break;
+            case 'recent':
+                const monthAgo = new Date();
+                monthAgo.setMonth(monthAgo.getMonth() - 1);
+                customers = customers.filter(c => new Date(c.createdAt) > monthAgo);
+                break;
+        }
+
+        this.displayCustomers(customers);
     },
 
     displayCustomers(customers) {
@@ -1671,23 +1741,50 @@ const App = {
         if (!container) return;
 
         if (customers.length === 0) {
-            container.innerHTML = '<p class="text-gray-500 text-center py-8">Nessun cliente</p>';
+            container.innerHTML = '<p class="text-gray-500 text-center py-8 col-span-full">Nessun cliente</p>';
             return;
         }
 
-        container.innerHTML = customers.map(c => `
-        <div class="bg-white p-4 rounded-lg shadow hover:shadow-md transition">
-            <div class="flex justify-between items-start">
-                <div class="flex-1">
+        container.innerHTML = customers.map(c => {
+            const fidelityCustomer = FidelityModule.fidelityCustomers.find(fc => fc.customerId === c.id);
+            const isTop = c.totalSpent >= 100; // Top se speso almeno 100€
+
+            return `
+            <div class="bg-white p-5 rounded-xl shadow-lg hover:shadow-xl transition cursor-pointer border-2 border-gray-100"
+                 onclick="app.viewCustomerDetails('${c.id}')">
+                
+                <!-- Header con Nome e Badge -->
+                <div class="flex justify-between items-start mb-3">
                     <h3 class="font-bold text-lg">${c.firstName} ${c.lastName}</h3>
-                    ${c.phone ? `<p class="text-sm text-gray-600">📞 ${c.phone}</p>` : ''}
-                    ${c.email ? `<p class="text-sm text-gray-600">📧 ${c.email}</p>` : ''}
-                    <p class="text-xs text-gray-500 mt-2">Ordini: ${c.totalOrders || 0} | Speso: ${Utils.formatPrice(c.totalSpent || 0)}</p>
+                    <div class="flex gap-1">
+                        ${fidelityCustomer ? '<span class="bg-purple-500 text-white text-xs px-2 py-1 rounded-full">🎁</span>' : ''}
+                        ${isTop ? '<span class="bg-yellow-500 text-white text-xs px-2 py-1 rounded-full">⭐</span>' : ''}
+                    </div>
                 </div>
-                <button onclick="app.deleteCustomer('${c.id}')" class="text-red-600 hover:text-red-800">🗑️</button>
+                
+                <!-- Info Contatto -->
+                <div class="text-sm text-gray-600 space-y-1 mb-3">
+                    ${c.phone ? `<p>📞 ${c.phone}</p>` : ''}
+                    ${c.email ? `<p class="text-xs">📧 ${c.email}</p>` : ''}
+                </div>
+                
+                <!-- Statistiche -->
+                <div class="grid grid-cols-2 gap-2 pt-3 border-t border-gray-200">
+                    <div class="text-center bg-blue-50 rounded-lg p-2">
+                        <p class="text-xs text-gray-600">Ordini</p>
+                        <p class="text-xl font-bold text-blue-600">${c.totalOrders || 0}</p>
+                    </div>
+                    <div class="text-center bg-green-50 rounded-lg p-2">
+                        <p class="text-xs text-gray-600">Speso</p>
+                        <p class="text-lg font-bold text-green-600">${Utils.formatPrice(c.totalSpent || 0)}</p>
+                    </div>
+                </div>
+                
+                <!-- Data Registrazione -->
+                <p class="text-xs text-gray-400 mt-2">📅 ${Utils.formatDate(c.createdAt)}</p>
             </div>
-        </div>
-    `).join('');
+        `;
+        }).join('');
     },
 
     searchCustomers() {
