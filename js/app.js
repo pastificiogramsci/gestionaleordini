@@ -37,10 +37,16 @@ const App = {
             // 4. Inizializza tutti i moduli
             await this.initModules();
 
-            // 5. Setup UI
+            // 5. Sync iniziale con Dropbox (se connesso)
+            if (Storage.dropboxClient) {
+                console.log("🔄 Sincronizzazione iniziale...");
+                await Storage.syncAllToDropbox(true); // true = silent (no toast)
+            }
+
+            // 6. Setup UI
             this.setupUI();
 
-            // 6. Carica tab iniziale
+            // 7. Carica tab iniziale
             this.switchTab('dashboard');
 
             this.initialized = true;
