@@ -1307,6 +1307,19 @@ const App = {
         this.loadOrders();
     },
 
+    showAllOrders() {
+        // Rimuovi tutti i filtri
+        document.getElementById('order-date-filter').value = '';
+        document.getElementById('order-month-filter').value = '';
+        document.getElementById('order-year-filter').value = '';
+        this.currentOrderFilter = null;
+
+        // Mostra tutti gli ordini
+        this.displayOrders(OrdersModule.getAllOrders('recent'));
+
+        Utils.showToast("📋 Tutti gli ordini visualizzati", "info");
+    },
+
     populateYearFilter() {
         const select = document.getElementById('order-year-filter');
         const orders = OrdersModule.getAllOrders('recent');
