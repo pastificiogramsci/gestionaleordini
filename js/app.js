@@ -414,6 +414,45 @@ const App = {
         this.loadFidelity();
     },
 
+    async removeDuplicateCustomers() {
+        const customers = CustomersModule.getAllCustomers();
+        const seen = new Map(); // phone -> customer
+        const duplicates = [];
+
+        customers.forEach(c => {
+            const phone = (c.phone || '').replace(/\s+/g, '');
+
+            if (phone && seen.has(phone)) {
+                // Duplicato trovato
+                duplicates.push({
+                    keep: seen.get(phone),
+                    duplicate: c
+                });
+            } else if (phone) {
+                seen.set(phone, c);
+            }
+        });
+
+        if (duplicates.length === 0) {
+            Utils.showToast("✅ Nessun duplicato trovato!", "success");
+            return;
+        }
+
+        const message = `Trovati ${duplicates.length} duplicati:\n\n` +
+            duplicates.map(d => `- ${d.duplicate.firstName} ${d.duplicate.lastName} (${d.duplicate.phone})`).join('\n') +
+            `\n\nVuoi eliminare i duplicati? (Verrà tenuto il primo)`;
+
+        if (!confirm(message)) return;
+
+        // Elimina duplicati
+        duplicates.forEach(d => {
+            CustomersModule.deleteCustomer(d.duplicate.id);
+        });
+
+        Utils.showToast(`✅ Eliminati ${duplicates.length} duplicati!`, "success");
+        this.loadCustomers();
+    },
+
     async resetAllFidelity() {
         const confirm1 = confirm("⚠️ Vuoi azzerare TUTTI i dati Fidelity?\n\nQuesta azione è irreversibile!");
         if (!confirm1) return;

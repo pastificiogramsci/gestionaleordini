@@ -35,12 +35,35 @@ const CustomersModule = {
 
     // Aggiungi nuovo cliente
     addCustomer(customerData) {
-        // Controlla duplicati per telefono
-        if (customerData.phone) {
-            const existing = this.customers.find(c => c.phone === customerData.phone);
+        // ✅ CONTROLLO DUPLICATI RAFFORZATO
+
+        // 1. Controlla telefono
+        if (customerData.phone && customerData.phone.trim()) {
+            const phoneClean = customerData.phone.replace(/\s+/g, ''); // Rimuovi spazi
+            const existing = this.customers.find(c => {
+                const existingPhone = (c.phone || '').replace(/\s+/g, '');
+                return existingPhone === phoneClean;
+            });
+
             if (existing) {
-                Utils.showToast("⚠️ Cliente con questo numero già esistente", "error");
+                Utils.showToast(`❌ Cliente già esistente: ${existing.firstName} ${existing.lastName}`, "error");
                 return null;
+            }
+        }
+
+        // 2. Controlla nome+cognome (se telefono vuoto)
+        if (!customerData.phone || !customerData.phone.trim()) {
+            const nameMatch = this.customers.find(c =>
+                c.firstName.toLowerCase() === customerData.firstName.toLowerCase() &&
+                c.lastName.toLowerCase() === customerData.lastName.toLowerCase()
+            );
+
+            if (nameMatch) {
+                const confirm = window.confirm(
+                    `⚠️ Esiste già "${nameMatch.firstName} ${nameMatch.lastName}".\n\n` +
+                    `Vuoi creare un duplicato comunque?`
+                );
+                if (!confirm) return null;
             }
         }
 
@@ -52,6 +75,7 @@ const CustomersModule = {
             email: customerData.email || '',
             address: customerData.address || '',
             notes: customerData.notes || '',
+            inWhatsAppGroup: customerData.inWhatsAppGroup || false,
             createdAt: new Date().toISOString(),
             totalOrders: 0,
             totalSpent: 0
