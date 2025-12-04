@@ -256,18 +256,20 @@ const TestData = {
 
         const data = jsonData.data;
 
-        // CLIENTI
-        if (data.clienti && data.clienti.length > 0) {
-            const customers = data.clienti.map(c => ({
+        // CLIENTI (supporta sia 'customers' che 'clienti')
+        const customersData = data.customers || data.clienti || [];
+        if (customersData.length > 0) {
+            const customers = customersData.map(c => ({
                 id: c.id || Utils.generateId(),
-                firstName: c.nome || '',
-                lastName: c.cognome || '',
-                phone: c.telefono || '',
+                firstName: c.firstName || c.nome || '',
+                lastName: c.lastName || c.cognome || '',
+                phone: c.phone || c.telefono || '',
                 email: c.email || '',
-                address: c.indirizzo || '',
-                createdAt: c.dataRegistrazione || new Date().toISOString(),
-                totalOrders: 0,
-                totalSpent: 0
+                address: c.address || c.indirizzo || '',
+                createdAt: c.createdAt || c.dataRegistrazione || new Date().toISOString(),
+                totalOrders: c.totalOrders || 0,
+                totalSpent: c.totalSpent || 0,
+                coupons: c.coupons || []
             }));
 
             CustomersModule.customers = customers;
@@ -275,18 +277,19 @@ const TestData = {
             console.log(`✅ Importati ${customers.length} clienti`);
         }
 
-        // PRODOTTI
-        if (data.prodotti && data.prodotti.length > 0) {
-            const products = data.prodotti.map(p => ({
+        // PRODOTTI (supporta sia 'products' che 'prodotti')
+        const productsData = data.products || data.prodotti || [];
+        if (productsData.length > 0) {
+            const products = productsData.map(p => ({
                 id: p.id || Utils.generateId(),
-                name: p.nome || '',
-                category: p.categoria || 'Generale',
-                price: parseFloat(p.prezzo) || 0,
-                unit: p.unita || 'kg',
-                averageWeight: p.pesoMedio ? parseFloat(p.pesoMedio) : null,
-                description: p.descrizione || '',
-                active: p.attivo !== false,
-                createdAt: p.dataCreazione || new Date().toISOString()
+                name: p.name || p.nome || '',
+                category: p.category || p.categoria || 'Generale',
+                price: parseFloat(p.price || p.prezzo) || 0,
+                unit: p.unit || p.unita || 'kg',
+                averageWeight: p.averageWeight || p.pesoMedio ? parseFloat(p.averageWeight || p.pesoMedio) : null,
+                description: p.description || p.descrizione || '',
+                active: p.active !== false && p.attivo !== false,
+                createdAt: p.createdAt || p.dataCreazione || new Date().toISOString()
             }));
 
             ProductsModule.products = products;
@@ -294,25 +297,26 @@ const TestData = {
             console.log(`✅ Importati ${products.length} prodotti`);
         }
 
-        // ORDINI
-        if (data.ordini && data.ordini.length > 0) {
-            const orders = data.ordini.map(o => ({
+        // ORDINI (supporta sia 'orders' che 'ordini')
+        const ordersData = data.orders || data.ordini || [];
+        if (ordersData.length > 0) {
+            const orders = ordersData.map(o => ({
                 id: o.id || Utils.generateId(),
-                orderNumber: o.numeroOrdine || '',
-                customerId: o.clienteId || '',
-                items: o.prodotti ? o.prodotti.map(item => ({
-                    productId: item.prodottoId || '',
-                    quantity: parseFloat(item.quantita) || 0,
-                    price: parseFloat(item.prezzo) || 0,
-                    prepared: item.preparato || false
-                })) : [],
-                totalAmount: parseFloat(o.totale) || 0,
-                status: o.stato || 'pending',
-                deliveryDate: o.dataConsegna || '',
-                deliveryTime: o.oraConsegna || '',
-                notes: o.note || '',
-                createdAt: o.dataCreazione || new Date().toISOString(),
-                updatedAt: o.dataModifica || new Date().toISOString()
+                orderNumber: o.orderNumber || o.numeroOrdine || '',
+                customerId: o.customerId || o.clienteId || '',
+                items: (o.items || o.prodotti || []).map(item => ({
+                    productId: item.productId || item.prodottoId || '',
+                    quantity: parseFloat(item.quantity || item.quantita) || 0,
+                    price: parseFloat(item.price || item.prezzo) || 0,
+                    prepared: item.prepared || item.preparato || false
+                })),
+                totalAmount: parseFloat(o.totalAmount || o.totale) || 0,
+                status: o.status || o.stato || 'pending',
+                deliveryDate: o.deliveryDate || o.dataConsegna || '',
+                deliveryTime: o.deliveryTime || o.oraConsegna || '',
+                notes: o.notes || o.note || '',
+                createdAt: o.createdAt || o.dataCreazione || new Date().toISOString(),
+                updatedAt: o.updatedAt || o.dataModifica || new Date().toISOString()
             }));
 
             OrdersModule.orders = orders;
@@ -321,23 +325,22 @@ const TestData = {
         }
 
         // FIDELITY
-        if (data.fidelity && data.fidelity.length > 0) {
-            FidelityModule.fidelityCustomers = data.fidelity;
+        const fidelityData = data.fidelity || data.fidelityCustomers || [];
+        if (fidelityData.length > 0) {
+            FidelityModule.fidelityCustomers = fidelityData;
             await FidelityModule.saveFidelity();
-            console.log(`✅ Importati ${data.fidelity.length} clienti fidelity`);
+            console.log(`✅ Importati ${fidelityData.length} clienti fidelity`);
         }
 
         Utils.showToast("✅ Dati importati con successo!", "success");
-
-        // Ricarica tutto
-        await CustomersModule.init();
-        await ProductsModule.init();
-        await OrdersModule.init();
-        await FidelityModule.init();
-
         console.log('✅ Importazione completata!');
+
+        // Aspetta un attimo prima di ricaricare
+        setTimeout(() => {
+            window.location.reload();
+        }, 1000);
     },
-    
+
     async importProducts(oldProducts) {
         console.log(`📦 Importazione ${oldProducts.length} prodotti...`);
 
