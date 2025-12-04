@@ -48,6 +48,7 @@ const Storage = {
                         code: code,
                         grant_type: 'authorization_code',
                         client_id: config.clientId,
+                        client_secret: config.clientSecret,
                         redirect_uri: config.redirectUri
                     })
                 });
@@ -94,7 +95,8 @@ const Storage = {
                 body: new URLSearchParams({
                     grant_type: "refresh_token",
                     refresh_token: this.dropboxRefreshToken,
-                    client_id: config.clientId
+                    client_id: config.clientId,
+                    client_secret: config.clientSecret
                 })
             });
 
