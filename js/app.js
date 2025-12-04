@@ -2042,49 +2042,50 @@ const App = {
     renderProductCard(product) {
         const categoryIcons = {
             'Pasta': '🍝',
-            'Pane': '🍞',
-            'Dolci': '🍰',
             'Gastronomia': '🍲',
-            'Altro': '📦'
+            'Prodotti Forno': '🥖',
+            'Sughi': '🍅',
+            'Prodotti Rivendita': '📦'
         };
 
-        const icon = categoryIcons[product.category] || '📦';
+        const icon = categoryIcons[product.category] || '📁';
+        const weightText = product.averageWeight ? `${product.averageWeight} kg` : '';
 
         return `
-        <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition border-2 ${product.active ? 'border-green-200' : 'border-gray-200'}">
-            <div class="bg-gradient-to-br from-orange-50 to-red-50 p-6 rounded-t-xl">
-                <div class="flex justify-between items-start mb-2">
-                    <span class="text-5xl">${icon}</span>
-                    ${!product.active ? '<span class="bg-gray-500 text-white text-xs px-2 py-1 rounded-full">Non attivo</span>' : ''}
+                <div class="bg-white rounded-xl shadow-lg hover:shadow-xl transition border-2 ${product.active ? 'border-green-200' : 'border-gray-200'}">
+                    <div class="bg-gradient-to-br from-orange-50 to-red-50 p-6 rounded-t-xl">
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="text-5xl">${icon}</span>
+                            ${!product.active ? '<span class="bg-gray-500 text-white text-xs px-2 py-1 rounded-full">Non attivo</span>' : ''}
+                        </div>
+                        <h4 class="font-bold text-xl mt-2">${product.name}</h4>
+                    </div>
+                    
+                    <div class="p-5">
+                        <div class="mb-4">
+                            <p class="text-3xl font-bold text-blue-600">${Utils.formatPrice(product.price)}/${product.unit}</p>
+                            ${weightText ? `<p class="text-sm text-gray-600">Peso medio: ${weightText}</p>` : ''}
+                        </div>
+                        
+                        ${product.description ? `<p class="text-sm text-gray-600 mb-4">${product.description}</p>` : ''}
+                        
+                        <div class="flex gap-2">
+                            <button onclick="app.toggleProductActive('${product.id}')" 
+                                    class="flex-1 ${product.active ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-green-500 hover:bg-green-600'} text-white px-3 py-2 rounded-lg text-sm font-bold">
+                                ${product.active ? '❌ Disattiva' : '✅ Attiva'}
+                            </button>
+                            <button onclick="app.editProduct('${product.id}')" 
+                                    class="bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 text-sm font-bold">
+                                ✏️
+                            </button>
+                            <button onclick="app.deleteProduct('${product.id}')" 
+                                    class="bg-red-500 text-white px-3 py-2 rounded-lg hover:bg-red-600 text-sm font-bold">
+                                🗑️
+                            </button>
+                        </div>
+                    </div>
                 </div>
-                <h4 class="font-bold text-xl mt-2">${product.name}</h4>
-            </div>
-            
-            <div class="p-5">
-                <div class="mb-4">
-                    <p class="text-3xl font-bold text-blue-600">${Utils.formatPrice(product.price)}/${product.unit}</p>
-                    ${product.averageWeight ? `<p class="text-sm text-gray-600">Peso medio: ${product.averageWeight} kg</p>` : ''}
-                </div>
-                
-                ${product.description ? `<p class="text-sm text-gray-600 mb-4">${product.description}</p>` : ''}
-                
-                <div class="flex gap-2">
-                    <button onclick="app.toggleProductActive('${product.id}')" 
-                            class="flex-1 ${product.active ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-green-500 hover:bg-green-600'} text-white px-3 py-2 rounded-lg text-sm font-bold">
-                        ${product.active ? '❌ Disattiva' : '✅ Attiva'}
-                    </button>
-                    <button onclick="app.editProduct('${product.id}')" 
-                            class="bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 text-sm font-bold">
-                        ✏️
-                    </button>
-                    <button onclick="app.deleteProduct('${product.id}')" 
-                            class="bg-red-500 text-white px-3 py-2 rounded-lg hover:bg-red-600 text-sm font-bold">
-                        🗑️
-                    </button>
-                </div>
-            </div>
-        </div>
-    `;
+            `;
     },
 
     filterProductsByCategory(category) {
@@ -2135,6 +2136,7 @@ const App = {
         // Reset campi
         document.getElementById('product-name').value = '';
         document.getElementById('product-category').value = '';
+        document.getElementById('product-category-custom').classList.add('hidden'); // ← AGGIUNGI
         document.getElementById('product-price').value = '';
         document.getElementById('product-unit').value = 'kg';
         document.getElementById('product-weight').value = '';
@@ -2145,30 +2147,78 @@ const App = {
         // Reset checkbox allergeni
         document.querySelectorAll('.allergen-checkbox').forEach(cb => cb.checked = false);
 
+        this.loadCustomCategories();
+
         const modalTitle = document.querySelector('#new-product-modal h3');
         if (modalTitle) {
             modalTitle.textContent = '🍝 Nuovo Prodotto';
         }
     },
 
+    handleCategoryChange() {
+        const select = document.getElementById('product-category');
+        const customInput = document.getElementById('product-category-custom');
+
+        if (select.value === '__custom__') {
+            customInput.classList.remove('hidden');
+            customInput.focus();
+            customInput.required = true;
+        } else {
+            customInput.classList.add('hidden');
+            customInput.required = false;
+            customInput.value = '';
+        }
+    },
+
     saveProduct(event) {
         event.preventDefault();
-        const unit = document.getElementById('product-unit').value;
-        const productId = document.getElementById('product-id').value;
 
+        const name = document.getElementById('product-name').value.trim();
         let category = document.getElementById('product-category').value;
-        if (category === '__new__') {
-            category = document.getElementById('product-category-new').value;
+        const customCategory = document.getElementById('product-category-custom').value.trim();
+
+        // Se categoria custom, usa quella
+        if (category === '__custom__' && customCategory) {
+            category = customCategory;
+            // Salva la nuova categoria per riuso futuro
+            this.saveCustomCategory(category);
+        }
+
+        const price = document.getElementById('product-price').value;
+        const unit = document.getElementById('product-unit').value;
+        const weight = document.getElementById('product-weight').value;
+        const description = document.getElementById('product-description').value.trim();
+        const ingredients = document.getElementById('product-ingredients').value.trim();
+
+        // Raccogli allergeni selezionati
+        const allergens = Array.from(document.querySelectorAll('.allergen-checkbox:checked'))
+            .map(cb => cb.value);
+
+        // Aggiungi allergeni custom
+        const customAllergens = document.getElementById('product-custom-allergens').value
+            .split(',')
+            .map(a => a.trim())
+            .filter(a => a);
+
+        const allAllergens = [...allergens, ...customAllergens];
+
+        if (!name || !category || !price) {
+            Utils.showToast("❌ Compilare i campi obbligatori", "error");
+            return;
         }
 
         const data = {
-            name: document.getElementById('product-name').value,
-            price: document.getElementById('product-price').value,
-            category: category,
-            description: document.getElementById('product-description').value,
-            unit: unit,
-            averageWeight: unit === 'kg (peso medio)' ? parseFloat(document.getElementById('product-weight').value) : null
+            name,
+            category,
+            price,
+            unit,
+            averageWeight: weight || null,
+            description,
+            ingredients,
+            allergens: allAllergens
         };
+
+        const productId = document.getElementById('product-id') ? document.getElementById('product-id').value : null;
 
         if (productId) {
             ProductsModule.updateProduct(productId, data);
@@ -2178,7 +2228,9 @@ const App = {
 
         this.closeModal('new-product-modal');
         event.target.reset();
-        document.getElementById('product-id').value = '';
+        if (document.getElementById('product-id')) {
+            document.getElementById('product-id').value = '';
+        }
         this.loadProducts();
     },
 
