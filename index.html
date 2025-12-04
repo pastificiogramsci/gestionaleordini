@@ -660,10 +660,18 @@
                 <h2 class="text-2xl font-bold">🎁 Gestione Clienti Fidelity</h2>
             </div>
 
-            <button onclick="app.showAllFidelityCustomers()"
-                class="w-full bg-orange-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-orange-600 mb-4">
-                🔥 Azzera Tutti i Dati Fidelity
-            </button>
+            <!-- Bottoni Azioni -->
+            <div class="flex gap-3 mb-4">
+                <button onclick="app.addAllCustomersToFidelity()"
+                    class="flex-1 bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700">
+                    ➕ Aggiungi Tutti i Clienti
+                </button>
+
+                <button onclick="app.resetAllFidelity()"
+                    class="flex-1 bg-orange-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-orange-600">
+                    🔥 Azzera Dati Fidelity
+                </button>
+            </div>
 
             <div id="fidelity-customers-list" class="space-y-4"></div>
         </div>
@@ -841,43 +849,6 @@
                 <h2 class="text-2xl font-bold">⚙️ Impostazioni</h2>
             </div>
 
-            <!-- DROPBOX SYNC -->
-            <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
-                <h3 class="text-xl font-bold mb-4">📦 Sincronizzazione Dropbox</h3>
-
-                <div id="dropbox-status" class="mb-4">
-                    <p class="text-gray-600">Caricamento...</p>
-                </div>
-
-                <div id="dropbox-actions">
-                    <!-- Popolato dinamicamente -->
-                </div>
-
-                <div id="dropbox-sync-info" class="mt-4 text-sm text-gray-600">
-                    <!-- Info ultimo sync -->
-                </div>
-            </div>
-
-            <!-- Backup e Ripristino -->
-            <div class="bg-white rounded-lg shadow p-6 mb-6">
-                <h3 class="text-lg font-bold mb-4">💾 Backup e Ripristino</h3>
-                <p class="text-gray-600 text-sm mb-4">Esporta tutti i dati per backup o trasferimento tra dispositivi
-                </p>
-
-                <div class="flex flex-col md:flex-row gap-3">
-                    <button onclick="app.exportData()"
-                        class="flex-1 bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 font-medium">
-                        📤 Esporta Dati (JSON)
-                    </button>
-                    <button onclick="app.importData()"
-                        class="flex-1 bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 font-medium">
-                        📥 Importa Dati (JSON)
-                    </button>
-                </div>
-
-                <input type="file" id="import-file-input" accept=".json" class="hidden">
-            </div>
-
             <!-- Sincronizzazione Dropbox -->
             <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
                 <h3 class="text-xl font-bold mb-4">📦 Sincronizzazione Dropbox</h3>
@@ -895,15 +866,58 @@
                 </div>
             </div>
 
-            <!-- Reset Dati Test -->
-            <div class="bg-white rounded-lg shadow p-6 border-2 border-red-200">
-                <h3 class="text-lg font-bold mb-4 text-red-600">⚠️ Zona Pericolosa</h3>
-                <p class="text-gray-600 text-sm mb-4">Cancella tutti i dati di test (non reversibile!)</p>
+            <!-- Backup e Ripristino -->
+            <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+                <h3 class="text-xl font-bold mb-4">💾 Backup e Ripristino</h3>
+                <p class="text-gray-600 text-sm mb-4">Esporta tutti i dati per backup o trasferimento tra dispositivi
+                </p>
 
-                <button onclick="TestData.reset()"
-                    class="w-full bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 font-medium">
-                    🗑️ Cancella Tutti i Dati
+                <div class="flex flex-col md:flex-row gap-3">
+                    <button onclick="app.exportData()"
+                        class="flex-1 bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 font-medium">
+                        📤 Esporta Dati (JSON)
+                    </button>
+                    <button onclick="app.importData()"
+                        class="flex-1 bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 font-medium">
+                        📥 Importa Dati (JSON)
+                    </button>
+                </div>
+
+                <input type="file" id="import-file-input" accept=".json" class="hidden">
+            </div>
+
+            <!-- Sicurezza -->
+            <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+                <h3 class="text-xl font-bold mb-4">🔐 Sicurezza</h3>
+
+                <button onclick="app.changePassword()"
+                    class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                    🔑 Modifica Password
                 </button>
+
+                <p class="text-sm text-gray-600 mt-2">
+                    Password attuale: <span class="font-mono">••••••••</span>
+                </p>
+            </div>
+
+            <!-- Gestione Dati - Zona Pericolosa -->
+            <div class="bg-white rounded-lg shadow-lg p-6 border-2 border-red-200">
+                <h3 class="text-xl font-bold mb-4 text-red-600">⚠️ Zona Pericolosa</h3>
+                <p class="text-gray-600 text-sm mb-4">Azioni irreversibili - Usare con cautela!</p>
+
+                <div class="space-y-3">
+                    <button onclick="app.deleteAllOrders()"
+                        class="w-full bg-red-600 text-white px-4 py-3 rounded-lg hover:bg-red-700 font-medium">
+                        🗑️ Elimina TUTTI gli Ordini
+                    </button>
+
+                    <button onclick="TestData.reset()"
+                        class="w-full bg-red-700 text-white px-4 py-3 rounded-lg hover:bg-red-800 font-medium">
+                        💣 Cancella TUTTI i Dati (Reset Completo)
+                    </button>
+                </div>
+
+                <p class="text-xs text-red-600 mt-3">⚠️ Queste azioni sono IRREVERSIBILI!</p>
             </div>
         </div>
 

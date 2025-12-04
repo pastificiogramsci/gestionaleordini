@@ -375,6 +375,33 @@ const App = {
         this.displayFidelityCustomers(fidelityList);
     },
 
+    async addAllCustomersToFidelity() {
+        const customers = CustomersModule.getAllCustomers();
+        let added = 0;
+
+        for (const customer of customers) {
+            const existing = FidelityModule.fidelityCustomers.find(fc => fc.customerId === customer.id);
+            if (!existing) {
+                FidelityModule.addCustomerToFidelity(customer.id);
+                added++;
+            }
+        }
+
+        Utils.showToast(`✅ ${added} clienti aggiunti a Fidelity!`, "success");
+        this.loadFidelity();
+    },
+
+    async resetAllFidelity() {
+        const confirm1 = confirm("⚠️ Vuoi azzerare TUTTI i dati Fidelity?\n\nQuesta azione è irreversibile!");
+        if (!confirm1) return;
+
+        FidelityModule.fidelityCustomers = [];
+        await FidelityModule.saveFidelity();
+
+        this.loadFidelity();
+        Utils.showToast("✅ Dati Fidelity azzerati", "success");
+    },
+
     displayFidelityCustomers(fidelityList) {
         const container = document.getElementById('fidelity-customers-list');
         if (!container) return;
@@ -1536,6 +1563,26 @@ const App = {
         if (OrdersModule.deleteOrder(orderId)) {
             this.loadOrders();
         }
+    },
+
+    async deleteAllOrders() {
+        const confirm1 = confirm("⚠️ ATTENZIONE!\n\nVuoi eliminare TUTTI gli ordini?\n\nQuesta azione è IRREVERSIBILE!");
+        if (!confirm1) return;
+
+        const confirm2 = confirm("Sei ASSOLUTAMENTE sicuro?\n\nDigita OK per confermare");
+        if (!confirm2) return;
+
+        const confirm3 = prompt("Scrivi DELETE in maiuscolo per confermare:");
+        if (confirm3 !== "DELETE") {
+            Utils.showToast("❌ Cancellazione annullata", "error");
+            return;
+        }
+
+        OrdersModule.orders = [];
+        await OrdersModule.saveOrders();
+
+        this.loadOrders();
+        Utils.showToast("✅ Tutti gli ordini eliminati", "success");
     },
 
     undoDelivery(orderId) {
