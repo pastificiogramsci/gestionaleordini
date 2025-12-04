@@ -15,30 +15,28 @@ const App = {
         console.log("🚀 Inizializzazione App...");
 
         try {
-            // 0. Controlla autenticazione
+            // 1. PRIMA controlla callback Dropbox (se c'è ?code= nell'URL)
+            await Storage.checkDropboxCallback();
+
+            // 2. Controlla autenticazione
             if (!AuthManager.init()) {
                 console.log("🔒 Autenticazione richiesta");
-                return; // Mostra schermata login e aspetta
+                return;
             }
 
             console.log("✅ Autenticato");
             this.hideAuthScreen();
 
-            // 1. Controlla callback Dropbox
-            if (window.location.hash.includes('access_token')) {
-                Storage.handleDropboxCallback();
-            }
-
-            // 2. Inizializza Storage e Dropbox
+            // 3. Inizializza Storage e Dropbox
             await Storage.initDropbox();
 
-            // 3. Inizializza tutti i moduli
+            // 4. Inizializza tutti i moduli
             await this.initModules();
 
-            // 4. Setup UI
+            // 5. Setup UI
             this.setupUI();
 
-            // 5. Carica tab iniziale
+            // 6. Carica tab iniziale
             this.switchTab('dashboard');
 
             this.initialized = true;
