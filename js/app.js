@@ -1787,40 +1787,46 @@ const App = {
             const isTop = c.totalSpent >= 100; // Top se speso almeno 100€
 
             return `
-            <div class="bg-white p-5 rounded-xl shadow-lg hover:shadow-xl transition cursor-pointer border-2 border-gray-100"
-                 onclick="app.viewCustomerDetails('${c.id}')">
-                
-                <!-- Header con Nome e Badge -->
-                <div class="flex justify-between items-start mb-3">
-                    <h3 class="font-bold text-lg">${c.firstName} ${c.lastName}</h3>
-                    <div class="flex gap-1">
-                        ${fidelityCustomer ? '<span class="bg-purple-500 text-white text-xs px-2 py-1 rounded-full">🎁</span>' : ''}
-                        ${isTop ? '<span class="bg-yellow-500 text-white text-xs px-2 py-1 rounded-full">⭐</span>' : ''}
+                <div class="bg-white p-5 rounded-xl shadow-lg hover:shadow-xl transition border-2 border-gray-100">
+                    
+                    <!-- Header con Nome e Badge -->
+                    <div class="flex justify-between items-start mb-3">
+                        <h3 class="font-bold text-lg cursor-pointer" onclick="app.viewCustomerDetails('${c.id}')">${c.firstName} ${c.lastName}</h3>
+                        <div class="flex gap-1">
+                            ${c.inWhatsAppGroup ? '<span class="bg-green-500 text-white text-xs px-2 py-1 rounded-full">💬</span>' : ''}
+                            ${fidelityCustomer ? '<span class="bg-purple-500 text-white text-xs px-2 py-1 rounded-full">🎁</span>' : ''}
+                            ${isTop ? '<span class="bg-yellow-500 text-white text-xs px-2 py-1 rounded-full">⭐</span>' : ''}
+                        </div>
+                    </div>
+                    
+                    <!-- Info Contatto -->
+                    <div class="text-sm text-gray-600 space-y-1 mb-3 cursor-pointer" onclick="app.viewCustomerDetails('${c.id}')">
+                        ${c.phone ? `<p>📞 ${c.phone}</p>` : ''}
+                        ${c.email ? `<p class="text-xs">📧 ${c.email}</p>` : ''}
+                    </div>
+                    
+                    <!-- Statistiche -->
+                    <div class="grid grid-cols-2 gap-2 pt-3 border-t border-gray-200 mb-3 cursor-pointer" onclick="app.viewCustomerDetails('${c.id}')">
+                        <div class="text-center bg-blue-50 rounded-lg p-2">
+                            <p class="text-xs text-gray-600">Ordini</p>
+                            <p class="text-xl font-bold text-blue-600">${c.totalOrders || 0}</p>
+                        </div>
+                        <div class="text-center bg-green-50 rounded-lg p-2">
+                            <p class="text-xs text-gray-600">Speso</p>
+                            <p class="text-lg font-bold text-green-600">${Utils.formatPrice(c.totalSpent || 0)}</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Data Registrazione e Bottone Elimina -->
+                    <div class="flex justify-between items-center">
+                        <p class="text-xs text-gray-400">📅 ${Utils.formatDate(c.createdAt)}</p>
+                        <button onclick="event.stopPropagation(); app.deleteCustomer('${c.id}')" 
+                                class="bg-red-500 text-white px-3 py-1 rounded-lg hover:bg-red-600 text-sm font-bold">
+                            🗑️
+                        </button>
                     </div>
                 </div>
-                
-                <!-- Info Contatto -->
-                <div class="text-sm text-gray-600 space-y-1 mb-3">
-                    ${c.phone ? `<p>📞 ${c.phone}</p>` : ''}
-                    ${c.email ? `<p class="text-xs">📧 ${c.email}</p>` : ''}
-                </div>
-                
-                <!-- Statistiche -->
-                <div class="grid grid-cols-2 gap-2 pt-3 border-t border-gray-200">
-                    <div class="text-center bg-blue-50 rounded-lg p-2">
-                        <p class="text-xs text-gray-600">Ordini</p>
-                        <p class="text-xl font-bold text-blue-600">${c.totalOrders || 0}</p>
-                    </div>
-                    <div class="text-center bg-green-50 rounded-lg p-2">
-                        <p class="text-xs text-gray-600">Speso</p>
-                        <p class="text-lg font-bold text-green-600">${Utils.formatPrice(c.totalSpent || 0)}</p>
-                    </div>
-                </div>
-                
-                <!-- Data Registrazione -->
-                <p class="text-xs text-gray-400 mt-2">📅 ${Utils.formatDate(c.createdAt)}</p>
-            </div>
-        `;
+            `;
         }).join('');
     },
 
