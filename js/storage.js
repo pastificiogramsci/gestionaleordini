@@ -238,7 +238,7 @@ const Storage = {
             };
 
             const content = JSON.stringify(payload);
-            const path = `/${key}.json`;
+            const path = key.startsWith('/') ? key : `/${key}.json`; // ← FIX: usa key direttamente se inizia con /
 
             await this.dropboxClient.filesUpload({
                 path: path,
@@ -264,8 +264,9 @@ const Storage = {
         if (!this.dropboxClient) return null;
 
         try {
-            const path = `/${key}.json`;
+            const path = key.startsWith('/') ? key : `/${key}.json`; // ← FIX
             const response = await this.dropboxClient.filesDownload({ path });
+
 
             const reader = new FileReader();
             return new Promise((resolve, reject) => {
