@@ -1197,7 +1197,7 @@ const App = {
         const statusColors = {
             pending: "bg-yellow-100 text-yellow-800",
             confirmed: "bg-blue-100 text-blue-800",
-            in_preparation: "bg-purple-100 text-purple-800",  // ← NUOVO
+            in_preparation: "bg-purple-100 text-purple-800",
             ready: "bg-green-100 text-green-800",
             delivered: "bg-gray-100 text-gray-800",
             cancelled: "bg-red-100 text-red-800"
@@ -1206,7 +1206,7 @@ const App = {
         const statusNames = {
             pending: "In attesa",
             confirmed: "Confermato",
-            in_preparation: "In preparazione",  // ← NUOVO
+            in_preparation: "In preparazione",
             ready: "Pronto",
             delivered: "Consegnato",
             cancelled: "Annullato"
@@ -1217,33 +1217,36 @@ const App = {
             const customerName = customer ? `${customer.firstName} ${customer.lastName}` : 'Cliente sconosciuto';
 
             return `
-                <div class="bg-white p-4 rounded-lg shadow cursor-pointer" onclick="app.viewOrderDetails('${o.id}')">
-                    <div class="flex justify-between items-start mb-2">
-                        <div>
-                            <h3 class="font-bold text-lg">
-                                #${o.orderNumber || 'N/A'} - ${customerName}
-                                ${o.modifications ? '<span class="ml-2 bg-orange-500 text-white px-2 py-1 rounded-full text-xs">⚠️ Da modificare</span>' : ''}
-                                ${o.deliveryDate && o.deliveryDate < new Date().toISOString().split('T')[0] && o.status !== 'delivered' ? '<span class="ml-2 bg-red-500 text-white px-2 py-1 rounded-full text-xs">📅 Data passata</span>' : ''}
-                            </h3>
-                            <p class="text-sm text-gray-600">${o.items.length} prodotti</p>
-                            ${o.deliveryDate ? `<p class="text-sm text-gray-600">📅 Consegna: ${Utils.formatDate(o.deliveryDate)} ${o.deliveryTime || ''}</p>` : ''}
-                            <p class="text-xs text-gray-500">Creato: ${Utils.formatDateTime(o.createdAt)}</p>
-                        </div>
-                        <div class="text-right">
-                            <p class="text-2xl font-bold text-blue-600">${Utils.formatPrice(o.totalAmount)}</p>
-                            <span class="text-xs px-2 py-1 rounded ${statusColors[o.status]}">${statusNames[o.status]}</span>
-                        </div>
+            <div class="bg-white p-4 rounded-lg shadow cursor-pointer" onclick="app.viewOrderDetails('${o.id}')">
+                <div class="flex justify-between items-start mb-2">
+                    <div>
+                        <h3 class="font-bold text-lg">
+                            #${o.orderNumber || 'N/A'} - ${customerName}
+                            ${o.modifications ? '<span class="ml-2 bg-orange-500 text-white px-2 py-1 rounded-full text-xs">⚠️ Da modificare</span>' : ''}
+                            ${o.deliveryDate && o.deliveryDate < new Date().toISOString().split('T')[0] && o.status !== 'delivered' ? '<span class="ml-2 bg-red-500 text-white px-2 py-1 rounded-full text-xs">📅 Data passata</span>' : ''}
+                            ${o.deposit > 0 ? (o.depositPaid ? '<span class="ml-2 bg-green-500 text-white px-2 py-1 rounded-full text-xs">✓ Acconto</span>' : '<span class="ml-2 bg-yellow-500 text-white px-2 py-1 rounded-full text-xs">⚠️ Acconto richiesto</span>') : ''}
+                        </h3>
+                        <p class="text-sm text-gray-600">${o.items.length} prodotti</p>
+                        ${o.deliveryDate ? `<p class="text-sm text-gray-600">📅 Consegna: ${Utils.formatDate(o.deliveryDate)} ${o.deliveryTime || ''}</p>` : ''}
+                        ${o.deposit > 0 ? `<p class="text-sm font-medium ${o.depositPaid ? 'text-green-600' : 'text-orange-600'}">💰 Acconto: ${Utils.formatPrice(o.deposit)} ${o.depositPaid ? '(Ricevuto)' : '(Da ricevere)'}</p>` : ''}
+                        <p class="text-xs text-gray-500">Creato: ${Utils.formatDateTime(o.createdAt)}</p>
                     </div>
-                
-                <div class="flex gap-2 mt-3">
-                    ${o.status === 'pending' ? `<button onclick="OrdersModule.changeOrderStatus('${o.id}', 'in_preparation'); app.loadOrders()" class="text-xs px-3 py-1 bg-blue-600 text-white rounded">Conferma</button>` : ''}
-                    ${o.status === 'ready' ? `<button onclick="OrdersModule.changeOrderStatus('${o.id}', 'delivered'); app.loadOrders()" class="text-xs px-3 py-1 bg-gray-600 text-white rounded">Consegnato</button>` : ''}
-                    ${o.status === 'delivered' ? `<button onclick="app.undoDelivery('${o.id}')" class="text-xs px-3 py-1 bg-orange-600 text-white rounded">↩️ Annulla consegna</button>` : ''}
-                    ${o.status !== 'delivered' ? `<button onclick="app.editOrder('${o.id}')" class="text-xs px-3 py-1 bg-gray-200 rounded">✏️ Modifica</button>` : ''}
-                    <button onclick="app.deleteOrder('${o.id}')" class="text-red-600 text-sm ml-auto">🗑️</button>
+                    <div class="text-right">
+                        <p class="text-2xl font-bold text-blue-600">${Utils.formatPrice(o.totalAmount)}</p>
+                        ${o.deposit > 0 && !o.depositPaid ? `<p class="text-sm text-orange-600 font-medium">Residuo: ${Utils.formatPrice(o.totalAmount - o.deposit)}</p>` : ''}
+                        <span class="text-xs px-2 py-1 rounded ${statusColors[o.status]}">${statusNames[o.status]}</span>
+                    </div>
                 </div>
+            
+            <div class="flex gap-2 mt-3">
+                ${o.status === 'pending' ? `<button onclick="OrdersModule.changeOrderStatus('${o.id}', 'in_preparation'); app.loadOrders()" class="text-xs px-3 py-1 bg-blue-600 text-white rounded">Conferma</button>` : ''}
+                ${o.status === 'ready' ? `<button onclick="OrdersModule.changeOrderStatus('${o.id}', 'delivered'); app.loadOrders()" class="text-xs px-3 py-1 bg-gray-600 text-white rounded">Consegnato</button>` : ''}
+                ${o.status === 'delivered' ? `<button onclick="app.undoDelivery('${o.id}')" class="text-xs px-3 py-1 bg-orange-600 text-white rounded">↩️ Annulla consegna</button>` : ''}
+                ${o.status !== 'delivered' ? `<button onclick="app.editOrder('${o.id}')" class="text-xs px-3 py-1 bg-gray-200 rounded">✏️ Modifica</button>` : ''}
+                <button onclick="app.deleteOrder('${o.id}')" class="text-red-600 text-sm ml-auto">🗑️</button>
             </div>
-        `;
+        </div>
+    `;
         }).join('');
     },
 
@@ -1349,6 +1352,8 @@ const App = {
         document.getElementById('order-items').innerHTML = '';
         document.getElementById('order-delivery-date').value = new Date().toISOString().split('T')[0];
         document.getElementById('order-notes').value = '';
+        document.getElementById('order-deposit').value = '';
+        document.getElementById('order-deposit-paid').checked = false;
         this.orderItems = [];
         this.updateOrderTotal();
     },

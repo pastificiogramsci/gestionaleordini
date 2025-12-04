@@ -45,19 +45,17 @@ const OrdersModule = {
 
     // Crea nuovo ordine
     createOrder(orderData) {
-        // Genera numero ordine progressivo per data
-        const sameDate = this.orders.filter(o => o.deliveryDate === orderData.deliveryDate);
-        const dateStr = orderData.deliveryDate ? new Date(orderData.deliveryDate).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' }) : '';
-        const orderNumber = `${sameDate.length + 1}-${dateStr}`;
         const order = {
             id: Utils.generateId(),
-            orderNumber: orderNumber,
+            orderNumber: this.generateOrderNumber(),
             customerId: orderData.customerId,
-            items: orderData.items || [], // Array di { productId, quantity, price }
-            totalAmount: this.calculateOrderTotal(orderData.items),
+            items: orderData.items,
+            totalAmount: this.calculateTotal(orderData.items),
+            deposit: parseFloat(orderData.deposit) || 0, // ← AGGIUNGI
+            depositPaid: orderData.depositPaid || false, // ← AGGIUNGI
             status: this.ORDER_STATUS.PENDING,
-            deliveryDate: orderData.deliveryDate || null,
-            deliveryTime: orderData.deliveryTime || null,
+            deliveryDate: orderData.deliveryDate,
+            deliveryTime: orderData.deliveryTime || '',
             notes: orderData.notes || '',
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
@@ -65,11 +63,6 @@ const OrdersModule = {
 
         this.orders.push(order);
         this.saveOrders();
-
-        // Aggiorna statistiche cliente
-        if (CustomersModule) {
-            CustomersModule.updateCustomerStats(order.customerId, order.totalAmount);
-        }
 
         Utils.showToast("✅ Ordine creato!", "success");
         return order;
@@ -190,7 +183,7 @@ const OrdersModule = {
                     }, 500);
                 }
             } else if (WhatsAppModule) {
-                
+
                 // Solo notifica consegna senza coupon
                 setTimeout(() => {
                     if (confirm("Mandare notifica consegna su WhatsApp?")) {
