@@ -2123,7 +2123,26 @@ const App = {
     },
 
     openNewProductModal() {
+        this.editingProductId = null;
         this.openModal('new-product-modal');
+
+        // Reset campi
+        document.getElementById('product-name').value = '';
+        document.getElementById('product-category').value = '';
+        document.getElementById('product-price').value = '';
+        document.getElementById('product-unit').value = 'kg';
+        document.getElementById('product-weight').value = '';
+        document.getElementById('product-description').value = '';
+        document.getElementById('product-ingredients').value = '';
+        document.getElementById('product-custom-allergens').value = '';
+
+        // Reset checkbox allergeni
+        document.querySelectorAll('.allergen-checkbox').forEach(cb => cb.checked = false);
+
+        const modalTitle = document.querySelector('#new-product-modal h3');
+        if (modalTitle) {
+            modalTitle.textContent = '🍝 Nuovo Prodotto';
+        }
     },
 
     saveProduct(event) {

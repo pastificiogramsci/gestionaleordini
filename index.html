@@ -801,48 +801,185 @@
         </div>
 
         <!-- Modal Nuovo Prodotto -->
+        <!-- Modal Nuovo Prodotto -->
         <div id="new-product-modal"
             class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4 z-50">
-            <div class="bg-white rounded-lg p-6 w-full max-w-md">
-                <h3 class="text-xl font-bold mb-4">Nuovo Prodotto</h3>
-                <form onsubmit="app.saveProduct(event)">
-                    <input type="hidden" id="product-id">
-                    <input type="text" id="product-name" placeholder="Nome *" required
-                        class="w-full px-3 py-2 border rounded mb-3">
-                    <input type="number" step="0.01" id="product-price" placeholder="Prezzo *" required
-                        class="w-full px-3 py-2 border rounded mb-3">
-                    <input type="text" id="product-category" list="categories-list" placeholder="Categoria *" required
-                        class="w-full px-3 py-2 border rounded mb-3">
-                    <select id="product-category" onchange="checkNewCategory()"
-                        class="w-full px-3 py-2 border rounded mb-3" required>
-                        <option value="">-- Seleziona categoria --</option>
-                        <option value="Pasta">Pasta</option>
-                        <option value="Gastronomia">Gastronomia</option>
-                        <option value="Sughi">Sughi</option>
-                        <option value="Prodotti Forno">Prodotti Forno</option>
-                        <option value="Prodotti Rivendita">Prodotti Rivendita</option>
-                        <option value="Altro">Altro</option>
-                        <option value="__new__">+ Nuova categoria...</option>
-                    </select>
-                    <input type="text" id="product-category-new" placeholder="Nome nuova categoria"
-                        class="w-full px-3 py-2 border rounded mb-3 hidden">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
 
-                    <select id="product-unit" onchange="toggleWeightInput()"
-                        class="w-full px-3 py-2 border rounded mb-3">
-                        <option value="kg">Kg</option>
-                        <option value="pezzo">Pezzo</option>
-                        <option value="kg (peso medio)">Kg (peso medio)</option>
-                    </select>
+                <!-- Header Colorato -->
+                <div class="bg-gradient-to-r from-orange-500 to-red-500 text-white p-6 rounded-t-xl">
+                    <h3 class="text-2xl font-bold">🍝 Nuovo Prodotto</h3>
+                </div>
 
-                    <input type="number" step="0.001" id="product-weight" placeholder="Peso medio kg (es. 0.3)"
-                        class="w-full px-3 py-2 border rounded mb-3 hidden">
+                <!-- Form -->
+                <form onsubmit="app.saveProduct(event)" class="p-6">
 
-                    <textarea id="product-description" placeholder="Descrizione"
-                        class="w-full px-3 py-2 border rounded mb-3"></textarea>
-                    <div class="flex gap-3 mt-4">
+                    <!-- Nome Prodotto -->
+                    <div class="mb-4">
+                        <label class="block text-sm font-bold mb-2 text-gray-700">
+                            <span class="text-red-500">*</span> Nome Prodotto
+                        </label>
+                        <input type="text" id="product-name" required
+                            class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-orange-500 focus:outline-none"
+                            placeholder="Es: Ravioli Magro">
+                    </div>
+
+                    <!-- Categoria e Prezzo -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-sm font-bold mb-2 text-gray-700">
+                                <span class="text-red-500">*</span> Categoria
+                            </label>
+                            <select id="product-category" required
+                                class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-orange-500 focus:outline-none">
+                                <option value="">-- Seleziona --</option>
+                                <option value="Pasta">🍝 Pasta</option>
+                                <option value="Pane">🍞 Pane</option>
+                                <option value="Dolci">🍰 Dolci</option>
+                                <option value="Gastronomia">🍲 Gastronomia</option>
+                                <option value="Altro">📦 Altro</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-bold mb-2 text-gray-700">
+                                <span class="text-red-500">*</span> Prezzo (€)
+                            </label>
+                            <input type="number" step="0.01" id="product-price" required
+                                class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-orange-500 focus:outline-none"
+                                placeholder="15.90">
+                        </div>
+                    </div>
+
+                    <!-- Unità e Peso Medio -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-sm font-bold mb-2 text-gray-700">
+                                Unità di misura
+                            </label>
+                            <select id="product-unit"
+                                class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-orange-500 focus:outline-none">
+                                <option value="kg">Kg</option>
+                                <option value="pezzo">Pezzo</option>
+                                <option value="g">Grammi</option>
+                                <option value="l">Litri</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-bold mb-2 text-gray-700">
+                                Peso medio (g)
+                            </label>
+                            <input type="number" id="product-weight"
+                                class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-orange-500 focus:outline-none"
+                                placeholder="300">
+                            <p class="text-xs text-gray-500 mt-1">Opzionale - per prodotti a pezzo</p>
+                        </div>
+                    </div>
+
+                    <!-- Descrizione -->
+                    <div class="mb-4">
+                        <label class="block text-sm font-bold mb-2 text-gray-700">
+                            Descrizione
+                        </label>
+                        <textarea id="product-description" rows="2"
+                            class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-orange-500 focus:outline-none"
+                            placeholder="Breve descrizione del prodotto..."></textarea>
+                    </div>
+
+                    <!-- Ingredienti -->
+                    <div class="mb-4">
+                        <label class="block text-sm font-bold mb-2 text-gray-700">
+                            🥚 Ingredienti
+                        </label>
+                        <textarea id="product-ingredients" rows="3"
+                            class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-orange-500 focus:outline-none"
+                            placeholder="Es: Farina di grano tenero tipo 00, uova fresche, sale..."></textarea>
+                        <p class="text-xs text-gray-500 mt-1">Opzionale - separa con virgola</p>
+                    </div>
+
+                    <!-- Allergeni -->
+                    <div class="mb-6 bg-yellow-50 border-2 border-yellow-200 rounded-lg p-4">
+                        <label class="block text-sm font-bold mb-3 text-gray-700">
+                            ⚠️ Allergeni Presenti
+                        </label>
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+                            <label class="flex items-center text-sm cursor-pointer">
+                                <input type="checkbox" value="Glutine" class="allergen-checkbox mr-2">
+                                Glutine
+                            </label>
+                            <label class="flex items-center text-sm cursor-pointer">
+                                <input type="checkbox" value="Crostacei" class="allergen-checkbox mr-2">
+                                Crostacei
+                            </label>
+                            <label class="flex items-center text-sm cursor-pointer">
+                                <input type="checkbox" value="Uova" class="allergen-checkbox mr-2">
+                                Uova
+                            </label>
+                            <label class="flex items-center text-sm cursor-pointer">
+                                <input type="checkbox" value="Pesce" class="allergen-checkbox mr-2">
+                                Pesce
+                            </label>
+                            <label class="flex items-center text-sm cursor-pointer">
+                                <input type="checkbox" value="Arachidi" class="allergen-checkbox mr-2">
+                                Arachidi
+                            </label>
+                            <label class="flex items-center text-sm cursor-pointer">
+                                <input type="checkbox" value="Soia" class="allergen-checkbox mr-2">
+                                Soia
+                            </label>
+                            <label class="flex items-center text-sm cursor-pointer">
+                                <input type="checkbox" value="Latte" class="allergen-checkbox mr-2">
+                                Latte
+                            </label>
+                            <label class="flex items-center text-sm cursor-pointer">
+                                <input type="checkbox" value="Frutta a guscio" class="allergen-checkbox mr-2">
+                                Frutta a guscio
+                            </label>
+                            <label class="flex items-center text-sm cursor-pointer">
+                                <input type="checkbox" value="Sedano" class="allergen-checkbox mr-2">
+                                Sedano
+                            </label>
+                            <label class="flex items-center text-sm cursor-pointer">
+                                <input type="checkbox" value="Senape" class="allergen-checkbox mr-2">
+                                Senape
+                            </label>
+                            <label class="flex items-center text-sm cursor-pointer">
+                                <input type="checkbox" value="Sesamo" class="allergen-checkbox mr-2">
+                                Sesamo
+                            </label>
+                            <label class="flex items-center text-sm cursor-pointer">
+                                <input type="checkbox" value="Solfiti" class="allergen-checkbox mr-2">
+                                Solfiti
+                            </label>
+                            <label class="flex items-center text-sm cursor-pointer">
+                                <input type="checkbox" value="Lupini" class="allergen-checkbox mr-2">
+                                Lupini
+                            </label>
+                            <label class="flex items-center text-sm cursor-pointer">
+                                <input type="checkbox" value="Molluschi" class="allergen-checkbox mr-2">
+                                Molluschi
+                            </label>
+                        </div>
+
+                        <!-- Allergeni Aggiuntivi -->
+                        <div class="mt-3">
+                            <input type="text" id="product-custom-allergens"
+                                class="w-full px-3 py-2 border rounded-lg text-sm"
+                                placeholder="Altri allergeni (separa con virgola)">
+                        </div>
+                    </div>
+
+                    <!-- Bottoni -->
+                    <div class="flex gap-3">
                         <button type="button" onclick="app.closeModal('new-product-modal')"
-                            class="flex-1 bg-gray-200 px-4 py-2 rounded">Annulla</button>
-                        <button type="submit" class="flex-1 bg-blue-600 text-white px-4 py-2 rounded">Salva</button>
+                            class="flex-1 bg-gray-200 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-300 font-bold">
+                            ✕ Annulla
+                        </button>
+                        <button type="submit"
+                            class="flex-1 bg-orange-600 text-white px-6 py-3 rounded-lg hover:bg-orange-700 font-bold shadow-lg">
+                            ✓ Salva Prodotto
+                        </button>
                     </div>
                 </form>
             </div>
@@ -1127,7 +1264,7 @@
                 <p class="text-gray-600 text-sm mb-4">Azioni irreversibili - Usare con cautela!</p>
 
                 <div class="space-y-3">
-                    
+
                     <button onclick="app.removeDuplicateCustomers()"
                         class="w-full bg-orange-500 text-white px-4 py-3 rounded-lg hover:bg-orange-600 font-medium">
                         🔍 Trova ed Elimina Duplicati Clienti

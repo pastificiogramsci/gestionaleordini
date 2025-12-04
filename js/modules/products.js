@@ -41,9 +41,11 @@ const ProductsModule = {
             price: parseFloat(productData.price) || 0,
             category: productData.category || 'Altro',
             description: productData.description || '',
-            unit: productData.unit || 'kg', // kg, pezzo, kg (peso medio)
-            averageWeight: productData.averageWeight || null, // per peso medio
+            unit: productData.unit || 'kg',
+            averageWeight: productData.averageWeight || null,
             variableWeight: productData.variableWeight || false,
+            ingredients: productData.ingredients || '', // ← AGGIUNGI
+            allergens: productData.allergens || [], // ← AGGIUNGI
             active: true,
             createdAt: new Date().toISOString()
         };
@@ -57,27 +59,22 @@ const ProductsModule = {
 
     // Aggiorna prodotto esistente
     updateProduct(productId, updates) {
-        const index = this.products.findIndex(p => p.id === productId);
+        const product = this.getProductById(productId);
+        if (!product) return null;
 
-        if (index === -1) {
-            Utils.showToast("Prodotto non trovato", "error");
-            return null;
-        }
-
-        // Se c'è un prezzo, convertilo in numero
-        if (updates.price !== undefined) {
-            updates.price = parseFloat(updates.price);
-        }
-
-        this.products[index] = {
-            ...this.products[index],
-            ...updates,
-            id: productId // Non permettere cambio ID
-        };
+        product.name = updates.name || product.name;
+        product.price = parseFloat(updates.price) || product.price;
+        product.category = updates.category || product.category;
+        product.description = updates.description !== undefined ? updates.description : product.description;
+        product.unit = updates.unit || product.unit;
+        product.averageWeight = updates.averageWeight !== undefined ? updates.averageWeight : product.averageWeight;
+        product.variableWeight = updates.variableWeight !== undefined ? updates.variableWeight : product.variableWeight;
+        product.ingredients = updates.ingredients !== undefined ? updates.ingredients : product.ingredients; // ← AGGIUNGI
+        product.allergens = updates.allergens !== undefined ? updates.allergens : product.allergens; // ← AGGIUNGI
 
         this.saveProducts();
         Utils.showToast("✅ Prodotto aggiornato!", "success");
-        return this.products[index];
+        return product;
     },
 
     // Elimina prodotto
