@@ -1593,28 +1593,50 @@ const App = {
     },
 
     populateCustomersList() {
-        const customers = CustomersModule.getAllCustomers('name')
-            .filter(c => c.type !== 'fornitore');
+        console.log("📋 INIZIO populateCustomersList"); // ← DEBUG
 
-        console.log("📋 Popolamento lista clienti:", customers.length); // ← DEBUG
+        const allCustomers = CustomersModule.getAllCustomers('name');
+        console.log("📊 Tutti i clienti:", allCustomers.length); // ← DEBUG
+
+        const customers = allCustomers.filter(c => c.type !== 'fornitore');
+        console.log("📊 Clienti (no fornitori):", customers.length); // ← DEBUG
 
         const listContainer = document.getElementById('order-customer-list');
+        console.log("📦 Container trovato:", !!listContainer); // ← DEBUG
+
         if (!listContainer) {
-            console.error("❌ order-customer-list non trovato!"); // ← DEBUG
+            console.error("❌ order-customer-list non trovato!");
             return;
         }
 
-        listContainer.innerHTML = customers.map(c => `
+        listContainer.innerHTML = customers.map(c => {
+            const fullName = `${c.firstName} ${c.lastName}`;
+            return `
             <div class="customer-item p-3 hover:bg-blue-50 cursor-pointer border-b"
-                data-id="${c.id}"
-                data-name="${c.firstName} ${c.lastName}"
-                onclick="app.selectCustomer('${c.id}', '${c.firstName} ${c.lastName}')">
-                <div class="font-bold">${c.firstName} ${c.lastName}</div>
+                 data-id="${c.id}"
+                 data-name="${fullName}">
+                <div class="font-bold">${fullName}</div>
                 ${c.phone ? `<div class="text-sm text-gray-600">📞 ${c.phone}</div>` : ''}
             </div>
-        `).join('');
+        `;
+        }).join('');
 
-        console.log("✅ Lista popolata con", listContainer.children.length, "clienti"); // ← DEBUG
+        console.log("✅ HTML generato, lunghezza:", listContainer.innerHTML.length); // ← DEBUG
+
+        // Aggiungi event listener
+        const items = document.querySelectorAll('.customer-item');
+        console.log("👥 Customer items trovati:", items.length); // ← DEBUG
+
+        items.forEach(item => {
+            item.addEventListener('click', () => {
+                const id = item.dataset.id;
+                const name = item.dataset.name;
+                console.log("🖱️ Click su cliente:", name); // ← DEBUG
+                app.selectCustomer(id, name);
+            });
+        });
+
+        console.log("✅ FINE populateCustomersList"); // ← DEBUG
     },
 
     filterCustomerDropdown() {
@@ -1644,6 +1666,8 @@ const App = {
     },
 
     selectCustomer(customerId, customerName) {
+        console.log("✅ Cliente selezionato:", customerId, customerName); // ← DEBUG
+
         document.getElementById('order-customer').value = customerId;
         document.getElementById('order-customer-search').value = customerName;
         document.getElementById('order-customer-list').classList.add('hidden');
@@ -1693,7 +1717,6 @@ const App = {
 
         const itemId = 'item-' + Date.now();
 
-        // Raggruppa prodotti per categoria
         const products = ProductsModule.getAllProducts().filter(p => p.active);
         const categories = [...new Set(products.map(p => p.category))].sort();
 
@@ -1701,63 +1724,68 @@ const App = {
         itemDiv.className = 'bg-white border-2 border-gray-200 rounded-lg p-4';
         itemDiv.id = itemId;
         itemDiv.innerHTML = `
-            <div class="space-y-3">
-                <!-- Ricerca e Filtro Categoria -->
-                <div class="flex gap-2">
-                    <input type="text" 
-                        class="flex-1 px-3 py-2 border rounded-lg product-search-${itemId}" 
-                        placeholder="🔍 Cerca prodotto..."
-                        oninput="app.filterProducts('${itemId}')">
-                    
-                    <select class="px-3 py-2 border rounded-lg product-category-filter-${itemId}"
-                            onchange="app.filterProducts('${itemId}')">
-                        <option value="">Tutte le categorie</option>
-                        ${categories.map(cat => `<option value="${cat}">${cat}</option>`).join('')}
-                    </select>
-                </div>
+        <div class="space-y-3">
+            <!-- Ricerca e Filtro Categoria -->
+            <div class="flex gap-2">
+                <input type="text" 
+                       class="flex-1 px-3 py-2 border rounded-lg product-search-${itemId}" 
+                       placeholder="🔍 Cerca prodotto..."
+                       oninput="app.filterProducts('${itemId}')">
                 
-                <!-- Prodotto -->
-                <div class="flex gap-3">
-                    <div class="flex-1">
-                        <label class="block text-xs font-medium text-gray-600 mb-1">Prodotto</label>
-                        <select class="order-item-product w-full px-3 py-2 border rounded-lg" 
-                                onchange="app.updateOrderItemPrice('${itemId}')">
-                            <option value="">-- Seleziona --</option>
-                            ${products.map(p => `
+                <select class="px-3 py-2 border rounded-lg product-category-filter-${itemId}"
+                        onchange="app.filterProducts('${itemId}')">
+                    <option value="">Tutte le categorie</option>
+                    ${categories.map(cat => `<option value="${cat}">${cat}</option>`).join('')}
+                </select>
+            </div>
+            
+            <!-- Dettagli Prodotto -->
+            <div class="flex gap-3">
+                <div class="flex-1">
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Prodotto</label>
+                    <select class="order-item-product w-full px-3 py-2 border rounded-lg" 
+                            onchange="app.updateOrderItemPrice('${itemId}')">
+                        <option value="">-- Seleziona --</option>
+                        ${products.map(p => {
+            const modeIcon = p.mode === 'weight' ? '🍝' : p.mode === 'kg' ? '⚖️' : '🔢';
+            return `
                                 <option value="${p.id}" 
                                         data-price="${p.price}" 
                                         data-unit="${p.unit}"
+                                        data-weight="${p.averageWeight || 0}"
+                                        data-mode="${p.mode || 'pieces'}"
                                         data-category="${p.category}"
                                         data-name="${p.name.toLowerCase()}">
-                                    ${p.name} - ${Utils.formatPrice(p.price)}/${p.unit}
+                                    ${modeIcon} ${p.name} - ${Utils.formatPrice(p.price)}/${p.unit}
                                 </option>
-                            `).join('')}
-                        </select>
-                    </div>
-                    
-                    <div class="w-32">
-                        <label class="block text-xs font-medium text-gray-600 mb-1">Quantità</label>
-                        <input type="number" step="0.01" value="1" min="0.01" 
-                            class="order-item-quantity w-full px-3 py-2 border rounded-lg" 
-                            oninput="app.updateOrderTotal()">
-                    </div>
-                    
-                    <div class="w-32">
-                        <label class="block text-xs font-medium text-gray-600 mb-1">Prezzo €</label>
-                        <input type="number" step="0.01" value="0" 
-                            class="order-item-price w-full px-3 py-2 border rounded-lg" 
-                            oninput="app.updateOrderTotal()">
-                    </div>
-                    
-                    <div class="flex items-end">
-                        <button type="button" onclick="app.removeOrderItem('${itemId}')" 
-                                class="bg-red-500 text-white px-3 py-2 rounded-lg hover:bg-red-600">
-                            🗑️
-                        </button>
-                    </div>
+                            `;
+        }).join('')}
+                    </select>
+                </div>
+                
+                <div class="w-32">
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Quantità</label>
+                    <input type="number" step="0.01" value="1" min="0.01" 
+                           class="order-item-quantity w-full px-3 py-2 border rounded-lg" 
+                           oninput="app.updateOrderTotal()">
+                </div>
+                
+                <div class="w-32">
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Prezzo €</label>
+                    <input type="number" step="0.01" value="0" 
+                           class="order-item-price w-full px-3 py-2 border rounded-lg" 
+                           oninput="app.updateOrderTotal()">
+                </div>
+                
+                <div class="flex items-end">
+                    <button type="button" onclick="app.removeOrderItem('${itemId}')" 
+                            class="bg-red-500 text-white px-3 py-2 rounded-lg hover:bg-red-600">
+                        🗑️
+                    </button>
                 </div>
             </div>
-        `;
+        </div>
+    `;
 
         container.appendChild(itemDiv);
     },
@@ -1780,10 +1808,18 @@ const App = {
 
     updateOrderItemPrice(itemId) {
         const itemDiv = document.getElementById(itemId);
-        if (!itemDiv) return;
+        if (!itemDiv) {
+            console.error("❌ Item non trovato:", itemId);
+            return;
+        }
 
         const select = itemDiv.querySelector('.order-item-product');
         const priceInput = itemDiv.querySelector('.order-item-price');
+
+        if (!select || !priceInput) {
+            console.error("❌ Select o priceInput non trovato");
+            return;
+        }
 
         const selectedOption = select.options[select.selectedIndex];
         if (selectedOption && selectedOption.dataset.price) {
@@ -1796,11 +1832,30 @@ const App = {
         let total = 0;
 
         document.querySelectorAll('#order-items > div').forEach(itemDiv => {
+            const select = itemDiv.querySelector('.order-item-product');
             const quantity = parseFloat(itemDiv.querySelector('.order-item-quantity').value) || 0;
             const price = parseFloat(itemDiv.querySelector('.order-item-price').value) || 0;
 
-            if (quantity > 0 && price > 0) {
-                total += quantity * price;
+            if (select && select.value && quantity > 0 && price > 0) {
+                const selectedOption = select.options[select.selectedIndex];
+                const weight = parseFloat(selectedOption.dataset.weight) || 0;
+                const mode = selectedOption.dataset.mode || 'pieces'; // ← Legge dal prodotto
+
+                let itemTotal = 0;
+
+                switch (mode) {
+                    case 'weight':
+                        itemTotal = weight > 0 ? price * weight * quantity : price * quantity;
+                        break;
+                    case 'pieces':
+                        itemTotal = price * quantity;
+                        break;
+                    case 'kg':
+                        itemTotal = price * quantity;
+                        break;
+                }
+
+                total += itemTotal;
             }
         });
 
@@ -1812,6 +1867,7 @@ const App = {
 
     saveOrder() {
         const customerId = document.getElementById('order-customer').value;
+
         if (!customerId) {
             Utils.showToast("❌ Seleziona un cliente", "error");
             return;
@@ -1825,9 +1881,35 @@ const App = {
             const price = parseFloat(itemDiv.querySelector('.order-item-price').value) || 0;
 
             if (select && select.value && quantity > 0) {
+                const selectedOption = select.options[select.selectedIndex];
+                const weight = parseFloat(selectedOption.dataset.weight) || 0;
+                const mode = selectedOption.dataset.mode || 'pieces'; // ← Legge dal prodotto
+
+                let finalQuantity = quantity;
+                let unit = 'pz';
+
+                switch (mode) {
+                    case 'weight':
+                        if (weight > 0) {
+                            finalQuantity = weight * quantity;
+                            unit = 'kg';
+                        }
+                        break;
+                    case 'pieces':
+                        finalQuantity = quantity;
+                        unit = 'pz';
+                        break;
+                    case 'kg':
+                        finalQuantity = quantity;
+                        unit = 'kg';
+                        break;
+                }
+
                 items.push({
                     productId: select.value,
-                    quantity: quantity,
+                    quantity: finalQuantity,
+                    unit: unit,
+                    mode: mode,
                     price: price,
                     prepared: false
                 });
@@ -1849,36 +1931,26 @@ const App = {
             depositPaid: document.getElementById('order-deposit-paid').checked
         };
 
-        if (this.editingOrderId) {
-            // Modifica ordine esistente
-            const oldOrder = OrdersModule.getOrderById(this.editingOrderId);
+        try {
+            if (this.editingOrderId) {
+                OrdersModule.updateOrder(this.editingOrderId, orderData);
+                Utils.showToast("✅ Ordine modificato!", "success");
+                this.editingOrderId = null;
+            } else {
+                const newOrder = OrdersModule.createOrder(orderData);
 
-            if (oldOrder && (oldOrder.status === 'confirmed' || oldOrder.status === 'in_preparation' || oldOrder.status === 'ready')) {
-                const modifications = this.compareOrders(oldOrder.items, items);
-                if (modifications && (modifications.toAdd.length > 0 || modifications.toRemove.length > 0)) {
-                    OrdersModule.addModification(this.editingOrderId, modifications);
-
-                    if (oldOrder.status === 'ready') {
-                        OrdersModule.changeOrderStatus(this.editingOrderId, 'in_preparation');
-                    }
+                if (newOrder && confirm("💬 Mandare conferma ordine su WhatsApp?")) {
+                    WhatsAppModule.sendOrderConfirmation(newOrder);
                 }
             }
 
-            OrdersModule.updateOrder(this.editingOrderId, orderData);
-            Utils.showToast("✅ Ordine modificato!", "success");
-            this.editingOrderId = null;
+            this.closeModal('new-order-modal');
+            this.loadOrders();
 
-        } else {
-            // Nuovo ordine
-            const newOrder = OrdersModule.createOrder(orderData);
-
-            if (newOrder && confirm("💬 Mandare conferma ordine su WhatsApp?")) {
-                WhatsAppModule.sendOrderConfirmation(newOrder);
-            }
+        } catch (error) {
+            console.error("❌ Errore salvataggio ordine:", error);
+            Utils.showToast("❌ Errore: " + error.message, "error");
         }
-
-        this.closeModal('new-order-modal');
-        this.loadOrders();
     },
 
     compareOrders(oldItems, newItems) {
@@ -2461,21 +2533,23 @@ const App = {
     },
 
     openNewProductModal() {
-        this.editingProductId = null;
+        this.editingProductId = null; // ← RESET ID
+        console.log("🆕 Nuovo prodotto"); // ← DEBUG
+
         this.openModal('new-product-modal');
 
         // Reset campi
         document.getElementById('product-name').value = '';
         document.getElementById('product-category').value = '';
-        document.getElementById('product-category-custom').classList.add('hidden'); // ← AGGIUNGI
+        document.getElementById('product-category-custom').classList.add('hidden');
         document.getElementById('product-price').value = '';
         document.getElementById('product-unit').value = 'kg';
         document.getElementById('product-weight').value = '';
+        document.getElementById('product-mode').value = '';
         document.getElementById('product-description').value = '';
         document.getElementById('product-ingredients').value = '';
         document.getElementById('product-custom-allergens').value = '';
 
-        // Reset checkbox allergeni
         document.querySelectorAll('.allergen-checkbox').forEach(cb => cb.checked = false);
 
         this.loadCustomCategories();
@@ -2501,8 +2575,47 @@ const App = {
         }
     },
 
+    saveCustomCategory(category) {
+        let customCategories = JSON.parse(localStorage.getItem('customProductCategories') || '[]');
+
+        if (!customCategories.includes(category)) {
+            customCategories.push(category);
+            localStorage.setItem('customProductCategories', JSON.stringify(customCategories));
+            Utils.showToast(`✅ Categoria "${category}" salvata!`, "success");
+        }
+    },
+
+    loadCustomCategories() {
+        const customCategories = JSON.parse(localStorage.getItem('customProductCategories') || '[]');
+        const select = document.getElementById('product-category');
+
+        if (!select) return;
+
+        // Mantieni solo opzioni base
+        const baseHTML = `
+        <option value="">-- Seleziona --</option>
+        <option value="Pasta">🍝 Pasta</option>
+        <option value="Gastronomia">🍲 Gastronomia</option>
+        <option value="Prodotti Forno">🥖 Prodotti Forno</option>
+        <option value="Sughi">🍅 Sughi</option>
+        <option value="Prodotti Rivendita">📦 Prodotti Rivendita</option>
+    `;
+
+        // Aggiungi categorie custom
+        const customHTML = customCategories.map(cat =>
+            `<option value="${cat}">📁 ${cat}</option>`
+        ).join('');
+
+        const addNewHTML = `<option value="__custom__">➕ Aggiungi nuova categoria...</option>`;
+
+        select.innerHTML = baseHTML + customHTML + addNewHTML;
+    },
+
+
     saveProduct(event) {
         event.preventDefault();
+
+        console.log("💾 Salvataggio prodotto, editingProductId:", this.editingProductId);
 
         const name = document.getElementById('product-name').value.trim();
         let category = document.getElementById('product-category').value;
@@ -2511,21 +2624,20 @@ const App = {
         // Se categoria custom, usa quella
         if (category === '__custom__' && customCategory) {
             category = customCategory;
-            // Salva la nuova categoria per riuso futuro
             this.saveCustomCategory(category);
         }
 
         const price = document.getElementById('product-price').value;
         const unit = document.getElementById('product-unit').value;
         const weight = document.getElementById('product-weight').value;
+        const mode = document.getElementById('product-mode').value;
         const description = document.getElementById('product-description').value.trim();
         const ingredients = document.getElementById('product-ingredients').value.trim();
 
-        // Raccogli allergeni selezionati
+        // Raccogli allergeni
         const allergens = Array.from(document.querySelectorAll('.allergen-checkbox:checked'))
             .map(cb => cb.value);
 
-        // Aggiungi allergeni custom
         const customAllergens = document.getElementById('product-custom-allergens').value
             .split(',')
             .map(a => a.trim())
@@ -2533,7 +2645,8 @@ const App = {
 
         const allAllergens = [...allergens, ...customAllergens];
 
-        if (!name || !category || !price) {
+        // Validazione
+        if (!name || !category || !price || !mode) {
             Utils.showToast("❌ Compilare i campi obbligatori", "error");
             return;
         }
@@ -2544,24 +2657,24 @@ const App = {
             price,
             unit,
             averageWeight: weight || null,
+            mode,
             description,
             ingredients,
             allergens: allAllergens
         };
 
-        const productId = document.getElementById('product-id') ? document.getElementById('product-id').value : null;
-
-        if (productId) {
-            ProductsModule.updateProduct(productId, data);
+        // MODIFICA o CREA usando this.editingProductId
+        if (this.editingProductId) {
+            console.log("✏️ MODIFICA prodotto:", this.editingProductId);
+            ProductsModule.updateProduct(this.editingProductId, data);
+            this.editingProductId = null; // Reset
+            Utils.showToast("✅ Prodotto modificato!", "success");
         } else {
+            console.log("🆕 NUOVO prodotto");
             ProductsModule.addProduct(data);
         }
 
         this.closeModal('new-product-modal');
-        event.target.reset();
-        if (document.getElementById('product-id')) {
-            document.getElementById('product-id').value = '';
-        }
         this.loadProducts();
     },
 
@@ -2571,54 +2684,50 @@ const App = {
 
         this.openModal('new-product-modal');
 
-        // ✅ TUTTI con controllo esistenza
+        // Popola campi
         const fields = {
             'product-name': product.name || '',
             'product-category': product.category || '',
             'product-price': product.price || '',
             'product-unit': product.unit || 'kg',
             'product-weight': product.averageWeight || '',
+            'product-mode': product.mode || 'pieces',
             'product-description': product.description || '',
             'product-ingredients': product.ingredients || '',
             'product-custom-allergens': ''
         };
 
-        // Popola tutti i campi con controllo
         Object.keys(fields).forEach(fieldId => {
             const field = document.getElementById(fieldId);
             if (field) {
                 field.value = fields[fieldId];
-            } else {
-                console.warn(`⚠️ Campo non trovato: ${fieldId}`);
             }
         });
 
         // Checkbox allergeni
-        const allergenCheckboxes = document.querySelectorAll('.allergen-checkbox');
-        if (allergenCheckboxes.length > 0) {
-            allergenCheckboxes.forEach(cb => {
-                cb.checked = product.allergens && product.allergens.includes(cb.value);
-            });
-        }
+        document.querySelectorAll('.allergen-checkbox').forEach(cb => {
+            cb.checked = product.allergens && product.allergens.includes(cb.value);
+        });
 
         // Allergeni custom
-        const customAllergensField = document.getElementById('product-custom-allergens');
-        if (product.allergens && customAllergensField) {
+        if (product.allergens) {
             const standardAllergens = Array.from(document.querySelectorAll('.allergen-checkbox'))
                 .map(cb => cb.value);
             const customAllergens = product.allergens.filter(a => !standardAllergens.includes(a));
             if (customAllergens.length > 0) {
-                customAllergensField.value = customAllergens.join(', ');
+                document.getElementById('product-custom-allergens').value = customAllergens.join(', ');
             }
         }
 
-        // Titolo modal
+        // Cambia titolo modal
         const modalTitle = document.querySelector('#new-product-modal h3');
         if (modalTitle) {
             modalTitle.textContent = `Modifica: ${product.name}`;
         }
 
+        // ← IMPORTANTE: SETTA L'ID 👇
         this.editingProductId = productId;
+        console.log("✏️ Editing product:", productId); // ← DEBUG
     },
 
     deleteProduct(productId) {
@@ -2723,18 +2832,18 @@ const App = {
     // ==========================================
 
     openNewOrderModal() {
+        console.log("📦 Apertura modal nuovo ordine..."); // ← DEBUG
+
+        this.editingOrderId = null;
         this.openModal('new-order-modal');
 
-        // Popola select clienti
-        const select = document.getElementById('order-customer');
-        const customers = CustomersModule.getAllCustomers('name');
-        select.innerHTML = '<option value="">-- Seleziona cliente --</option>' +
-            customers.map(c => `<option value="${c.id}">${c.firstName} ${c.lastName}</option>`).join('');
+        // ← DEVE ESSERE QUI, SUBITO DOPO openModal
+        this.populateCustomersList();
 
-        // Reset form
-        document.getElementById('order-items').innerHTML = '';
-        document.getElementById('order-delivery-date').value = new Date().toISOString().split('T')[0];
-        document.getElementById('order-notes').value = '';
+        // Reset campi
+        document.getElementById('order-customer-search').value = '';
+        document.getElementById('order-customer').value = '';
+        document.getElementById('order-customer-list').classList.add('hidden');
         this.orderItems = [];
         this.updateOrderTotal();
     },
