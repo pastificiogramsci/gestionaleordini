@@ -80,6 +80,18 @@ const App = {
             // 6. Setup UI
             this.setupUI();
 
+            // Chiudi dropdown clienti quando clicchi fuori
+            document.addEventListener('click', (e) => {
+                const searchInput = document.getElementById('order-customer-search');
+                const listContainer = document.getElementById('order-customer-list');
+
+                if (searchInput && listContainer &&
+                    !searchInput.contains(e.target) &&
+                    !listContainer.contains(e.target)) {
+                    listContainer.classList.add('hidden');
+                }
+            });
+
             // 7. Carica tab iniziale
             this.switchTab('dashboard');
 
@@ -1423,28 +1435,35 @@ const App = {
     },
 
     openNewOrderModal() {
-        console.log("🔵 openNewOrderModal chiamata");
+        this.editingOrderId = null;
         this.openModal('new-order-modal');
 
-        const select = document.getElementById('order-customer');
-        console.log("🔵 Select trovato:", select);
+        // Popola lista clienti ricercabile
+        this.populateCustomersList();
 
-        const customers = CustomersModule.getAllCustomers('name');
-        console.log("🔵 Clienti:", customers.length);
-
-        select.innerHTML = '<option value="">-- Seleziona cliente --</option>' +
-            customers.map(c => `<option value="${c.id}">${c.firstName} ${c.lastName}</option>`).join('');
-
-        console.log("🔵 Select popolato, innerHTML length:", select.innerHTML.length);
-
-        // Reset form
-        document.getElementById('order-items').innerHTML = '';
+        // Reset campi
+        document.getElementById('order-customer-search').value = '';
+        document.getElementById('order-customer').value = '';
+        document.getElementById('order-customer-list').classList.add('hidden');
         document.getElementById('order-delivery-date').value = new Date().toISOString().split('T')[0];
+        document.getElementById('order-delivery-time').value = '';
         document.getElementById('order-notes').value = '';
         document.getElementById('order-deposit').value = '';
         document.getElementById('order-deposit-paid').checked = false;
-        this.orderItems = [];
-        this.updateOrderTotal();
+
+        // Reset prodotti
+        const container = document.getElementById('order-items');
+        container.innerHTML = '';
+        const emptyMessage = document.getElementById('order-items-empty');
+        if (emptyMessage) emptyMessage.classList.remove('hidden');
+
+        // Reset totale
+        document.getElementById('order-total').textContent = '€0,00';
+
+        const modalTitle = document.querySelector('#new-order-modal h3');
+        if (modalTitle) {
+            modalTitle.textContent = '📦 Nuovo Ordine';
+        }
     },
 
     orderItems: [],
@@ -1483,6 +1502,76 @@ const App = {
         }
     },
 
+    populateCustomersList() {
+        const customers = CustomersModule.getAllCustomers('name')
+            .filter(c => c.type !== 'fornitore');
+
+        const listContainer = document.getElementById('order-customer-list');
+        if (!listContainer) return;
+
+        listContainer.innerHTML = customers.map(c => `
+        <div class="customer-item p-3 hover:bg-blue-50 cursor-pointer border-b"
+             data-id="${c.id}"
+             data-name="${c.firstName} ${c.lastName}"
+             onclick="app.selectCustomer('${c.id}', '${c.firstName} ${c.lastName}')">
+            <div class="font-bold">${c.firstName} ${c.lastName}</div>
+            ${c.phone ? `<div class="text-sm text-gray-600">📞 ${c.phone}</div>` : ''}
+        </div>
+    `).join('');
+    },
+
+    filterCustomerDropdown() {
+        const searchInput = document.getElementById('order-customer-search');
+        const query = searchInput.value.toLowerCase();
+        const items = document.querySelectorAll('.customer-item');
+
+        items.forEach(item => {
+            const name = item.dataset.name.toLowerCase();
+            if (name.includes(query)) {
+                item.style.display = 'block';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+
+        document.getElementById('order-customer-list').classList.remove('hidden');
+    },
+
+    selectCustomer(customerId, customerName) {
+        document.getElementById('order-customer').value = customerId;
+        document.getElementById('order-customer-search').value = customerName;
+        document.getElementById('order-customer-list').classList.add('hidden');
+    },
+
+    filterProducts(itemId) {
+        const itemDiv = document.getElementById(itemId);
+        const searchInput = itemDiv.querySelector(`.product-search-${itemId}`);
+        const categoryFilter = itemDiv.querySelector(`.product-category-filter-${itemId}`);
+        const select = itemDiv.querySelector('.order-item-product');
+
+        const searchQuery = searchInput.value.toLowerCase();
+        const selectedCategory = categoryFilter.value;
+
+        Array.from(select.options).forEach(option => {
+            if (option.value === '') {
+                option.style.display = 'block';
+                return;
+            }
+
+            const name = option.dataset.name || '';
+            const category = option.dataset.category || '';
+
+            const matchesSearch = !searchQuery || name.includes(searchQuery);
+            const matchesCategory = !selectedCategory || category === selectedCategory;
+
+            if (matchesSearch && matchesCategory) {
+                option.style.display = 'block';
+            } else {
+                option.style.display = 'none';
+            }
+        });
+    },
+
     addOrderItem() {
         const container = document.getElementById('order-items');
         const emptyMessage = document.getElementById('order-items-empty');
@@ -1491,45 +1580,71 @@ const App = {
 
         const itemId = 'item-' + Date.now();
 
+        // Raggruppa prodotti per categoria
+        const products = ProductsModule.getAllProducts().filter(p => p.active);
+        const categories = [...new Set(products.map(p => p.category))].sort();
+
         const itemDiv = document.createElement('div');
         itemDiv.className = 'bg-white border-2 border-gray-200 rounded-lg p-4';
         itemDiv.id = itemId;
         itemDiv.innerHTML = `
-        <div class="flex gap-3">
-            <div class="flex-1">
-                <label class="block text-xs font-medium text-gray-600 mb-1">Prodotto</label>
-                <select class="order-item-product w-full px-3 py-2 border rounded-lg" 
-                        onchange="app.updateOrderItemPrice('${itemId}')">
-                    <option value="">-- Seleziona --</option>
-                    ${ProductsModule.getAllProducts()
-                .filter(p => p.active)
-                .map(p => `<option value="${p.id}" data-price="${p.price}" data-unit="${p.unit}">${p.name} - ${Utils.formatPrice(p.price)}/${p.unit}</option>`)
-                .join('')}
-                </select>
+            <div class="space-y-3">
+                <!-- Ricerca e Filtro Categoria -->
+                <div class="flex gap-2">
+                    <input type="text" 
+                        class="flex-1 px-3 py-2 border rounded-lg product-search-${itemId}" 
+                        placeholder="🔍 Cerca prodotto..."
+                        oninput="app.filterProducts('${itemId}')">
+                    
+                    <select class="px-3 py-2 border rounded-lg product-category-filter-${itemId}"
+                            onchange="app.filterProducts('${itemId}')">
+                        <option value="">Tutte le categorie</option>
+                        ${categories.map(cat => `<option value="${cat}">${cat}</option>`).join('')}
+                    </select>
+                </div>
+                
+                <!-- Prodotto -->
+                <div class="flex gap-3">
+                    <div class="flex-1">
+                        <label class="block text-xs font-medium text-gray-600 mb-1">Prodotto</label>
+                        <select class="order-item-product w-full px-3 py-2 border rounded-lg" 
+                                onchange="app.updateOrderItemPrice('${itemId}')">
+                            <option value="">-- Seleziona --</option>
+                            ${products.map(p => `
+                                <option value="${p.id}" 
+                                        data-price="${p.price}" 
+                                        data-unit="${p.unit}"
+                                        data-category="${p.category}"
+                                        data-name="${p.name.toLowerCase()}">
+                                    ${p.name} - ${Utils.formatPrice(p.price)}/${p.unit}
+                                </option>
+                            `).join('')}
+                        </select>
+                    </div>
+                    
+                    <div class="w-32">
+                        <label class="block text-xs font-medium text-gray-600 mb-1">Quantità</label>
+                        <input type="number" step="0.01" value="1" min="0.01" 
+                            class="order-item-quantity w-full px-3 py-2 border rounded-lg" 
+                            oninput="app.updateOrderTotal()">
+                    </div>
+                    
+                    <div class="w-32">
+                        <label class="block text-xs font-medium text-gray-600 mb-1">Prezzo €</label>
+                        <input type="number" step="0.01" value="0" 
+                            class="order-item-price w-full px-3 py-2 border rounded-lg" 
+                            oninput="app.updateOrderTotal()">
+                    </div>
+                    
+                    <div class="flex items-end">
+                        <button type="button" onclick="app.removeOrderItem('${itemId}')" 
+                                class="bg-red-500 text-white px-3 py-2 rounded-lg hover:bg-red-600">
+                            🗑️
+                        </button>
+                    </div>
+                </div>
             </div>
-            
-            <div class="w-32">
-                <label class="block text-xs font-medium text-gray-600 mb-1">Quantità</label>
-                <input type="number" step="0.01" value="1" min="0.01" 
-                       class="order-item-quantity w-full px-3 py-2 border rounded-lg" 
-                       oninput="app.updateOrderTotal()">
-            </div>
-            
-            <div class="w-32">
-                <label class="block text-xs font-medium text-gray-600 mb-1">Prezzo €</label>
-                <input type="number" step="0.01" value="0" 
-                       class="order-item-price w-full px-3 py-2 border rounded-lg" 
-                       oninput="app.updateOrderTotal()">
-            </div>
-            
-            <div class="flex items-end">
-                <button type="button" onclick="app.removeOrderItem('${itemId}')" 
-                        class="bg-red-500 text-white px-3 py-2 rounded-lg hover:bg-red-600">
-                    🗑️
-                </button>
-            </div>
-        </div>
-    `;
+        `;
 
         container.appendChild(itemDiv);
     },

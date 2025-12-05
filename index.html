@@ -546,10 +546,22 @@
                         <label class="block text-sm font-bold mb-2 text-gray-700">
                             <span class="text-red-500">*</span> 👤 Cliente
                         </label>
-                        <select id="order-customer" required
-                            class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-orange-500 focus:outline-none text-lg">
-                            <option value="">-- Seleziona cliente --</option>
-                        </select>
+
+                        <!-- Input Ricerca -->
+                        <input type="text" id="order-customer-search"
+                            class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none text-lg mb-2"
+                            placeholder="🔍 Cerca cliente per nome..." oninput="app.filterCustomerDropdown()"
+                            onfocus="document.getElementById('order-customer-list').classList.remove('hidden')"
+                            autocomplete="off">
+
+                        <!-- Lista Clienti (nascosta di default) -->
+                        <div id="order-customer-list"
+                            class="hidden max-h-60 overflow-y-auto border-2 border-blue-300 rounded-lg bg-white">
+                            <!-- Popolato dinamicamente -->
+                        </div>
+
+                        <!-- ID Cliente selezionato (nascosto) -->
+                        <input type="hidden" id="order-customer" required>
                     </div>
 
                     <!-- Data e Ora Consegna -->
@@ -569,6 +581,7 @@
                         </div>
                     </div>
 
+                    <!-- Prodotti -->
                     <!-- Prodotti -->
                     <div class="bg-purple-50 border-2 border-purple-200 rounded-xl p-4 mb-6">
                         <div class="flex justify-between items-center mb-3">
