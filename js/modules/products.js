@@ -43,9 +43,9 @@ const ProductsModule = {
             description: productData.description || '',
             unit: productData.unit || 'kg',
             averageWeight: productData.averageWeight || null,
-            variableWeight: productData.variableWeight || false,
-            ingredients: productData.ingredients || '', // ← AGGIUNGI
-            allergens: productData.allergens || [], // ← AGGIUNGI
+            mode: productData.mode || 'pieces', // ← AGGIUNGI
+            ingredients: productData.ingredients || '',
+            allergens: productData.allergens || [],
             active: true,
             createdAt: new Date().toISOString()
         };
@@ -68,9 +68,9 @@ const ProductsModule = {
         product.description = updates.description !== undefined ? updates.description : product.description;
         product.unit = updates.unit || product.unit;
         product.averageWeight = updates.averageWeight !== undefined ? updates.averageWeight : product.averageWeight;
-        product.variableWeight = updates.variableWeight !== undefined ? updates.variableWeight : product.variableWeight;
-        product.ingredients = updates.ingredients !== undefined ? updates.ingredients : product.ingredients; // ← AGGIUNGI
-        product.allergens = updates.allergens !== undefined ? updates.allergens : product.allergens; // ← AGGIUNGI
+        product.mode = updates.mode || product.mode; // ← AGGIUNGI
+        product.ingredients = updates.ingredients !== undefined ? updates.ingredients : product.ingredients;
+        product.allergens = updates.allergens !== undefined ? updates.allergens : product.allergens;
 
         this.saveProducts();
         Utils.showToast("✅ Prodotto aggiornato!", "success");

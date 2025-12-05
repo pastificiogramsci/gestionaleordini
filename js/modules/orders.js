@@ -55,6 +55,34 @@ const OrdersModule = {
         return `ORD-${year}${month}${day}-${hours}${minutes}${seconds}`;
     },
 
+    // Genera numero ordine
+    generateOrderNumber(deliveryDate) {
+        if (!deliveryDate) {
+            deliveryDate = new Date().toISOString().split('T')[0];
+        }
+
+        // Conta ordini esistenti con questa data di consegna
+        const ordersOnDate = this.orders.filter(o => o.deliveryDate === deliveryDate);
+        const nextNumber = ordersOnDate.length + 1;
+
+        // Formato: 1-05/12/2025
+        const [year, month, day] = deliveryDate.split('-');
+        return `${nextNumber}-${day}/${month}/${year}`;
+    },
+
+
+
+    // Calcola totale ordine
+    calculateTotal(items) {
+        if (!items || items.length === 0) return 0;
+
+        return items.reduce((total, item) => {
+            const quantity = parseFloat(item.quantity) || 0;
+            const price = parseFloat(item.price) || 0;
+            return total + (quantity * price);
+        }, 0);
+    },
+
     // ==========================================
     // OPERAZIONI CRUD
     // ==========================================
@@ -63,7 +91,7 @@ const OrdersModule = {
     createOrder(orderData) {
         const order = {
             id: Utils.generateId(),
-            orderNumber: this.generateOrderNumber(),
+            orderNumber: this.generateOrderNumber(orderData.deliveryDate),
             customerId: orderData.customerId,
             items: orderData.items,
             totalAmount: this.calculateTotal(orderData.items),
