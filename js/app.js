@@ -580,6 +580,96 @@ const App = {
         this.loadFidelity();
     },
 
+    showFidelityCard() {
+        if (!this.currentFidelityCustomer) return; // ← Corretto
+
+        const fidelity = FidelityModule.getFidelityCustomer(this.currentFidelityCustomer);
+        const customer = CustomersModule.getCustomerById(this.currentFidelityCustomer);
+
+        if (!fidelity || !customer) return;
+
+        this.displayFidelityCard(customer, fidelity);
+    },
+
+    resendFidelityCard() {
+        if (!this.currentFidelityCustomer) return; // ← Corretto
+
+        const customer = CustomersModule.getCustomerById(this.currentFidelityCustomer);
+
+        if (!customer) {
+            Utils.showToast("❌ Cliente non trovato", "error");
+            return;
+        }
+
+        if (!customer.phone) {
+            Utils.showToast("❌ Cliente senza numero di telefono", "error");
+            return;
+        }
+
+        const confirm = window.confirm(
+            `Inviare tessera fidelity a:\n\n` +
+            `${customer.firstName} ${customer.lastName}\n` +
+            `📞 ${customer.phone}\n\n` +
+            `Continuare?`
+        );
+
+        if (!confirm) return;
+
+        // Invia tramite WhatsApp
+        WhatsAppModule.sendWelcomeMessage(customer, true);
+
+        Utils.showToast("✅ Messaggio WhatsApp aperto!", "success");
+    },
+
+    displayFidelityCard(customer, fidelity) {
+        const availableRewards = Math.floor(fidelity.stamps / CONFIG.FIDELITY.STAMPS_FOR_REWARD);
+        const currentStamps = fidelity.stamps % CONFIG.FIDELITY.STAMPS_FOR_REWARD;
+
+        const cardHTML = `
+        <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onclick="this.remove()">
+            <div class="bg-gradient-to-br from-purple-500 to-pink-500 text-white p-8 rounded-3xl shadow-2xl max-w-md" onclick="event.stopPropagation()">
+                <div class="text-center mb-6">
+                    <h2 class="text-3xl font-bold">🎁 Tessera Fidelity</h2>
+                    <p class="text-lg mt-2">${customer.firstName} ${customer.lastName}</p>
+                </div>
+                
+                <div class="bg-white/20 backdrop-blur rounded-2xl p-6 mb-6">
+                    <div class="text-center mb-4">
+                        <p class="text-sm opacity-90">Bollini Attuali</p>
+                        <p class="text-6xl font-bold">${currentStamps}</p>
+                        <p class="text-sm opacity-75">su ${CONFIG.FIDELITY.STAMPS_FOR_REWARD}</p>
+                    </div>
+                    
+                    <div class="flex justify-center gap-2 mb-4 flex-wrap">
+                        ${Array.from({ length: CONFIG.FIDELITY.STAMPS_FOR_REWARD }, (_, i) =>
+            `<div class="w-8 h-8 rounded-full ${i < currentStamps ? 'bg-yellow-400' : 'bg-white/30'}"></div>`
+        ).join('')}
+                    </div>
+                </div>
+                
+                <div class="bg-white/20 backdrop-blur rounded-2xl p-4 mb-6">
+                    <p class="text-center">
+                        <span class="text-4xl font-bold">${availableRewards}</span>
+                        <span class="text-lg"> Premi Disponibili</span>
+                    </p>
+                </div>
+                
+                <div class="text-center text-sm opacity-75">
+                    <p>Totale bollini raccolti: ${fidelity.totalStamps || 0}</p>
+                    <p class="mt-1">Membro dal ${Utils.formatDate(fidelity.joinedAt)}</p>
+                </div>
+                
+                <button onclick="this.closest('.fixed').remove()" 
+                        class="w-full mt-6 bg-white text-purple-600 py-3 rounded-xl font-bold hover:bg-gray-100">
+                    ✕ Chiudi
+                </button>
+            </div>
+        </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', cardHTML);
+    },
+
     openCustomStamps() {
         document.getElementById('custom-stamps-input').value = '';
         this.openModal('custom-stamps-modal');
