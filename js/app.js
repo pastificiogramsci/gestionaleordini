@@ -1596,41 +1596,64 @@ const App = {
         const customers = CustomersModule.getAllCustomers('name')
             .filter(c => c.type !== 'fornitore');
 
+        console.log("📋 Popolamento lista clienti:", customers.length); // ← DEBUG
+
         const listContainer = document.getElementById('order-customer-list');
-        if (!listContainer) return;
+        if (!listContainer) {
+            console.error("❌ order-customer-list non trovato!"); // ← DEBUG
+            return;
+        }
 
         listContainer.innerHTML = customers.map(c => `
-        <div class="customer-item p-3 hover:bg-blue-50 cursor-pointer border-b"
-             data-id="${c.id}"
-             data-name="${c.firstName} ${c.lastName}"
-             onclick="app.selectCustomer('${c.id}', '${c.firstName} ${c.lastName}')">
-            <div class="font-bold">${c.firstName} ${c.lastName}</div>
-            ${c.phone ? `<div class="text-sm text-gray-600">📞 ${c.phone}</div>` : ''}
-        </div>
-    `).join('');
+            <div class="customer-item p-3 hover:bg-blue-50 cursor-pointer border-b"
+                data-id="${c.id}"
+                data-name="${c.firstName} ${c.lastName}"
+                onclick="app.selectCustomer('${c.id}', '${c.firstName} ${c.lastName}')">
+                <div class="font-bold">${c.firstName} ${c.lastName}</div>
+                ${c.phone ? `<div class="text-sm text-gray-600">📞 ${c.phone}</div>` : ''}
+            </div>
+        `).join('');
+
+        console.log("✅ Lista popolata con", listContainer.children.length, "clienti"); // ← DEBUG
     },
 
     filterCustomerDropdown() {
         const searchInput = document.getElementById('order-customer-search');
+        const listContainer = document.getElementById('order-customer-list');
         const query = searchInput.value.toLowerCase();
+
+        console.log("🔍 Ricerca:", query); // ← DEBUG
+
+        // ← MOSTRA SEMPRE IL DROPDOWN
+        listContainer.classList.remove('hidden');
+
         const items = document.querySelectorAll('.customer-item');
+        let visibleCount = 0;
 
         items.forEach(item => {
             const name = item.dataset.name.toLowerCase();
-            if (name.includes(query)) {
+            if (!query || name.includes(query)) {
                 item.style.display = 'block';
+                visibleCount++;
             } else {
                 item.style.display = 'none';
             }
         });
 
-        document.getElementById('order-customer-list').classList.remove('hidden');
+        console.log("👀 Clienti visibili:", visibleCount); // ← DEBUG
     },
 
     selectCustomer(customerId, customerName) {
         document.getElementById('order-customer').value = customerId;
         document.getElementById('order-customer-search').value = customerName;
         document.getElementById('order-customer-list').classList.add('hidden');
+    },
+
+    showCustomerDropdown() {
+        const listContainer = document.getElementById('order-customer-list');
+        if (listContainer) {
+            listContainer.classList.remove('hidden');
+        }
     },
 
     filterProducts(itemId) {
