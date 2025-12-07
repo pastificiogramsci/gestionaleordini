@@ -61,7 +61,6 @@ Il tuo ordine #${order.orderNumber} è stato confermato!
 
 ${itemsList}
 
-💰 Totale: ${Utils.formatPrice(order.totalAmount)}
 📅 Ritiro: ${Utils.formatDate(order.deliveryDate)} ${order.deliveryTime || ''}
 
 Ci vediamo presto! 😊`;

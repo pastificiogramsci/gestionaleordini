@@ -15,7 +15,9 @@ const App = {
         console.log("🚀 Inizializzazione App...");
 
         try {
-            // 1. PRIMA controlla callback Dropbox
+            this.updateLoaderStatus("Controllo autenticazione...");
+
+            // 1. Callback Dropbox
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.get('code')) {
                 console.log("🔵 Trovato code Dropbox, processo callback...");
@@ -25,6 +27,7 @@ const App = {
             // 2. Controlla autenticazione
             if (!AuthManager.init()) {
                 console.log("🔒 Autenticazione richiesta");
+                this.hideLoader();
                 return;
             }
 
@@ -32,52 +35,89 @@ const App = {
             this.hideAuthScreen();
 
             // 3. Inizializza Storage e Dropbox
+            this.updateLoaderStatus("Connessione a Dropbox...");
             await Storage.initDropbox();
 
-            // 4. Inizializza tutti i moduli
-            await this.initModules();
-
-            // 5. Auto-download da Dropbox se connesso
+            // 4. Download dati da Dropbox (parallelo con fallback)
             if (Storage.dropboxClient) {
-                console.log("📥 Download automatico da Dropbox...");
+                this.updateLoaderStatus("Download dati da cloud...");
 
                 try {
-                    // Carica dati da Dropbox
+                    // Prova PARALLELO (veloce)
+                    const [cloudCustomers, cloudProducts, cloudOrders, cloudFidelity, cloudCampaigns] =
+                        await Promise.all([
+                            Storage.loadDropbox(CONFIG.DROPBOX_PATHS.CUSTOMERS),
+                            Storage.loadDropbox(CONFIG.DROPBOX_PATHS.PRODUCTS),
+                            Storage.loadDropbox(CONFIG.DROPBOX_PATHS.ORDERS),
+                            Storage.loadDropbox(CONFIG.DROPBOX_PATHS.FIDELITY),
+                            Storage.loadDropbox(CONFIG.DROPBOX_PATHS.CAMPAIGNS)
+                        ]);
+
+                    if (cloudCustomers?.length > 0) {
+                        CustomersModule.customers = cloudCustomers;
+                        Storage.saveLocal(CONFIG.STORAGE_KEYS.CUSTOMERS, cloudCustomers);
+                    }
+                    if (cloudProducts?.length > 0) {
+                        ProductsModule.products = cloudProducts;
+                        Storage.saveLocal(CONFIG.STORAGE_KEYS.PRODUCTS, cloudProducts);
+                    }
+                    if (cloudOrders?.length > 0) {
+                        OrdersModule.orders = cloudOrders;
+                        Storage.saveLocal(CONFIG.STORAGE_KEYS.ORDERS, cloudOrders);
+                    }
+                    if (cloudFidelity?.length > 0) {
+                        FidelityModule.fidelityCustomers = cloudFidelity;
+                        Storage.saveLocal(CONFIG.STORAGE_KEYS.FIDELITY, cloudFidelity);
+                    }
+                    if (cloudCampaigns?.length > 0) {
+                        CouponsModule.campaigns = cloudCampaigns;
+                        Storage.saveLocal(CONFIG.STORAGE_KEYS.CAMPAIGNS, cloudCampaigns);
+                    }
+
+                    console.log("✅ Dati sincronizzati (parallelo)");
+
+                } catch (error) {
+                    // Fallback SEQUENZIALE se parallelo fallisce
+                    console.warn("⚠️ Parallelo fallito, provo sequenziale...", error);
+                    this.updateLoaderStatus("Connessione lenta, download in corso...");
+
                     const cloudCustomers = await Storage.loadDropbox(CONFIG.DROPBOX_PATHS.CUSTOMERS);
                     const cloudProducts = await Storage.loadDropbox(CONFIG.DROPBOX_PATHS.PRODUCTS);
                     const cloudOrders = await Storage.loadDropbox(CONFIG.DROPBOX_PATHS.ORDERS);
                     const cloudFidelity = await Storage.loadDropbox(CONFIG.DROPBOX_PATHS.FIDELITY);
                     const cloudCampaigns = await Storage.loadDropbox(CONFIG.DROPBOX_PATHS.CAMPAIGNS);
 
-                    // Aggiorna solo se ci sono dati remoti
-                    if (cloudCustomers && cloudCustomers.length > 0) {
+                    if (cloudCustomers?.length > 0) {
                         CustomersModule.customers = cloudCustomers;
                         Storage.saveLocal(CONFIG.STORAGE_KEYS.CUSTOMERS, cloudCustomers);
                     }
-                    if (cloudProducts && cloudProducts.length > 0) {
+                    if (cloudProducts?.length > 0) {
                         ProductsModule.products = cloudProducts;
                         Storage.saveLocal(CONFIG.STORAGE_KEYS.PRODUCTS, cloudProducts);
                     }
-                    if (cloudOrders && cloudOrders.length > 0) {
+                    if (cloudOrders?.length > 0) {
                         OrdersModule.orders = cloudOrders;
                         Storage.saveLocal(CONFIG.STORAGE_KEYS.ORDERS, cloudOrders);
                     }
-                    if (cloudFidelity && cloudFidelity.length > 0) {
+                    if (cloudFidelity?.length > 0) {
                         FidelityModule.fidelityCustomers = cloudFidelity;
                         Storage.saveLocal(CONFIG.STORAGE_KEYS.FIDELITY, cloudFidelity);
                     }
-                    if (cloudCampaigns && cloudCampaigns.length > 0) {
+                    if (cloudCampaigns?.length > 0) {
                         CouponsModule.campaigns = cloudCampaigns;
                         Storage.saveLocal(CONFIG.STORAGE_KEYS.CAMPAIGNS, cloudCampaigns);
                     }
 
-                    console.log("✅ Dati sincronizzati da Dropbox");
-                } catch (error) {
-                    console.error("⚠️ Errore download Dropbox:", error);
+                    console.log("✅ Dati sincronizzati (sequenziale)");
                 }
             }
 
+            // 5. Inizializza moduli
+            this.updateLoaderStatus("Caricamento moduli...");
+            await this.initModules();
+
             // 6. Setup UI
+            this.updateLoaderStatus("Preparazione interfaccia...");
             this.setupUI();
 
             // Chiudi dropdown clienti quando clicchi fuori
@@ -98,12 +138,25 @@ const App = {
             this.initialized = true;
             console.log("✅ App inizializzata con successo!");
 
-            Utils.showToast("✅ App caricata!", "success");
+            // 8. NASCONDI LOADER
+            this.hideLoader();
+            Utils.showToast("✅ App caricata con successo!", "success");
 
         } catch (error) {
             console.error("❌ Errore inizializzazione:", error);
+            this.hideLoader();
             Utils.showToast("Errore caricamento app", "error");
         }
+    },
+
+    updateLoaderStatus(message) {
+        const statusEl = document.getElementById('loader-status');
+        if (statusEl) statusEl.textContent = message;
+    },
+
+    hideLoader() {
+        const loader = document.getElementById('app-loader');
+        if (loader) loader.style.display = 'none';
     },
 
     // Inizializza tutti i moduli
@@ -405,11 +458,6 @@ const App = {
         this.updateElement('count-delivered', delivered);
     },
 
-    loadFidelity() {
-        const fidelityList = FidelityModule.getAllFidelityCustomers();
-        this.displayFidelityCustomers(fidelityList);
-    },
-
     async addAllCustomersToFidelity() {
         const customers = CustomersModule.getAllCustomers();
         let added = 0;
@@ -681,7 +729,25 @@ const App = {
             Utils.showToast("Inserisci un numero valido", "error");
             return;
         }
-        FidelityModule.addStamps(this.currentFidelityCustomer, qty);
+
+        const updatedFidelity = FidelityModule.addStamps(this.currentFidelityCustomer, qty);
+
+        // ← AGGIUNGI QUI IL CODICE WHATSAPP
+        const customer = CustomersModule.getCustomerById(this.currentFidelityCustomer);
+        if (customer && customer.phone) {
+            const phone = WhatsAppModule.formatPhone(customer.phone);
+            const message = `Ciao ${customer.firstName}! ⭐
+
+    Hai ricevuto ${qty} bollini!
+
+    Totale bollini: ${updatedFidelity.stamps}
+    Prossimo premio tra: ${10 - updatedFidelity.stamps} bollini
+
+    Continua così! 🎉`;
+
+            WhatsAppModule.openWhatsApp(phone, message);
+        }
+
         this.closeModal('custom-stamps-modal');
         this.openFidelityDetail(this.currentFidelityCustomer);
         this.loadFidelity();
@@ -1525,13 +1591,15 @@ const App = {
     },
 
     openNewOrderModal() {
+        console.log("📦 Apertura modal nuovo ordine...");
+
         this.editingOrderId = null;
         this.openModal('new-order-modal');
 
         // Popola lista clienti ricercabile
         this.populateCustomersList();
 
-        // Reset campi
+        // Reset campi cliente e consegna
         document.getElementById('order-customer-search').value = '';
         document.getElementById('order-customer').value = '';
         document.getElementById('order-customer-list').classList.add('hidden');
@@ -1541,14 +1609,23 @@ const App = {
         document.getElementById('order-deposit').value = '';
         document.getElementById('order-deposit-paid').checked = false;
 
-        // Reset prodotti
-        const container = document.getElementById('order-items');
-        container.innerHTML = '';
-        const emptyMessage = document.getElementById('order-items-empty');
-        if (emptyMessage) emptyMessage.classList.remove('hidden');
+        // Reset carrello
+        this.orderItems = [];
+        this.editingCartIndex = null;
+
+        // Popola dropdown prodotti
+        this.populateProductsDropdown();
+
+        // Reset form prodotti
+        document.getElementById('cart-product-select').value = '';
+        document.getElementById('cart-quantity').value = '1';
+        document.getElementById('cart-price').value = '0';
+
+        // Mostra carrello vuoto
+        this.displayCartItems();
 
         // Reset totale
-        document.getElementById('order-total').textContent = '€0,00';
+        this.updateOrderTotal();
 
         const modalTitle = document.querySelector('#new-order-modal h3');
         if (modalTitle) {
@@ -1557,40 +1634,6 @@ const App = {
     },
 
     orderItems: [],
-
-    openNewOrderModal() {
-        this.editingOrderId = null;
-        this.openModal('new-order-modal');
-
-        // Popola dropdown clienti
-        const customerSelect = document.getElementById('order-customer');
-        const customers = CustomersModule.getAllCustomers('name')
-            .filter(c => c.type !== 'fornitore'); // Escludi fornitori
-
-        customerSelect.innerHTML = '<option value="">-- Seleziona cliente --</option>' +
-            customers.map(c => `<option value="${c.id}">${c.firstName} ${c.lastName}</option>`).join('');
-
-        // Reset campi
-        document.getElementById('order-delivery-date').value = new Date().toISOString().split('T')[0];
-        document.getElementById('order-delivery-time').value = '';
-        document.getElementById('order-notes').value = '';
-        document.getElementById('order-deposit').value = '';
-        document.getElementById('order-deposit-paid').checked = false;
-
-        // Reset prodotti
-        const container = document.getElementById('order-items');
-        container.innerHTML = '';
-        const emptyMessage = document.getElementById('order-items-empty');
-        if (emptyMessage) emptyMessage.classList.remove('hidden');
-
-        // Reset totale
-        document.getElementById('order-total').textContent = '€0,00';
-
-        const modalTitle = document.querySelector('#new-order-modal h3');
-        if (modalTitle) {
-            modalTitle.textContent = '📦 Nuovo Ordine';
-        }
-    },
 
     populateCustomersList() {
         console.log("📋 INIZIO populateCustomersList"); // ← DEBUG
@@ -1709,154 +1752,214 @@ const App = {
         });
     },
 
-    addOrderItem() {
-        const container = document.getElementById('order-items');
-        const emptyMessage = document.getElementById('order-items-empty');
-
-        if (emptyMessage) emptyMessage.classList.add('hidden');
-
-        const itemId = 'item-' + Date.now();
+    // Popola dropdown prodotti nel form
+    populateProductsDropdown() {
+        const select = document.getElementById('cart-product-select');
+        if (!select) return;
 
         const products = ProductsModule.getAllProducts().filter(p => p.active);
-        const categories = [...new Set(products.map(p => p.category))].sort();
 
-        const itemDiv = document.createElement('div');
-        itemDiv.className = 'bg-white border-2 border-gray-200 rounded-lg p-4';
-        itemDiv.id = itemId;
-        itemDiv.innerHTML = `
-        <div class="space-y-3">
-            <!-- Ricerca e Filtro Categoria -->
-            <div class="flex gap-2">
-                <input type="text" 
-                       class="flex-1 px-3 py-2 border rounded-lg product-search-${itemId}" 
-                       placeholder="🔍 Cerca prodotto..."
-                       oninput="app.filterProducts('${itemId}')">
-                
-                <select class="px-3 py-2 border rounded-lg product-category-filter-${itemId}"
-                        onchange="app.filterProducts('${itemId}')">
-                    <option value="">Tutte le categorie</option>
-                    ${categories.map(cat => `<option value="${cat}">${cat}</option>`).join('')}
-                </select>
-            </div>
-            
-            <!-- Dettagli Prodotto -->
-            <div class="flex gap-3">
-                <div class="flex-1">
-                    <label class="block text-xs font-medium text-gray-600 mb-1">Prodotto</label>
-                    <select class="order-item-product w-full px-3 py-2 border rounded-lg" 
-                            onchange="app.updateOrderItemPrice('${itemId}')">
-                        <option value="">-- Seleziona --</option>
-                        ${products.map(p => {
-            const modeIcon = p.mode === 'weight' ? '🍝' : p.mode === 'kg' ? '⚖️' : '🔢';
+        select.innerHTML = '<option value="">-- Seleziona prodotto --</option>' +
+            products.map(p => {
+                const modeIcon = p.mode === 'weight' ? '🍝' : p.mode === 'kg' ? '⚖️' : '🔢';
+                return `<option value="${p.id}" 
+                            data-price="${p.price}" 
+                            data-unit="${p.unit}"
+                            data-weight="${p.averageWeight || 0}"
+                            data-mode="${p.mode || 'pieces'}">
+                        ${modeIcon} ${p.name} - ${Utils.formatPrice(p.price)}/${p.unit}
+                    </option>`;
+            }).join('');
+
+        // Auto-aggiorna prezzo quando cambia prodotto
+        select.onchange = () => {
+            const option = select.options[select.selectedIndex];
+            const priceInput = document.getElementById('cart-price');
+            if (option && option.dataset.price) {
+                priceInput.value = option.dataset.price;
+            }
+        };
+
+        // Salva tutte le opzioni per il filtro
+        this.allProductOptions = Array.from(select.options);
+    },
+
+    // Filtra prodotti nel dropdown
+    filterCartProducts() {
+        const searchInput = document.getElementById('cart-product-search');
+        const select = document.getElementById('cart-product-select');
+
+        if (!searchInput || !select || !this.allProductOptions) return;
+
+        const query = searchInput.value.toLowerCase();
+
+        // Rimuovi tutte le opzioni
+        select.innerHTML = '';
+
+        // Filtra e ri-aggiungi
+        this.allProductOptions.forEach(option => {
+            if (option.value === '' || option.textContent.toLowerCase().includes(query)) {
+                select.appendChild(option.cloneNode(true));
+            }
+        });
+
+        // Auto-seleziona se c'è solo 1 risultato (oltre al placeholder)
+        if (select.options.length === 2 && query.length > 2) {
+            select.selectedIndex = 1;
+            select.onchange(); // Trigger prezzo
+        }
+    },
+
+    // Aggiungi prodotto al carrello
+    addProductToCart() {
+        const select = document.getElementById('cart-product-select');
+        const quantity = parseFloat(document.getElementById('cart-quantity').value);
+        const price = parseFloat(document.getElementById('cart-price').value);
+
+        if (!select.value) {
+            Utils.showToast("Seleziona un prodotto", "error");
+            return;
+        }
+
+        if (!quantity || quantity <= 0) {
+            Utils.showToast("Inserisci una quantità valida", "error");
+            return;
+        }
+
+        const option = select.options[select.selectedIndex];
+        const productId = select.value;
+        const weight = parseFloat(option.dataset.weight) || 0;
+        const mode = option.dataset.mode || 'pieces';
+
+        let finalQuantity = quantity;
+        let unit = 'pz';
+
+        switch (mode) {
+            case 'weight':
+                if (weight > 0) {
+                    finalQuantity = weight * quantity;
+                    unit = 'kg';
+                }
+                break;
+            case 'pieces':
+                finalQuantity = quantity;
+                unit = 'pz';
+                break;
+            case 'kg':
+                finalQuantity = quantity;
+                unit = 'kg';
+                break;
+        }
+
+        const cartItem = {
+            productId: productId,
+            quantity: finalQuantity,
+            unit: unit,
+            mode: mode,
+            price: price,
+            prepared: false
+        };
+
+        if (this.editingCartIndex !== null) {
+            // Modifica esistente
+            this.orderItems[this.editingCartIndex] = cartItem;
+            this.editingCartIndex = null;
+        } else {
+            // Nuovo
+            this.orderItems.push(cartItem);
+        }
+
+        // Reset form
+        document.getElementById('cart-product-select').value = '';
+        document.getElementById('cart-product-search').value = '';
+        document.getElementById('cart-quantity').value = '1';
+        document.getElementById('cart-price').value = '0';
+
+        // Aggiorna visualizzazione
+        this.displayCartItems();
+        this.updateOrderTotal();
+    },
+
+    // Mostra prodotti nel carrello
+    displayCartItems() {
+        const container = document.getElementById('cart-items-list');
+        const emptyMsg = document.getElementById('cart-empty-message');
+
+        if (!container) return;
+
+        if (this.orderItems.length === 0) {
+            container.innerHTML = '';
+            if (emptyMsg) emptyMsg.classList.remove('hidden');
+            return;
+        }
+
+        if (emptyMsg) emptyMsg.classList.add('hidden');
+
+        container.innerHTML = this.orderItems.map((item, index) => {
+            const product = ProductsModule.getProductById(item.productId);
+            if (!product) return '';
+
+            const displayQty = item.mode === 'weight' ?
+                `${(item.quantity / (product.averageWeight || 1)).toFixed(0)} pz (${item.quantity.toFixed(2)} kg)` :
+                `${item.quantity.toFixed(2)} ${item.unit}`;
+
             return `
-                                <option value="${p.id}" 
-                                        data-price="${p.price}" 
-                                        data-unit="${p.unit}"
-                                        data-weight="${p.averageWeight || 0}"
-                                        data-mode="${p.mode || 'pieces'}"
-                                        data-category="${p.category}"
-                                        data-name="${p.name.toLowerCase()}">
-                                    ${modeIcon} ${p.name} - ${Utils.formatPrice(p.price)}/${p.unit}
-                                </option>
-                            `;
-        }).join('')}
-                    </select>
+            <div class="bg-white border-2 border-gray-200 rounded-lg p-3 flex items-center justify-between">
+                <div class="flex-1">
+                    <p class="font-bold text-gray-800">${product.name}</p>
+                    <p class="text-sm text-gray-600">${displayQty} × ${Utils.formatPrice(item.price)} = ${Utils.formatPrice(item.quantity * item.price)}</p>
                 </div>
-                
-                <div class="w-32">
-                    <label class="block text-xs font-medium text-gray-600 mb-1">Quantità</label>
-                    <input type="number" step="0.01" value="1" min="0.01" 
-                           class="order-item-quantity w-full px-3 py-2 border rounded-lg" 
-                           oninput="app.updateOrderTotal()">
-                </div>
-                
-                <div class="w-32">
-                    <label class="block text-xs font-medium text-gray-600 mb-1">Prezzo €</label>
-                    <input type="number" step="0.01" value="0" 
-                           class="order-item-price w-full px-3 py-2 border rounded-lg" 
-                           oninput="app.updateOrderTotal()">
-                </div>
-                
-                <div class="flex items-end">
-                    <button type="button" onclick="app.removeOrderItem('${itemId}')" 
+                <div class="flex gap-2">
+                    <button onclick="app.editCartItem(${index})" 
+                            class="bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600">
+                        ✏️
+                    </button>
+                    <button onclick="app.removeCartItem(${index})" 
                             class="bg-red-500 text-white px-3 py-2 rounded-lg hover:bg-red-600">
                         🗑️
                     </button>
                 </div>
             </div>
-        </div>
-    `;
-
-        container.appendChild(itemDiv);
+        `;
+        }).join('');
     },
 
-    removeOrderItem(itemId) {
-        const itemDiv = document.getElementById(itemId);
-        if (itemDiv) {
-            itemDiv.remove();
+    // Modifica prodotto nel carrello
+    editCartItem(index) {
+        const item = this.orderItems[index];
+        if (!item) return;
+
+        const product = ProductsModule.getProductById(item.productId);
+        if (!product) return;
+
+        // Calcola quantità originale
+        let displayQty = item.quantity;
+        if (item.mode === 'weight' && product.averageWeight > 0) {
+            displayQty = item.quantity / product.averageWeight;
         }
 
-        const container = document.getElementById('order-items');
-        const emptyMessage = document.getElementById('order-items-empty');
+        // Popola form
+        document.getElementById('cart-product-select').value = item.productId;
+        document.getElementById('cart-quantity').value = displayQty;
+        document.getElementById('cart-price').value = item.price;
 
-        if (container && container.children.length === 0 && emptyMessage) {
-            emptyMessage.classList.remove('hidden');
-        }
+        this.editingCartIndex = index;
 
+        Utils.showToast("Modifica il prodotto e clicca 'Aggiungi Prodotto'", "info");
+    },
+
+    // Rimuovi prodotto dal carrello
+    removeCartItem(index) {
+        this.orderItems.splice(index, 1);
+        this.displayCartItems();
         this.updateOrderTotal();
-    },
-
-    updateOrderItemPrice(itemId) {
-        const itemDiv = document.getElementById(itemId);
-        if (!itemDiv) {
-            console.error("❌ Item non trovato:", itemId);
-            return;
-        }
-
-        const select = itemDiv.querySelector('.order-item-product');
-        const priceInput = itemDiv.querySelector('.order-item-price');
-
-        if (!select || !priceInput) {
-            console.error("❌ Select o priceInput non trovato");
-            return;
-        }
-
-        const selectedOption = select.options[select.selectedIndex];
-        if (selectedOption && selectedOption.dataset.price) {
-            priceInput.value = selectedOption.dataset.price;
-            this.updateOrderTotal();
-        }
     },
 
     updateOrderTotal() {
         let total = 0;
 
-        document.querySelectorAll('#order-items > div').forEach(itemDiv => {
-            const select = itemDiv.querySelector('.order-item-product');
-            const quantity = parseFloat(itemDiv.querySelector('.order-item-quantity').value) || 0;
-            const price = parseFloat(itemDiv.querySelector('.order-item-price').value) || 0;
-
-            if (select && select.value && quantity > 0 && price > 0) {
-                const selectedOption = select.options[select.selectedIndex];
-                const weight = parseFloat(selectedOption.dataset.weight) || 0;
-                const mode = selectedOption.dataset.mode || 'pieces'; // ← Legge dal prodotto
-
-                let itemTotal = 0;
-
-                switch (mode) {
-                    case 'weight':
-                        itemTotal = weight > 0 ? price * weight * quantity : price * quantity;
-                        break;
-                    case 'pieces':
-                        itemTotal = price * quantity;
-                        break;
-                    case 'kg':
-                        itemTotal = price * quantity;
-                        break;
-                }
-
-                total += itemTotal;
-            }
+        this.orderItems.forEach(item => {
+            total += item.quantity * item.price;
         });
 
         const totalElement = document.getElementById('order-total');
@@ -1873,48 +1976,7 @@ const App = {
             return;
         }
 
-        const items = [];
-
-        document.querySelectorAll('#order-items > div').forEach(itemDiv => {
-            const select = itemDiv.querySelector('.order-item-product');
-            const quantity = parseFloat(itemDiv.querySelector('.order-item-quantity').value) || 0;
-            const price = parseFloat(itemDiv.querySelector('.order-item-price').value) || 0;
-
-            if (select && select.value && quantity > 0) {
-                const selectedOption = select.options[select.selectedIndex];
-                const weight = parseFloat(selectedOption.dataset.weight) || 0;
-                const mode = selectedOption.dataset.mode || 'pieces'; // ← Legge dal prodotto
-
-                let finalQuantity = quantity;
-                let unit = 'pz';
-
-                switch (mode) {
-                    case 'weight':
-                        if (weight > 0) {
-                            finalQuantity = weight * quantity;
-                            unit = 'kg';
-                        }
-                        break;
-                    case 'pieces':
-                        finalQuantity = quantity;
-                        unit = 'pz';
-                        break;
-                    case 'kg':
-                        finalQuantity = quantity;
-                        unit = 'kg';
-                        break;
-                }
-
-                items.push({
-                    productId: select.value,
-                    quantity: finalQuantity,
-                    unit: unit,
-                    mode: mode,
-                    price: price,
-                    prepared: false
-                });
-            }
-        });
+        const items = [...this.orderItems]; // Usa il carrello
 
         if (items.length === 0) {
             Utils.showToast("❌ Aggiungi almeno un prodotto", "error");
@@ -1951,6 +2013,8 @@ const App = {
             console.error("❌ Errore salvataggio ordine:", error);
             Utils.showToast("❌ Errore: " + error.message, "error");
         }
+
+        this.loadDashboard();
     },
 
     compareOrders(oldItems, newItems) {
@@ -1997,37 +2061,54 @@ const App = {
             return;
         }
 
-        // Prima apri modal
+        this.editingOrderId = orderId;
         this.openModal('new-order-modal');
 
-        // Popola select clienti
-        const select = document.getElementById('order-customer');
-        const customers = CustomersModule.getAllCustomers('name');
-        select.innerHTML = '<option value="">-- Seleziona cliente --</option>' +
-            customers.map(c => `<option value="${c.id}">${c.firstName} ${c.lastName}</option>`).join('');
+        // Popola ricerca clienti
+        this.populateCustomersList();
 
-        // Poi imposta valori
-        select.value = order.customerId;
+        // Imposta cliente selezionato
+        const customer = CustomersModule.getCustomerById(order.customerId);
+        if (customer) {
+            document.getElementById('order-customer-search').value = `${customer.firstName} ${customer.lastName}`;
+            document.getElementById('order-customer').value = order.customerId;
+            document.getElementById('order-customer-list').classList.add('hidden');
+        }
+
+        // Imposta dati ordine
         document.getElementById('order-delivery-date').value = order.deliveryDate;
         document.getElementById('order-delivery-time').value = order.deliveryTime || '';
         document.getElementById('order-notes').value = order.notes || '';
+        document.getElementById('order-deposit').value = order.deposit || '';
+        document.getElementById('order-deposit-paid').checked = order.depositPaid || false;
 
-        document.getElementById('order-items').innerHTML = '';
-        order.items.forEach(item => {
-            this.addOrderItem();
-            const lastItem = document.querySelectorAll('.order-item')[document.querySelectorAll('.order-item').length - 1];
-            lastItem.querySelector('select').value = item.productId;
-            lastItem.querySelector('input').value = item.quantity;
-        });
+        // Popola carrello con prodotti esistenti
+        this.orderItems = order.items.map(item => ({
+            productId: item.productId,
+            quantity: item.quantity,
+            unit: item.unit,
+            mode: item.mode,
+            price: item.price,
+            prepared: item.prepared || false
+        }));
 
+        // Mostra prodotti nel carrello
+        this.displayCartItems();
         this.updateOrderTotal();
-        this.editingOrderId = orderId;
+
+        // Cambia titolo modal
+        const modalTitle = document.querySelector('#new-order-modal h3');
+        if (modalTitle) {
+            modalTitle.textContent = '✏️ Modifica Ordine';
+        }
     },
 
     deleteOrder(orderId) {
         if (OrdersModule.deleteOrder(orderId)) {
             this.loadOrders();
         }
+
+        this.loadDashboard(); // Aggiorna dashboard
     },
 
     async deleteAllOrders() {
@@ -2187,7 +2268,11 @@ const App = {
 
         container.innerHTML = customers.map(c => {
             const fidelityCustomer = FidelityModule.fidelityCustomers.find(fc => fc.customerId === c.id);
-            const isTop = c.totalSpent >= 100; // Top se speso almeno 100€
+            const hasAvailableRewards = fidelityCustomer ? FidelityModule.getAvailableRewards(c.id).length > 0 : false;
+            const stamps = fidelityCustomer ? fidelityCustomer.stamps : 0;
+            const totalStamps = fidelityCustomer ? fidelityCustomer.totalStamps : 0;
+            const isTop = totalStamps >= 20; // Top se ha completato almeno 2 tessere (20 bollini)
+            const availableCoupons = (c.coupons || []).filter(coup => !coup.used && !coup.expired).length;
 
             return `
                 <div class="bg-white p-5 rounded-xl shadow-lg hover:shadow-xl transition border-2 border-gray-100">
@@ -2197,8 +2282,9 @@ const App = {
                         <h3 class="font-bold text-lg cursor-pointer" onclick="app.viewCustomerDetails('${c.id}')">${c.firstName} ${c.lastName}</h3>
                         <div class="flex gap-1">
                             ${c.inWhatsAppGroup ? '<span class="bg-green-500 text-white text-xs px-2 py-1 rounded-full">💬</span>' : ''}
-                            ${fidelityCustomer ? '<span class="bg-purple-500 text-white text-xs px-2 py-1 rounded-full">🎁</span>' : ''}
-                            ${isTop ? '<span class="bg-yellow-500 text-white text-xs px-2 py-1 rounded-full">⭐</span>' : ''}
+                            ${hasAvailableRewards ? '<span class="bg-purple-500 text-white text-xs px-2 py-1 rounded-full">🎁</span>' : ''}
+                            ${availableCoupons > 0 ? '<span class="bg-orange-500 text-white text-xs px-2 py-1 rounded-full">🎫</span>' : ''}
+                            ${isTop ? '<span class="bg-yellow-500 text-white text-xs px-2 py-1 rounded-full">👑</span>' : ''}
                         </div>
                     </div>
                     
@@ -2208,8 +2294,8 @@ const App = {
                         ${c.email ? `<p class="text-xs">📧 ${c.email}</p>` : ''}
                     </div>
                     
-                    <!-- Statistiche -->
-                    <div class="grid grid-cols-2 gap-2 pt-3 border-t border-gray-200 mb-3 cursor-pointer" onclick="app.viewCustomerDetails('${c.id}')">
+                    <!-- Statistiche CON BOLLINI -->
+                    <div class="grid grid-cols-3 gap-2 pt-3 border-t border-gray-200 mb-3 cursor-pointer" onclick="app.viewCustomerDetails('${c.id}')">
                         <div class="text-center bg-blue-50 rounded-lg p-2">
                             <p class="text-xs text-gray-600">Ordini</p>
                             <p class="text-xl font-bold text-blue-600">${c.totalOrders || 0}</p>
@@ -2217,6 +2303,10 @@ const App = {
                         <div class="text-center bg-green-50 rounded-lg p-2">
                             <p class="text-xs text-gray-600">Speso</p>
                             <p class="text-lg font-bold text-green-600">${Utils.formatPrice(c.totalSpent || 0)}</p>
+                        </div>
+                        <div class="text-center bg-purple-50 rounded-lg p-2">
+                            <p class="text-xs text-gray-600">Bollini</p>
+                            <p class="text-xl font-bold text-purple-600">${stamps} ⭐</p>
                         </div>
                     </div>
                     
@@ -2231,12 +2321,6 @@ const App = {
                 </div>
             `;
         }).join('');
-    },
-
-    searchCustomers() {
-        const query = document.getElementById('customer-search').value;
-        const results = CustomersModule.searchCustomers(query);
-        this.displayCustomers(results);
     },
 
     openNewCustomerModal() {
@@ -2298,12 +2382,14 @@ const App = {
             this.editingCustomerId = null;
             this.closeModal('new-customer-modal');
             this.loadCustomers();
+            this.loadDashboard();
             Utils.showToast("✅ Cliente modificato!", "success");
         } else {
             // CREA nuovo
             const newCustomer = CustomersModule.addCustomer(data);
             this.closeModal('new-customer-modal');
             this.loadCustomers();
+            this.loadDashboard();
 
             // Chiedi se mandare messaggio benvenuto
             if (confirm("Mandare messaggio di benvenuto su WhatsApp con tessera fidelity?")) {
@@ -2326,6 +2412,7 @@ const App = {
         if (confirm("Eliminare questo cliente? Questa azione è irreversibile.")) {
             if (CustomersModule.deleteCustomer(customerId)) {
                 this.loadCustomers();
+                this.loadDashboard();
             }
         }
     },
@@ -2336,15 +2423,6 @@ const App = {
         this.updateProductsStats();
         this.populateCategoryFilters();
     },
-
-    loadProducts() {
-        console.log("🍝 Caricamento prodotti...");
-        this.displayProductsByCategory();
-        this.updateProductsStats();
-        this.populateCategoryFilters();
-    },
-
-    // ← SOSTITUISCI displayProducts() CON TUTTE QUESTE FUNZIONI 👇
 
     updateProductsStats() {
         const products = ProductsModule.getAllProducts();
@@ -2524,12 +2602,6 @@ const App = {
     toggleProductActive(productId) {
         ProductsModule.toggleProductActive(productId);
         this.loadProducts();
-    },
-
-    searchProducts() {
-        const query = document.getElementById('product-search').value;
-        const results = ProductsModule.searchProducts(query);
-        this.displayProducts(results);
     },
 
     openNewProductModal() {
@@ -2739,7 +2811,29 @@ const App = {
     loadFidelity() {
         console.log("🎁 Caricamento fidelity...");
         const fidelityList = FidelityModule.getAllFidelityCustomers();
+        this.allFidelityCustomers = fidelityList; // ← AGGIUNGI QUESTA RIGA
         this.displayFidelityCustomers(fidelityList);
+    },
+
+    filterFidelityCustomers() {
+        const searchTerm = document.getElementById('fidelity-search').value.toLowerCase();
+
+        if (!searchTerm) {
+            this.displayFidelityCustomers(this.allFidelityCustomers);
+            return;
+        }
+
+        const filtered = this.allFidelityCustomers.filter(f => {
+            const customer = CustomersModule.getCustomerById(f.customerId);
+            if (!customer) return false;
+
+            const fullName = `${customer.firstName} ${customer.lastName}`.toLowerCase();
+            const phone = (customer.phone || '').replace(/\s/g, '');
+
+            return fullName.includes(searchTerm) || phone.includes(searchTerm);
+        });
+
+        this.displayFidelityCustomers(filtered);
     },
 
     loadSettings() {
@@ -2769,13 +2863,6 @@ const App = {
 
     connectDropbox() {
         Storage.startDropboxAuth();
-    },
-
-    disconnectDropbox() {
-        if (confirm("Disconnettere Dropbox? I dati rimarranno salvati localmente.")) {
-            Storage.disconnectDropbox();
-            this.updateDropboxStatus();
-        }
     },
 
     async manualSync() {
@@ -2830,23 +2917,6 @@ const App = {
     // ==========================================
     // ACTIONS
     // ==========================================
-
-    openNewOrderModal() {
-        console.log("📦 Apertura modal nuovo ordine..."); // ← DEBUG
-
-        this.editingOrderId = null;
-        this.openModal('new-order-modal');
-
-        // ← DEVE ESSERE QUI, SUBITO DOPO openModal
-        this.populateCustomersList();
-
-        // Reset campi
-        document.getElementById('order-customer-search').value = '';
-        document.getElementById('order-customer').value = '';
-        document.getElementById('order-customer-list').classList.add('hidden');
-        this.orderItems = [];
-        this.updateOrderTotal();
-    },
 
     // Visualizza dettagli ordine
     viewOrderDetails(orderId) {

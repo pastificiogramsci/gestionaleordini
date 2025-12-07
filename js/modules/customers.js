@@ -88,6 +88,10 @@ const CustomersModule = {
         FidelityModule.addCustomerToFidelity(customer.id);
 
         Utils.showToast(`✅ Cliente "${customer.firstName} ${customer.lastName}" aggiunto!`, "success");
+
+        // Genera e scarica vCard
+        this.downloadVCard(customer);
+
         return customer;
     },
 
@@ -109,6 +113,26 @@ const CustomersModule = {
         this.saveCustomers();
         Utils.showToast("✅ Cliente aggiornato!", "success");
         return this.customers[index];
+    },
+
+    downloadVCard(customer) {
+        const vcard = `BEGIN:VCARD
+    VERSION:3.0
+    FN:${customer.firstName} ${customer.lastName}
+    TEL;TYPE=CELL:${customer.phone || ''}
+    EMAIL:${customer.email || ''}
+    NOTE:Cliente Pastificio Gramsci
+    END:VCARD`;
+
+        const blob = new Blob([vcard], { type: 'text/vcard' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${customer.firstName}_${customer.lastName}.vcf`;
+        a.click();
+        URL.revokeObjectURL(url);
+
+        Utils.showToast("📱 vCard scaricata! Importala in rubrica", "info");
     },
 
     // Elimina cliente
