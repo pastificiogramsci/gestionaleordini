@@ -356,100 +356,198 @@ const QRModule = {
     },
 
     // Genera QR Code per coupon
-    generateCouponQR(containerId, customerId, couponId, callback) {
-        if (!CustomersModule) {
-            console.error("Modulo Clienti non disponibile");
-            return false;
+    // Genera QR Code per coupon card (come fidelity)
+    generateCouponQR(customerId, couponId, callback) {
+        console.log("🎨 Genera QR Coupon per:", customerId, couponId);
+
+        const customer = window.CustomersModule.getCustomerById(customerId);
+        const coupon = customer?.coupons?.find(c => c.id === couponId);
+
+        if (!customer || !coupon) {
+            console.error("❌ Cliente o coupon non trovato");
+            if (callback) callback(null);
+            return;
         }
 
-        const customer = CustomersModule.getCustomerById(customerId);
-        if (!customer || !customer.coupons) return false;
-
-        const coupon = customer.coupons.find(c => c.id === couponId);
-        if (!coupon) return false;
-
-        const qrData = {
+        const qrData = JSON.stringify({
             type: 'coupon',
-            couponId: coupon.id,
             customerId: customerId,
-            code: coupon.code
-        };
+            couponId: couponId,
+            code: coupon.code,
+            campaign: coupon.campaignName
+        });
 
-        return this.generateQRCode(containerId, JSON.stringify(qrData), {}, callback);
+        // Container nascosto
+        const qrContainer = document.createElement('div');
+        qrContainer.style.display = 'none';
+        document.body.appendChild(qrContainer);
+
+        // Genera QR
+        new QRCode(qrContainer, {
+            text: qrData,
+            width: 400,
+            height: 400
+        });
+
+        // TIMEOUT per aspettare rendering (come fidelity)
+        setTimeout(() => {
+            console.log('⏰ Cerco QR coupon renderizzato...');
+
+            let qrImg = qrContainer.querySelector('img');
+            const qrCanvas = qrContainer.querySelector('canvas');
+
+            console.log('IMG?', !!qrImg, '| CANVAS?', !!qrCanvas);
+
+            // Fallback: se IMG src vuoto, usa CANVAS
+            if (qrImg && (!qrImg.src || qrImg.src.length < 100)) {
+                console.log('⚠️ IMG vuota, uso CANVAS');
+                qrImg = null;
+            }
+
+            // Usa CANVAS se IMG non valida
+            if (!qrImg && qrCanvas) {
+                console.log('🔄 Converto CANVAS→IMG coupon');
+                const tempImg = new Image();
+                tempImg.onload = () => {
+                    console.log('✅ CANVAS coupon caricato');
+                    this.drawCouponCard(tempImg, customer, coupon, qrContainer, callback);
+                };
+                tempImg.onerror = () => {
+                    console.error('❌ Errore CANVAS coupon');
+                    document.body.removeChild(qrContainer);
+                    if (callback) callback(null);
+                };
+                tempImg.src = qrCanvas.toDataURL();
+                return;
+            }
+
+            // Usa IMG
+            if (qrImg && qrImg.src) {
+                console.log('🔄 Carico IMG coupon');
+                const tempImg = new Image();
+                tempImg.onload = () => {
+                    console.log('✅ IMG coupon caricata');
+                    this.drawCouponCard(tempImg, customer, coupon, qrContainer, callback);
+                };
+                tempImg.onerror = () => {
+                    console.error('❌ Errore IMG coupon');
+                    document.body.removeChild(qrContainer);
+                    if (callback) callback(null);
+                };
+                tempImg.src = qrImg.src;
+                return;
+            }
+
+            console.error('❌ Nessun QR coupon trovato');
+            document.body.removeChild(qrContainer);
+            if (callback) callback(null);
+        }, 500); // ASPETTA 500ms
     },
 
-    generateQRCode(containerId, data, options = {}, callback) {
-        const container = document.getElementById(containerId);
+    drawCouponCard(qrImg, customer, coupon, qrContainer, callback) {
+        console.log('🎨 Disegno card coupon elegante...');
 
-        if (!container) {
-            console.error("Container QR non trovato:", containerId);
-            return false;
-        }
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
 
-        container.innerHTML = '';
+        canvas.width = 1200;
+        canvas.height = 750;
 
-        const qrOptions = {
-            width: options.width || 256,
-            height: options.height || 256,
-            colorDark: options.colorDark || "#000000",
-            colorLight: options.colorLight || "#ffffff"
-        };
+        // Sfondo beige (come fidelity)
+        ctx.fillStyle = '#F5E6D3';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        try {
-            new QRCode(container, {
-                text: data,
-                ...qrOptions
-            });
+        // Bordo marrone
+        ctx.strokeStyle = '#5D3F24';
+        ctx.lineWidth = 6;
+        ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
 
-            // ASPETTA rendering (come fidelity)
-            setTimeout(() => {
-                console.log('⏰ Verifico QR coupon...');
+        // Bordo interno decorativo
+        ctx.strokeStyle = '#8B6F47';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(25, 25, canvas.width - 50, canvas.height - 50);
 
-                let qrImg = container.querySelector('img');
-                const qrCanvas = container.querySelector('canvas');
+        // Header rosa per distinguerlo
+        ctx.fillStyle = '#ec4899';
+        ctx.fillRect(50, 50, canvas.width - 100, 120);
 
-                // Fallback CANVAS se IMG vuota
-                if (qrImg && (!qrImg.src || qrImg.src.length < 100)) {
-                    console.log('⚠️ IMG vuota coupon, uso CANVAS');
-                    qrImg = null;
-                }
+        // Testo header bianco
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
+        ctx.font = 'bold 48px Arial';
+        ctx.fillText('🎫 COUPON SCONTO', canvas.width / 2, 120);
 
-                // Usa CANVAS
-                if (!qrImg && qrCanvas) {
-                    console.log('🔄 Converto CANVAS coupon');
-                    const tempImg = new Image();
-                    tempImg.onload = () => {
-                        console.log('✅ QR coupon da CANVAS pronto');
-                        container.innerHTML = '';
-                        container.appendChild(tempImg);
-                        if (callback) callback(true);
-                    };
-                    tempImg.onerror = () => {
-                        console.error('❌ Errore CANVAS coupon');
-                        if (callback) callback(false);
-                    };
-                    tempImg.src = qrCanvas.toDataURL();
-                    return;
-                }
+        const centerX = canvas.width / 2;
+        const startY = 220;
 
-                // IMG già OK
-                if (qrImg && qrImg.src) {
-                    console.log('✅ QR coupon da IMG pronto');
-                    if (callback) callback(true);
-                    return;
-                }
+        // Testo marrone (resto del contenuto)
+        ctx.fillStyle = '#5D3F24';
 
-                console.error('❌ Nessun QR coupon');
-                if (callback) callback(false);
-            }, 500);
+        // Logo/Nome azienda
+        ctx.font = 'bold 42px Georgia';
+        ctx.fillText('PASTIFICIO GRAMSCI', centerX, startY);
 
-            return true;
-        } catch (error) {
-            console.error("Errore generazione QR:", error);
-            Utils.showToast("Errore generazione QR Code", "error");
-            if (callback) callback(false);
-            return false;
-        }
+        // Nome cliente
+        ctx.font = 'bold 36px Arial';
+        ctx.fillText(`${customer.firstName} ${customer.lastName}`, centerX, startY + 60);
+
+        // Campagna
+        ctx.font = '28px Georgia';
+        ctx.fillStyle = '#8B6F47';
+        ctx.fillText(coupon.campaignName || 'Coupon Speciale', centerX, startY + 100);
+
+        // Box descrizione con sfondo rosa chiaro
+        ctx.fillStyle = '#fce7f3';
+        ctx.fillRect(150, startY + 130, canvas.width - 300, 70);
+
+        ctx.strokeStyle = '#ec4899';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(150, startY + 130, canvas.width - 300, 70);
+
+        ctx.fillStyle = '#5D3F24';
+        ctx.font = 'bold 32px Arial';
+        ctx.fillText(coupon.description || '', centerX, startY + 175);
+
+        // Codice con badge rosa
+        ctx.fillStyle = '#ec4899';
+        const codeText = `Codice: ${coupon.code}`;
+        ctx.font = 'bold 36px monospace';
+        const codeWidth = ctx.measureText(codeText).width;
+        ctx.fillRect(centerX - codeWidth / 2 - 20, startY + 220, codeWidth + 40, 50);
+
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(codeText, centerX, startY + 255);
+
+        // QR Code con cornice
+        const qrSize = 220;
+        const qrX = (canvas.width - qrSize) / 2;
+        const qrY = startY + 290;
+
+        // Sfondo bianco per QR
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(qrX - 15, qrY - 15, qrSize + 30, qrSize + 30);
+
+        // Bordo marrone
+        ctx.strokeStyle = '#5D3F24';
+        ctx.lineWidth = 4;
+        ctx.strokeRect(qrX - 15, qrY - 15, qrSize + 30, qrSize + 30);
+
+        ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
+
+        // Scadenza sotto QR
+        ctx.fillStyle = '#5D3F24';
+        ctx.font = 'italic 26px Georgia';
+        ctx.fillText(`Valido fino al: ${window.Utils.formatDate(coupon.expiryDate)}`, centerX, qrY + qrSize + 55);
+
+        // Footer
+        ctx.font = '22px Arial';
+        ctx.fillStyle = '#8B6F47';
+        ctx.fillText('Mostra questo coupon alla cassa', centerX, qrY + qrSize + 90);
+
+        canvas.toBlob((blob) => {
+            document.body.removeChild(qrContainer);
+            if (callback) callback(blob);
+        }, 'image/png', 1.0);
     },
 
     // ==========================================

@@ -570,7 +570,7 @@ const App = {
                         <p class="font-bold">${redeemed}</p>
                         <p class="text-gray-600">Premi riscattati</p>
                     </div>
-                    <div class="bg-blue-50 p-2 rounded text-center">
+                    <div class="bg-blue-50 p-2 rounded text-center cursor-pointer hover:bg-blue-100" onclick="app.openCustomerCoupons('${f.customerId}')">
                         <p class="font-bold text-blue-600">${customer.coupons?.filter(c => !c.used).length || 0}</p>
                         <p class="text-gray-600">Coupon attivi</p>
                     </div>
@@ -615,11 +615,91 @@ const App = {
             <h4 class="font-bold mb-2">🎫 Coupon Attivi (${coupons.length})</h4>
             ${coupons.map(c => `<p class="text-sm">• ${c.campaignName}</p>`).join('')}
         </div>
-    ` : '';
+        ` : '';
 
         document.getElementById('fidelity-detail-coupons').innerHTML = couponsHtml;
 
         this.openModal('fidelity-detail-modal');
+    },
+
+    openCustomerCoupons(customerId) {
+        this.currentCouponCustomer = customerId;
+        const customer = CustomersModule.getCustomerById(customerId);
+
+        if (!customer) return;
+
+        this.openModal('customer-coupons-modal');
+
+        // Mostra info cliente
+        document.getElementById('coupon-customer-name').textContent = `${customer.firstName} ${customer.lastName}`;
+        document.getElementById('coupon-customer-phone').textContent = customer.phone || '';
+
+        // Mostra coupon
+        this.displayCustomerCoupons(customer);
+    },
+
+    displayCustomerCoupons(customer) {
+        const container = document.getElementById('customer-coupons-list');
+        const noMessage = document.getElementById('no-coupons-message');
+
+        if (!container) return;
+
+        const coupons = (customer.coupons || []).filter(c => !c.used);
+
+        if (coupons.length === 0) {
+            container.innerHTML = '';
+            if (noMessage) noMessage.style.display = 'block';
+            return;
+        }
+
+        if (noMessage) noMessage.style.display = 'none';
+
+        container.innerHTML = coupons.map(coupon => {
+            const isExpired = coupon.expiryDate && new Date(coupon.expiryDate) < new Date();
+
+            return `
+        <div class="border-2 ${isExpired ? 'border-gray-300 bg-gray-50' : 'border-blue-200 bg-blue-50'} rounded-lg p-4">
+            <div class="flex justify-between items-start mb-2">
+                <div class="flex-1">
+                    <h4 class="font-bold text-lg ${isExpired ? 'text-gray-500' : 'text-blue-700'}">${coupon.campaignName || 'Coupon'}</h4>
+                    <p class="text-sm text-gray-600">${coupon.description || ''}</p>
+                    ${isExpired ? '<p class="text-xs text-red-600 font-bold mt-1">⚠️ SCADUTO</p>' : ''}
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-2 text-sm mb-3">
+                <div>
+                    <p class="text-gray-500">Codice:</p>
+                    <p class="font-mono font-bold text-blue-600">${coupon.code}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Scadenza:</p>
+                    <p class="font-bold">${Utils.formatDate(coupon.expiryDate)}</p>
+                </div>
+            </div>
+            
+            ${!isExpired ? `
+            <button onclick="app.sendCouponWhatsApp('${customer.id}', '${coupon.id}')" 
+                    class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 font-bold">
+                💬 Invia su WhatsApp
+            </button>
+            ` : ''}
+        </div>
+        `;
+        }).join('');
+    },
+
+    sendCouponWhatsApp(customerId, couponId) {
+        const customer = CustomersModule.getCustomerById(customerId);
+        if (!customer) return;
+
+        const coupon = customer.coupons.find(c => c.id === couponId);
+        if (!coupon) {
+            Utils.showToast('Coupon non trovato', 'error');
+            return;
+        }
+
+        WhatsAppModule.sendCouponMessage(customer, coupon);
     },
 
     quickAddStamps(qty) {
@@ -2014,7 +2094,23 @@ const App = {
             Utils.showToast("❌ Errore: " + error.message, "error");
         }
 
+        this.updateCustomerStats(customerId);
         this.loadDashboard();
+    },
+
+    updateCustomerStats(customerId) {
+        const customer = CustomersModule.getCustomerById(customerId);
+        if (!customer) return;
+
+        // Conta ordini e spesa totale
+        const customerOrders = OrdersModule.getAllOrders('all').filter(o => o.customerId === customerId);
+
+        customer.totalOrders = customerOrders.length;
+        customer.totalSpent = customerOrders.reduce((sum, order) => {
+            return sum + (order.totalAmount || 0);
+        }, 0);
+
+        CustomersModule.saveCustomers();
     },
 
     compareOrders(oldItems, newItems) {
@@ -2104,11 +2200,18 @@ const App = {
     },
 
     deleteOrder(orderId) {
+        // PRIMA prendi l'ordine per sapere il cliente
+        const order = OrdersModule.getOrderById(orderId);
+
         if (OrdersModule.deleteOrder(orderId)) {
             this.loadOrders();
-        }
+            this.loadDashboard(); // Aggiorna dashboard
 
-        this.loadDashboard(); // Aggiorna dashboard
+            // Aggiorna stats cliente
+            if (order && order.customerId) {
+                this.updateCustomerStats(order.customerId);
+            }
+        }
     },
 
     async deleteAllOrders() {
