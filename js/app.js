@@ -2093,7 +2093,7 @@ const App = {
         }
     },
 
-    async saveOrder() {  // ← Aggiungi async qui
+    async saveOrder() {  
         const customerId = document.getElementById('order-customer').value;
 
         if (!customerId) {

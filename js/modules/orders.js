@@ -75,15 +75,15 @@ const OrdersModule = {
     // ==========================================
 
     // Crea nuovo ordine
-    createOrder(orderData) {
+    async createOrder(orderData) {  // ← AGGIUNGI async
         const order = {
             id: Utils.generateId(),
-            orderNumber: this.generateOrderNumber(orderData.deliveryDate),
+            orderNumber: await this.generateOrderNumber(orderData.deliveryDate),  // ← AGGIUNGI await
             customerId: orderData.customerId,
             items: orderData.items,
             totalAmount: this.calculateTotal(orderData.items),
-            deposit: parseFloat(orderData.deposit) || 0, // ← AGGIUNGI
-            depositPaid: orderData.depositPaid || false, // ← AGGIUNGI
+            deposit: parseFloat(orderData.deposit) || 0,
+            depositPaid: orderData.depositPaid || false,
             status: this.ORDER_STATUS.PENDING,
             deliveryDate: orderData.deliveryDate,
             deliveryTime: orderData.deliveryTime || '',
@@ -93,7 +93,7 @@ const OrdersModule = {
         };
 
         this.orders.push(order);
-        this.saveOrders();
+        await this.saveOrders();  // ← AGGIUNGI await anche qui
 
         Utils.showToast("✅ Ordine creato!", "success");
         return order;
