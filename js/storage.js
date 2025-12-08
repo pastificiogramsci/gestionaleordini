@@ -606,64 +606,153 @@ const Storage = {
 
     async getNextOrderNumber(deliveryDate) {
         if (!this.dropboxClient) {
-            // Fallback locale se Dropbox non disponibile
             console.warn('⚠️ Dropbox non disponibile, uso counter locale');
             return this.getNextOrderNumberLocal(deliveryDate);
         }
 
-        try {
-            const counterKey = `/counters/orders_${deliveryDate}.json`;
-            
-            // 1. Leggi counter esistente
-            let counter = await this.loadDropbox(counterKey);
-            let currentNumber = 1;
-            
-            if (counter?.data?.number) {
-                currentNumber = counter.data.number;
+        const maxRetries = 10; // Riprova fino a 10 volte
+        const lockKey = `/counters/lock_orders_${deliveryDate}.json`;
+        const counterKey = `/counters/orders_${deliveryDate}.json`;
+
+        for (let attempt = 0; attempt < maxRetries; attempt++) {
+            try {
+                // 1. Prova a creare il LOCK
+                const lockAcquired = await this.acquireLock(lockKey);
+
+                if (!lockAcquired) {
+                    // Lock occupato, aspetta e riprova
+                    console.log(`🔒 Lock occupato, aspetto... (tentativo ${attempt + 1}/${maxRetries})`);
+                    await this.delay(200 + (attempt * 100)); // Exponential backoff
+                    continue;
+                }
+
+                console.log(`🟢 Lock acquisito!`);
+
+                try {
+                    // 2. Leggi counter
+                    let counter = await this.loadDropbox(counterKey);
+                    let currentNumber = 1;
+
+                    if (counter?.data?.number) {
+                        currentNumber = counter.data.number;
+                    }
+
+                    console.log(`🎫 Counter per ${deliveryDate}: assegno numero ${currentNumber}`);
+
+                    // 3. Incrementa e salva
+                    const newCounter = {
+                        number: currentNumber + 1,
+                        lastUpdate: new Date().toISOString()
+                    };
+
+                    await this.saveDropbox(counterKey, newCounter);
+
+                    console.log(`✅ Counter aggiornato → prossimo sarà ${currentNumber + 1}`);
+
+                    // 4. Rilascia il lock
+                    await this.releaseLock(lockKey);
+
+                    return currentNumber;
+
+                } catch (error) {
+                    // Errore durante la lettura/scrittura, rilascia lock
+                    await this.releaseLock(lockKey);
+                    throw error;
+                }
+
+            } catch (error) {
+                console.error(`❌ Errore tentativo ${attempt + 1}:`, error);
+
+                if (attempt === maxRetries - 1) {
+                    // Ultimo tentativo fallito, usa fallback
+                    console.error('❌ Troppi tentativi, uso counter locale');
+                    return this.getNextOrderNumberLocal(deliveryDate);
+                }
             }
-            
-            console.log(`🎫 Counter per ${deliveryDate}: assegno numero ${currentNumber}`);
-            
-            // 2. Incrementa e salva nuovo counter
-            const newCounter = {
-                number: currentNumber + 1,
-                lastUpdate: new Date().toISOString()
-            };
-            
-            await this.saveDropbox(counterKey, newCounter);
-            
-            console.log(`✅ Counter aggiornato → prossimo sarà ${currentNumber + 1}`);
-            
-            // 3. Ritorna il numero da usare
-            return currentNumber;
-            
-        } catch (error) {
-            console.error('❌ Errore lettura counter:', error);
-            // Fallback locale
-            return this.getNextOrderNumberLocal(deliveryDate);
         }
+
+        // Fallback finale
+        return this.getNextOrderNumberLocal(deliveryDate);
+    },
+
+    async acquireLock(lockKey, timeout = 30000) {
+        try {
+            // Prova a creare il file lock
+            const lockData = {
+                deviceId: this.getDeviceId(),
+                timestamp: Date.now(),
+                expires: Date.now() + timeout
+            };
+
+            // Controlla se esiste già
+            const existing = await this.loadDropbox(lockKey);
+
+            if (existing?.data) {
+                // Lock esiste, controlla se è scaduto
+                const lockAge = Date.now() - existing.data.timestamp;
+                if (lockAge < timeout) {
+                    // Lock ancora valido
+                    return false;
+                }
+
+                // Lock scaduto, lo sovrascriviamo
+                console.log('🔓 Lock scaduto, lo sostituisco');
+            }
+
+            // Crea/aggiorna lock
+            await this.saveDropbox(lockKey, lockData);
+
+            // Aspetta un po' e verifica che il lock sia ancora nostro
+            await this.delay(50);
+            const verify = await this.loadDropbox(lockKey);
+
+            if (verify?.data?.deviceId === this.getDeviceId()) {
+                return true; // Lock acquisito!
+            }
+
+            return false; // Qualcun altro l'ha preso
+
+        } catch (error) {
+            console.error('❌ Errore acquisizione lock:', error);
+            return false;
+        }
+    },
+
+    async releaseLock(lockKey) {
+        try {
+            // Elimina il file lock
+            await this.dropboxClient.filesDeleteV2({ path: lockKey });
+            console.log('🔓 Lock rilasciato');
+        } catch (error) {
+            // Se non esiste o errore, ignora
+            console.log('🔓 Lock già rilasciato o non esistente');
+        }
+    },
+
+    delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
     },
 
     getNextOrderNumberLocal(deliveryDate) {
         // Fallback: usa max + 1 locale
         const ordersOnDate = [];
-        
+
         // Cerca negli ordini esistenti
         if (window.OrdersModule && Array.isArray(window.OrdersModule.orders)) {
             ordersOnDate.push(...window.OrdersModule.orders.filter(o => o.deliveryDate === deliveryDate));
         }
-        
+
         const existingNumbers = ordersOnDate
             .map(o => {
                 const match = o.orderNumber?.match(/^(\d+)-/);
                 return match ? parseInt(match[1]) : 0;
             })
             .filter(n => !isNaN(n) && n > 0);
-        
-        const nextNumber = existingNumbers.length > 0 
-            ? Math.max(...existingNumbers) + 1 
+
+        const nextNumber = existingNumbers.length > 0
+            ? Math.max(...existingNumbers) + 1
             : 1;
-        
+
         console.log(`🎫 Counter locale per ${deliveryDate}: ${nextNumber}`);
         return nextNumber;
     }
