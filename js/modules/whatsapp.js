@@ -52,18 +52,40 @@ Grazie per averci scelto!`;
 
         const itemsList = order.items.map(item => {
             const product = ProductsModule.getProductById(item.productId);
-            return `• ${product?.name || 'Prodotto'} - ${item.quantity.toFixed(2)} ${product?.unit || 'kg'}`;
+
+            // Calcola display in base al mode
+            let displayQty = '';
+
+            if (item.mode === 'weight' && product?.averageWeight) {
+                // Peso medio: mostra pezzi
+                const pezzi = Math.round(item.quantity / product.averageWeight);
+                displayQty = `${pezzi} pz`;
+            } else if (item.mode === 'pieces') {
+                // Pezzi diretti
+                displayQty = `${item.quantity} pz`;
+            } else if (item.mode === 'kg') {
+                // Kg diretti
+                displayQty = `${item.quantity.toFixed(2)} kg`;
+            } else {
+                // Fallback
+                displayQty = `${item.quantity.toFixed(2)} ${item.unit || 'kg'}`;
+            }
+
+            return `• ${product?.name || 'Prodotto'} - ${displayQty}`;
         }).join('\n');
 
-        const message = `Ciao ${customer.firstName}! 📦
+        const message = `🎉 *ORDINE CONFERMATO* 🎉
 
-Il tuo ordine #${order.orderNumber} è stato confermato!
+        📦 *#${order.orderNumber}*
 
-${itemsList}
+        Ciao ${customer.firstName}!
 
-📅 Ritiro: ${Utils.formatDate(order.deliveryDate)} ${order.deliveryTime || ''}
+        ${itemsList}
 
-Ci vediamo presto! 😊`;
+        📅 *Ritiro:* ${Utils.formatDate(order.deliveryDate)} ${order.deliveryTime || ''}
+        💶 *Totale:* ${Utils.formatPrice(order.totalAmount)}
+
+        Ci vediamo presto! 😊`;
 
         this.openWhatsApp(phone, message);
     },
@@ -74,16 +96,16 @@ Ci vediamo presto! 😊`;
 
         const message = `Ciao ${customer.firstName}! 🎁
 
-Hai ricevuto un nuovo coupon sconto!
+    Hai ricevuto un nuovo coupon sconto!
 
-🎫 ${coupon.campaignName}
-💝 ${coupon.description}
-🔢 Codice: ${coupon.code}
-⏰ Valido fino al ${Utils.formatDate(coupon.expiryDate)}
+    🎫 ${coupon.campaignName}
+    💝 ${coupon.description}
+    🔢 Codice: ${coupon.code}
+    ⏰ Valido fino al ${Utils.formatDate(coupon.expiryDate)}
 
-Mostra questo messaggio alla cassa per usare lo sconto!
+    Mostra questo messaggio alla cassa per usare lo sconto!
 
-Grazie per la tua fedeltà! ❤️`;
+    Grazie per la tua fedeltà! ❤️`;
 
         // Prima genera e scarica la card coupon
         QRModule.generateCouponQR(customer.id, coupon.id, (blob) => {

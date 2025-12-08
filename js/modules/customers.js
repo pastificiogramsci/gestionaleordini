@@ -89,8 +89,10 @@ const CustomersModule = {
 
         Utils.showToast(`✅ Cliente "${customer.firstName} ${customer.lastName}" aggiunto!`, "success");
 
-        // Genera e scarica vCard
-        this.downloadVCard(customer);
+        // Chiedi se scaricare vCard
+        if (confirm("💾 Scaricare anche la vCard per la rubrica?")) {
+            this.downloadVCard(customer);
+        }
 
         return customer;
     },
