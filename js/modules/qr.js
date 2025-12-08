@@ -155,9 +155,9 @@ const QRModule = {
         }
 
         const qrData = JSON.stringify({
-            id: customer.id,
-            name: `${customer.firstName} ${customer.lastName}`,
-            app: 'fidelity-card'
+            type: 'fidelity',  // ← AGGIUNGI questo
+            customerId: customer.id,  // ← Rinomina da "id" a "customerId" per consistenza
+            name: `${customer.firstName} ${customer.lastName}`
         });
 
         // Container nascosto
@@ -370,11 +370,11 @@ const QRModule = {
         }
 
         const qrData = JSON.stringify({
-            type: 'coupon',
-            customerId: customerId,
+            type: 'coupon',  // ← AGGIUNGI questo
+            customerId: customer.id,
             couponId: couponId,
-            code: coupon.code,
-            campaign: coupon.campaignName
+            customerName: `${customer.firstName} ${customer.lastName}`,
+            couponCode: coupon.code
         });
 
         // Container nascosto
