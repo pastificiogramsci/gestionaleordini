@@ -553,14 +553,51 @@ const Storage = {
 
     async saveCampaigns(campaigns) {
         this.saveLocal(CONFIG.STORAGE_KEYS.CAMPAIGNS, campaigns);
+        this.lastLocalSave[CONFIG.STORAGE_KEYS.CAMPAIGNS] = new Date().toISOString();
         await this.saveDropbox(CONFIG.DROPBOX_PATHS.CAMPAIGNS, campaigns);
     },
 
     async loadCampaigns() {
-        const cloudData = await this.loadDropbox(CONFIG.DROPBOX_PATHS.CAMPAIGNS);
-        if (cloudData) return cloudData;
+        const result = await this.loadDropbox(CONFIG.DROPBOX_PATHS.CAMPAIGNS);
+        if (result?.data) {
+            const localCampaigns = this.loadLocal(CONFIG.STORAGE_KEYS.CAMPAIGNS, []);
+            if (localCampaigns.length > 0) {
+                const merged = this.mergeData(
+                    CONFIG.STORAGE_KEYS.CAMPAIGNS,
+                    localCampaigns,
+                    result.data
+                );
+                return merged;
+            }
+            return result.data;
+        }
         return this.loadLocal(CONFIG.STORAGE_KEYS.CAMPAIGNS, []);
+    },
+
+    // ==========================================
+    // INIZIALIZZAZIONE TIMESTAMP LOCALI
+    // ==========================================
+
+    initLastLocalSave() {
+        // Recupera i timestamp salvati in localStorage
+        const keys = [
+            CONFIG.STORAGE_KEYS.ORDERS,
+            CONFIG.STORAGE_KEYS.CUSTOMERS,
+            CONFIG.STORAGE_KEYS.PRODUCTS,
+            CONFIG.STORAGE_KEYS.FIDELITY,
+            CONFIG.STORAGE_KEYS.CAMPAIGNS
+        ];
+
+        keys.forEach(key => {
+            const saved = localStorage.getItem('lastLocalSave_' + key);
+            if (saved) {
+                this.lastLocalSave[key] = saved;
+            }
+        });
+
+        console.log('📅 Timestamp locali recuperati:', this.lastLocalSave);
     }
+
 };
 
 window.Storage = Storage;
