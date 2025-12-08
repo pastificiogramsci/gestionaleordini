@@ -80,6 +80,16 @@ const Storage = {
         }
     },
 
+    getDeviceId() {
+        let deviceId = localStorage.getItem('deviceId');
+        if (!deviceId) {
+            deviceId = 'device_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
+            localStorage.setItem('deviceId', deviceId);
+            console.log('📱 Device ID generato:', deviceId);
+        }
+        return deviceId;
+    },
+
     async refreshAccessToken() {
         console.log("🔄 Rinnovo access token...");
 
