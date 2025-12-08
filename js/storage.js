@@ -601,4 +601,4 @@ const Storage = {
 };
 
 window.Storage = Storage;
-console.log("✅ Storage caricato");
+console.log("✅ Storage caricato con merge intelligente v2.1");
