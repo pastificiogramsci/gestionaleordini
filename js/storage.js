@@ -345,6 +345,96 @@ const Storage = {
         }
     },
 
+    mergeData(key, localData, remoteData) {
+        // Se non sono array, usa i dati locali (più sicuro)
+        if (!Array.isArray(localData) || !Array.isArray(remoteData)) {
+            console.log('⚠️ Dati non sono array, uso versione locale');
+            return localData;
+        }
+
+        console.log(`🔀 MERGE ${key}:`);
+        console.log(`   Locale: ${localData.length} records`);
+        console.log(`   Remoto: ${remoteData.length} records`);
+
+        // Usa Map per merge efficiente
+        const merged = new Map();
+
+        // 1. Aggiungi tutti i records remoti
+        remoteData.forEach(item => {
+            if (item.id) {
+                merged.set(item.id, {
+                    ...item,
+                    _source: 'remote'
+                });
+            }
+        });
+
+        // 2. Aggiungi/aggiorna con records locali
+        let added = 0;
+        let updated = 0;
+        let kept = 0;
+
+        localData.forEach(item => {
+            if (!item.id) {
+                console.warn('⚠️ Record senza ID, lo aggiungo comunque');
+                merged.set(Math.random().toString(), {
+                    ...item,
+                    _source: 'local'
+                });
+                added++;
+                return;
+            }
+
+            const existing = merged.get(item.id);
+
+            if (!existing) {
+                // Nuovo record locale che non esiste in remoto
+                merged.set(item.id, {
+                    ...item,
+                    _source: 'local'
+                });
+                added++;
+                console.log(`   ➕ Aggiunto nuovo: ${item.id.substring(0, 8)}...`);
+            } else {
+                // Record esiste in entrambi - usa il più recente
+                const localTime = new Date(item.updatedAt || item.createdAt || 0);
+                const remoteTime = new Date(existing.updatedAt || existing.createdAt || 0);
+
+                if (localTime > remoteTime) {
+                    merged.set(item.id, {
+                        ...item,
+                        _source: 'local'
+                    });
+                    updated++;
+                    console.log(`   ✏️ Aggiornato: ${item.id.substring(0, 8)}... (locale più recente)`);
+                } else if (localTime.getTime() === remoteTime.getTime()) {
+                    // Stesso timestamp - usa locale per sicurezza
+                    merged.set(item.id, {
+                        ...item,
+                        _source: 'local'
+                    });
+                    kept++;
+                } else {
+                    // Remoto più recente, mantieni quello
+                    kept++;
+                    console.log(`   ⏸️ Mantenuto remoto: ${item.id.substring(0, 8)}... (remoto più recente)`);
+                }
+            }
+        });
+
+        // 3. Rimuovi metadata _source
+        const result = Array.from(merged.values()).map(item => {
+            const { _source, ...clean } = item;
+            return clean;
+        });
+
+        console.log(`✅ MERGE COMPLETATO:`);
+        console.log(`   Totale: ${result.length} records`);
+        console.log(`   Aggiunti: ${added} | Aggiornati: ${updated} | Mantenuti: ${kept}`);
+
+        return result;
+    },
+
     async loadDropbox(key) {
         if (!this.dropboxClient) return null;
 
