@@ -53,23 +53,44 @@ const App = {
                             Storage.loadDropbox(CONFIG.DROPBOX_PATHS.CAMPAIGNS)
                         ]);
 
-                    if (cloudCustomers?.length > 0) {
+                    // Gestisci nuovo formato {data, metadata}
+                    if (cloudCustomers?.data?.length > 0) {
+                        CustomersModule.customers = cloudCustomers.data;
+                        Storage.saveLocal(CONFIG.STORAGE_KEYS.CUSTOMERS, cloudCustomers.data);
+                    } else if (Array.isArray(cloudCustomers) && cloudCustomers.length > 0) {
+                        // Retrocompatibilità con vecchio formato
                         CustomersModule.customers = cloudCustomers;
                         Storage.saveLocal(CONFIG.STORAGE_KEYS.CUSTOMERS, cloudCustomers);
                     }
-                    if (cloudProducts?.length > 0) {
+
+                    if (cloudProducts?.data?.length > 0) {
+                        ProductsModule.products = cloudProducts.data;
+                        Storage.saveLocal(CONFIG.STORAGE_KEYS.PRODUCTS, cloudProducts.data);
+                    } else if (Array.isArray(cloudProducts) && cloudProducts.length > 0) {
                         ProductsModule.products = cloudProducts;
                         Storage.saveLocal(CONFIG.STORAGE_KEYS.PRODUCTS, cloudProducts);
                     }
-                    if (cloudOrders?.length > 0) {
+
+                    if (cloudOrders?.data?.length > 0) {
+                        OrdersModule.orders = cloudOrders.data;
+                        Storage.saveLocal(CONFIG.STORAGE_KEYS.ORDERS, cloudOrders.data);
+                    } else if (Array.isArray(cloudOrders) && cloudOrders.length > 0) {
                         OrdersModule.orders = cloudOrders;
                         Storage.saveLocal(CONFIG.STORAGE_KEYS.ORDERS, cloudOrders);
                     }
-                    if (cloudFidelity?.length > 0) {
+
+                    if (cloudFidelity?.data?.length > 0) {
+                        FidelityModule.fidelityCustomers = cloudFidelity.data;
+                        Storage.saveLocal(CONFIG.STORAGE_KEYS.FIDELITY, cloudFidelity.data);
+                    } else if (Array.isArray(cloudFidelity) && cloudFidelity.length > 0) {
                         FidelityModule.fidelityCustomers = cloudFidelity;
                         Storage.saveLocal(CONFIG.STORAGE_KEYS.FIDELITY, cloudFidelity);
                     }
-                    if (cloudCampaigns?.length > 0) {
+
+                    if (cloudCampaigns?.data?.length > 0) {
+                        CouponsModule.campaigns = cloudCampaigns.data;
+                        Storage.saveLocal(CONFIG.STORAGE_KEYS.CAMPAIGNS, cloudCampaigns.data);
+                    } else if (Array.isArray(cloudCampaigns) && cloudCampaigns.length > 0) {
                         CouponsModule.campaigns = cloudCampaigns;
                         Storage.saveLocal(CONFIG.STORAGE_KEYS.CAMPAIGNS, cloudCampaigns);
                     }
@@ -87,23 +108,44 @@ const App = {
                     const cloudFidelity = await Storage.loadDropbox(CONFIG.DROPBOX_PATHS.FIDELITY);
                     const cloudCampaigns = await Storage.loadDropbox(CONFIG.DROPBOX_PATHS.CAMPAIGNS);
 
-                    if (cloudCustomers?.length > 0) {
+                    // Gestisci nuovo formato {data, metadata}
+                    if (cloudCustomers?.data?.length > 0) {
+                        CustomersModule.customers = cloudCustomers.data;
+                        Storage.saveLocal(CONFIG.STORAGE_KEYS.CUSTOMERS, cloudCustomers.data);
+                    } else if (Array.isArray(cloudCustomers) && cloudCustomers.length > 0) {
+                        // Retrocompatibilità con vecchio formato
                         CustomersModule.customers = cloudCustomers;
                         Storage.saveLocal(CONFIG.STORAGE_KEYS.CUSTOMERS, cloudCustomers);
                     }
-                    if (cloudProducts?.length > 0) {
+
+                    if (cloudProducts?.data?.length > 0) {
+                        ProductsModule.products = cloudProducts.data;
+                        Storage.saveLocal(CONFIG.STORAGE_KEYS.PRODUCTS, cloudProducts.data);
+                    } else if (Array.isArray(cloudProducts) && cloudProducts.length > 0) {
                         ProductsModule.products = cloudProducts;
                         Storage.saveLocal(CONFIG.STORAGE_KEYS.PRODUCTS, cloudProducts);
                     }
-                    if (cloudOrders?.length > 0) {
+
+                    if (cloudOrders?.data?.length > 0) {
+                        OrdersModule.orders = cloudOrders.data;
+                        Storage.saveLocal(CONFIG.STORAGE_KEYS.ORDERS, cloudOrders.data);
+                    } else if (Array.isArray(cloudOrders) && cloudOrders.length > 0) {
                         OrdersModule.orders = cloudOrders;
                         Storage.saveLocal(CONFIG.STORAGE_KEYS.ORDERS, cloudOrders);
                     }
-                    if (cloudFidelity?.length > 0) {
+
+                    if (cloudFidelity?.data?.length > 0) {
+                        FidelityModule.fidelityCustomers = cloudFidelity.data;
+                        Storage.saveLocal(CONFIG.STORAGE_KEYS.FIDELITY, cloudFidelity.data);
+                    } else if (Array.isArray(cloudFidelity) && cloudFidelity.length > 0) {
                         FidelityModule.fidelityCustomers = cloudFidelity;
                         Storage.saveLocal(CONFIG.STORAGE_KEYS.FIDELITY, cloudFidelity);
                     }
-                    if (cloudCampaigns?.length > 0) {
+
+                    if (cloudCampaigns?.data?.length > 0) {
+                        CouponsModule.campaigns = cloudCampaigns.data;
+                        Storage.saveLocal(CONFIG.STORAGE_KEYS.CAMPAIGNS, cloudCampaigns.data);
+                    } else if (Array.isArray(cloudCampaigns) && cloudCampaigns.length > 0) {
                         CouponsModule.campaigns = cloudCampaigns;
                         Storage.saveLocal(CONFIG.STORAGE_KEYS.CAMPAIGNS, cloudCampaigns);
                     }
