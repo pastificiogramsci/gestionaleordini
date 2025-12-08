@@ -601,7 +601,7 @@ const Storage = {
     },
 
     // ==========================================
-    // COUNTER CENTRALIZZATO PER ORDINI
+    // COUNTER CENTRALIZZATO CON LOCK
     // ==========================================
 
     async getNextOrderNumber(deliveryDate) {
@@ -610,7 +610,7 @@ const Storage = {
             return this.getNextOrderNumberLocal(deliveryDate);
         }
 
-        const maxRetries = 10; // Riprova fino a 10 volte
+        const maxRetries = 10;
         const lockKey = `/counters/lock_orders_${deliveryDate}.json`;
         const counterKey = `/counters/orders_${deliveryDate}.json`;
 
@@ -620,9 +620,8 @@ const Storage = {
                 const lockAcquired = await this.acquireLock(lockKey);
 
                 if (!lockAcquired) {
-                    // Lock occupato, aspetta e riprova
                     console.log(`🔒 Lock occupato, aspetto... (tentativo ${attempt + 1}/${maxRetries})`);
-                    await this.delay(200 + (attempt * 100)); // Exponential backoff
+                    await this.delay(200 + (attempt * 100));
                     continue;
                 }
 
@@ -655,7 +654,6 @@ const Storage = {
                     return currentNumber;
 
                 } catch (error) {
-                    // Errore durante la lettura/scrittura, rilascia lock
                     await this.releaseLock(lockKey);
                     throw error;
                 }
@@ -664,53 +662,43 @@ const Storage = {
                 console.error(`❌ Errore tentativo ${attempt + 1}:`, error);
 
                 if (attempt === maxRetries - 1) {
-                    // Ultimo tentativo fallito, usa fallback
                     console.error('❌ Troppi tentativi, uso counter locale');
                     return this.getNextOrderNumberLocal(deliveryDate);
                 }
             }
         }
 
-        // Fallback finale
         return this.getNextOrderNumberLocal(deliveryDate);
     },
 
     async acquireLock(lockKey, timeout = 30000) {
         try {
-            // Prova a creare il file lock
             const lockData = {
                 deviceId: this.getDeviceId(),
                 timestamp: Date.now(),
                 expires: Date.now() + timeout
             };
 
-            // Controlla se esiste già
             const existing = await this.loadDropbox(lockKey);
 
             if (existing?.data) {
-                // Lock esiste, controlla se è scaduto
                 const lockAge = Date.now() - existing.data.timestamp;
                 if (lockAge < timeout) {
-                    // Lock ancora valido
                     return false;
                 }
-
-                // Lock scaduto, lo sovrascriviamo
                 console.log('🔓 Lock scaduto, lo sostituisco');
             }
 
-            // Crea/aggiorna lock
             await this.saveDropbox(lockKey, lockData);
 
-            // Aspetta un po' e verifica che il lock sia ancora nostro
             await this.delay(50);
             const verify = await this.loadDropbox(lockKey);
 
             if (verify?.data?.deviceId === this.getDeviceId()) {
-                return true; // Lock acquisito!
+                return true;
             }
 
-            return false; // Qualcun altro l'ha preso
+            return false;
 
         } catch (error) {
             console.error('❌ Errore acquisizione lock:', error);
@@ -720,11 +708,9 @@ const Storage = {
 
     async releaseLock(lockKey) {
         try {
-            // Elimina il file lock
             await this.dropboxClient.filesDeleteV2({ path: lockKey });
             console.log('🔓 Lock rilasciato');
         } catch (error) {
-            // Se non esiste o errore, ignora
             console.log('🔓 Lock già rilasciato o non esistente');
         }
     },
@@ -734,10 +720,8 @@ const Storage = {
     },
 
     getNextOrderNumberLocal(deliveryDate) {
-        // Fallback: usa max + 1 locale
         const ordersOnDate = [];
 
-        // Cerca negli ordini esistenti
         if (window.OrdersModule && Array.isArray(window.OrdersModule.orders)) {
             ordersOnDate.push(...window.OrdersModule.orders.filter(o => o.deliveryDate === deliveryDate));
         }
@@ -757,7 +741,7 @@ const Storage = {
         return nextNumber;
     }
 
-};
+}; 
 
 window.Storage = Storage;
 console.log("✅ Storage caricato con merge intelligente v2.1");
