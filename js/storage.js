@@ -598,6 +598,74 @@ const Storage = {
         });
 
         console.log('📅 Timestamp locali recuperati:', this.lastLocalSave);
+    },
+
+    // ==========================================
+    // COUNTER CENTRALIZZATO PER ORDINI
+    // ==========================================
+
+    async getNextOrderNumber(deliveryDate) {
+        if (!this.dropboxClient) {
+            // Fallback locale se Dropbox non disponibile
+            console.warn('⚠️ Dropbox non disponibile, uso counter locale');
+            return this.getNextOrderNumberLocal(deliveryDate);
+        }
+
+        try {
+            const counterKey = `/counters/orders_${deliveryDate}.json`;
+            
+            // 1. Leggi counter esistente
+            let counter = await this.loadDropbox(counterKey);
+            let currentNumber = 1;
+            
+            if (counter?.data?.number) {
+                currentNumber = counter.data.number;
+            }
+            
+            console.log(`🎫 Counter per ${deliveryDate}: assegno numero ${currentNumber}`);
+            
+            // 2. Incrementa e salva nuovo counter
+            const newCounter = {
+                number: currentNumber + 1,
+                lastUpdate: new Date().toISOString()
+            };
+            
+            await this.saveDropbox(counterKey, newCounter);
+            
+            console.log(`✅ Counter aggiornato → prossimo sarà ${currentNumber + 1}`);
+            
+            // 3. Ritorna il numero da usare
+            return currentNumber;
+            
+        } catch (error) {
+            console.error('❌ Errore lettura counter:', error);
+            // Fallback locale
+            return this.getNextOrderNumberLocal(deliveryDate);
+        }
+    },
+
+    getNextOrderNumberLocal(deliveryDate) {
+        // Fallback: usa max + 1 locale
+        const ordersOnDate = [];
+        
+        // Cerca negli ordini esistenti
+        if (window.OrdersModule && Array.isArray(window.OrdersModule.orders)) {
+            ordersOnDate.push(...window.OrdersModule.orders.filter(o => o.deliveryDate === deliveryDate));
+        }
+        
+        const existingNumbers = ordersOnDate
+            .map(o => {
+                const match = o.orderNumber?.match(/^(\d+)-/);
+                return match ? parseInt(match[1]) : 0;
+            })
+            .filter(n => !isNaN(n) && n > 0);
+        
+        const nextNumber = existingNumbers.length > 0 
+            ? Math.max(...existingNumbers) + 1 
+            : 1;
+        
+        console.log(`🎫 Counter locale per ${deliveryDate}: ${nextNumber}`);
+        return nextNumber;
     }
 
 };
