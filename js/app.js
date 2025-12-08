@@ -201,15 +201,19 @@ const App = {
     },
 
     // Inizializza tutti i moduli
+    // Inizializza tutti i moduli
     async initModules() {
         console.log("📦 Caricamento moduli...");
 
-        // Ordine importante! Alcuni moduli dipendono da altri
-        if (CustomersModule) await CustomersModule.init();
-        if (ProductsModule) await ProductsModule.init();
-        if (OrdersModule) await OrdersModule.init();
-        if (FidelityModule) await FidelityModule.init();
-        if (CouponsModule) await CouponsModule.init();
+        // ⚠️ I dati sono già stati caricati da Dropbox, NON ricaricare!
+        // Verifica solo che i dati siano presenti
+        console.log(`📋 ${CustomersModule.customers?.length || 0} clienti già caricati`);
+        console.log(`📋 ${ProductsModule.products?.length || 0} prodotti già caricati`);
+        console.log(`📋 ${OrdersModule.orders?.length || 0} ordini già caricati`);
+        console.log(`📋 ${FidelityModule.fidelityCustomers?.length || 0} clienti fidelity già caricati`);
+        console.log(`📋 ${CouponsModule.campaigns?.length || 0} campagne già caricate`);
+
+        // Inizializza solo QRModule che non carica dati
         if (QRModule) QRModule.init();
 
         console.log("✅ Tutti i moduli caricati");
@@ -2089,7 +2093,7 @@ const App = {
         }
     },
 
-    saveOrder() {
+    async saveOrder() {  // ← Aggiungi async qui
         const customerId = document.getElementById('order-customer').value;
 
         if (!customerId) {
@@ -2097,7 +2101,7 @@ const App = {
             return;
         }
 
-        const items = [...this.orderItems]; // Usa il carrello
+        const items = [...this.orderItems];
 
         if (items.length === 0) {
             Utils.showToast("❌ Aggiungi almeno un prodotto", "error");
@@ -2116,11 +2120,11 @@ const App = {
 
         try {
             if (this.editingOrderId) {
-                OrdersModule.updateOrder(this.editingOrderId, orderData);
+                await OrdersModule.updateOrder(this.editingOrderId, orderData);  // ← Aggiungi await
                 Utils.showToast("✅ Ordine modificato!", "success");
                 this.editingOrderId = null;
             } else {
-                const newOrder = OrdersModule.createOrder(orderData);
+                const newOrder = await OrdersModule.createOrder(orderData);  // ← Aggiungi await
 
                 if (newOrder && confirm("💬 Mandare conferma ordine su WhatsApp?")) {
                     WhatsAppModule.sendOrderConfirmation(newOrder);
