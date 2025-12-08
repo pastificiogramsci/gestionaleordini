@@ -53,46 +53,48 @@ const App = {
                             Storage.loadDropbox(CONFIG.DROPBOX_PATHS.CAMPAIGNS)
                         ]);
 
-                    // Gestisci nuovo formato {data, metadata}
-                    if (cloudCustomers?.data?.length > 0) {
-                        CustomersModule.customers = cloudCustomers.data;
-                        Storage.saveLocal(CONFIG.STORAGE_KEYS.CUSTOMERS, cloudCustomers.data);
-                    } else if (Array.isArray(cloudCustomers) && cloudCustomers.length > 0) {
-                        // Retrocompatibilità con vecchio formato
-                        CustomersModule.customers = cloudCustomers;
-                        Storage.saveLocal(CONFIG.STORAGE_KEYS.CUSTOMERS, cloudCustomers);
+                    // Helper per estrarre data dal nuovo formato {data, metadata} o vecchio formato
+                    const extractData = (cloudData) => {
+                        if (!cloudData) return null;
+                        if (cloudData.data && Array.isArray(cloudData.data)) return cloudData.data;
+                        if (Array.isArray(cloudData)) return cloudData;
+                        return null;
+                    };
+
+                    const customersData = extractData(cloudCustomers);
+                    const productsData = extractData(cloudProducts);
+                    const ordersData = extractData(cloudOrders);
+                    const fidelityData = extractData(cloudFidelity);
+                    const campaignsData = extractData(cloudCampaigns);
+
+                    if (customersData && customersData.length > 0) {
+                        CustomersModule.customers = customersData;
+                        Storage.saveLocal(CONFIG.STORAGE_KEYS.CUSTOMERS, customersData);
+                        console.log(`📥 Caricati ${customersData.length} clienti da Dropbox`);
                     }
 
-                    if (cloudProducts?.data?.length > 0) {
-                        ProductsModule.products = cloudProducts.data;
-                        Storage.saveLocal(CONFIG.STORAGE_KEYS.PRODUCTS, cloudProducts.data);
-                    } else if (Array.isArray(cloudProducts) && cloudProducts.length > 0) {
-                        ProductsModule.products = cloudProducts;
-                        Storage.saveLocal(CONFIG.STORAGE_KEYS.PRODUCTS, cloudProducts);
+                    if (productsData && productsData.length > 0) {
+                        ProductsModule.products = productsData;
+                        Storage.saveLocal(CONFIG.STORAGE_KEYS.PRODUCTS, productsData);
+                        console.log(`📥 Caricati ${productsData.length} prodotti da Dropbox`);
                     }
 
-                    if (cloudOrders?.data?.length > 0) {
-                        OrdersModule.orders = cloudOrders.data;
-                        Storage.saveLocal(CONFIG.STORAGE_KEYS.ORDERS, cloudOrders.data);
-                    } else if (Array.isArray(cloudOrders) && cloudOrders.length > 0) {
-                        OrdersModule.orders = cloudOrders;
-                        Storage.saveLocal(CONFIG.STORAGE_KEYS.ORDERS, cloudOrders);
+                    if (ordersData && ordersData.length > 0) {
+                        OrdersModule.orders = ordersData;
+                        Storage.saveLocal(CONFIG.STORAGE_KEYS.ORDERS, ordersData);
+                        console.log(`📥 Caricati ${ordersData.length} ordini da Dropbox`);
                     }
 
-                    if (cloudFidelity?.data?.length > 0) {
-                        FidelityModule.fidelityCustomers = cloudFidelity.data;
-                        Storage.saveLocal(CONFIG.STORAGE_KEYS.FIDELITY, cloudFidelity.data);
-                    } else if (Array.isArray(cloudFidelity) && cloudFidelity.length > 0) {
-                        FidelityModule.fidelityCustomers = cloudFidelity;
-                        Storage.saveLocal(CONFIG.STORAGE_KEYS.FIDELITY, cloudFidelity);
+                    if (fidelityData && fidelityData.length > 0) {
+                        FidelityModule.fidelityCustomers = fidelityData;
+                        Storage.saveLocal(CONFIG.STORAGE_KEYS.FIDELITY, fidelityData);
+                        console.log(`📥 Caricati ${fidelityData.length} clienti fidelity da Dropbox`);
                     }
 
-                    if (cloudCampaigns?.data?.length > 0) {
-                        CouponsModule.campaigns = cloudCampaigns.data;
-                        Storage.saveLocal(CONFIG.STORAGE_KEYS.CAMPAIGNS, cloudCampaigns.data);
-                    } else if (Array.isArray(cloudCampaigns) && cloudCampaigns.length > 0) {
-                        CouponsModule.campaigns = cloudCampaigns;
-                        Storage.saveLocal(CONFIG.STORAGE_KEYS.CAMPAIGNS, cloudCampaigns);
+                    if (campaignsData && campaignsData.length > 0) {
+                        CouponsModule.campaigns = campaignsData;
+                        Storage.saveLocal(CONFIG.STORAGE_KEYS.CAMPAIGNS, campaignsData);
+                        console.log(`📥 Caricate ${campaignsData.length} campagne da Dropbox`);
                     }
 
                     console.log("✅ Dati sincronizzati (parallelo)");
@@ -108,46 +110,43 @@ const App = {
                     const cloudFidelity = await Storage.loadDropbox(CONFIG.DROPBOX_PATHS.FIDELITY);
                     const cloudCampaigns = await Storage.loadDropbox(CONFIG.DROPBOX_PATHS.CAMPAIGNS);
 
-                    // Gestisci nuovo formato {data, metadata}
-                    if (cloudCustomers?.data?.length > 0) {
-                        CustomersModule.customers = cloudCustomers.data;
-                        Storage.saveLocal(CONFIG.STORAGE_KEYS.CUSTOMERS, cloudCustomers.data);
-                    } else if (Array.isArray(cloudCustomers) && cloudCustomers.length > 0) {
-                        // Retrocompatibilità con vecchio formato
-                        CustomersModule.customers = cloudCustomers;
-                        Storage.saveLocal(CONFIG.STORAGE_KEYS.CUSTOMERS, cloudCustomers);
+                    // Helper per estrarre data
+                    const extractData = (cloudData) => {
+                        if (!cloudData) return null;
+                        if (cloudData.data && Array.isArray(cloudData.data)) return cloudData.data;
+                        if (Array.isArray(cloudData)) return cloudData;
+                        return null;
+                    };
+
+                    const customersData = extractData(cloudCustomers);
+                    const productsData = extractData(cloudProducts);
+                    const ordersData = extractData(cloudOrders);
+                    const fidelityData = extractData(cloudFidelity);
+                    const campaignsData = extractData(cloudCampaigns);
+
+                    if (customersData && customersData.length > 0) {
+                        CustomersModule.customers = customersData;
+                        Storage.saveLocal(CONFIG.STORAGE_KEYS.CUSTOMERS, customersData);
                     }
 
-                    if (cloudProducts?.data?.length > 0) {
-                        ProductsModule.products = cloudProducts.data;
-                        Storage.saveLocal(CONFIG.STORAGE_KEYS.PRODUCTS, cloudProducts.data);
-                    } else if (Array.isArray(cloudProducts) && cloudProducts.length > 0) {
-                        ProductsModule.products = cloudProducts;
-                        Storage.saveLocal(CONFIG.STORAGE_KEYS.PRODUCTS, cloudProducts);
+                    if (productsData && productsData.length > 0) {
+                        ProductsModule.products = productsData;
+                        Storage.saveLocal(CONFIG.STORAGE_KEYS.PRODUCTS, productsData);
                     }
 
-                    if (cloudOrders?.data?.length > 0) {
-                        OrdersModule.orders = cloudOrders.data;
-                        Storage.saveLocal(CONFIG.STORAGE_KEYS.ORDERS, cloudOrders.data);
-                    } else if (Array.isArray(cloudOrders) && cloudOrders.length > 0) {
-                        OrdersModule.orders = cloudOrders;
-                        Storage.saveLocal(CONFIG.STORAGE_KEYS.ORDERS, cloudOrders);
+                    if (ordersData && ordersData.length > 0) {
+                        OrdersModule.orders = ordersData;
+                        Storage.saveLocal(CONFIG.STORAGE_KEYS.ORDERS, ordersData);
                     }
 
-                    if (cloudFidelity?.data?.length > 0) {
-                        FidelityModule.fidelityCustomers = cloudFidelity.data;
-                        Storage.saveLocal(CONFIG.STORAGE_KEYS.FIDELITY, cloudFidelity.data);
-                    } else if (Array.isArray(cloudFidelity) && cloudFidelity.length > 0) {
-                        FidelityModule.fidelityCustomers = cloudFidelity;
-                        Storage.saveLocal(CONFIG.STORAGE_KEYS.FIDELITY, cloudFidelity);
+                    if (fidelityData && fidelityData.length > 0) {
+                        FidelityModule.fidelityCustomers = fidelityData;
+                        Storage.saveLocal(CONFIG.STORAGE_KEYS.FIDELITY, fidelityData);
                     }
 
-                    if (cloudCampaigns?.data?.length > 0) {
-                        CouponsModule.campaigns = cloudCampaigns.data;
-                        Storage.saveLocal(CONFIG.STORAGE_KEYS.CAMPAIGNS, cloudCampaigns.data);
-                    } else if (Array.isArray(cloudCampaigns) && cloudCampaigns.length > 0) {
-                        CouponsModule.campaigns = cloudCampaigns;
-                        Storage.saveLocal(CONFIG.STORAGE_KEYS.CAMPAIGNS, cloudCampaigns);
+                    if (campaignsData && campaignsData.length > 0) {
+                        CouponsModule.campaigns = campaignsData;
+                        Storage.saveLocal(CONFIG.STORAGE_KEYS.CAMPAIGNS, campaignsData);
                     }
 
                     console.log("✅ Dati sincronizzati (sequenziale)");
