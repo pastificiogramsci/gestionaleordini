@@ -18,6 +18,8 @@ const Storage = {
         this.dropboxAccessToken = localStorage.getItem('dropboxAccessToken');
         this.dropboxRefreshToken = localStorage.getItem('dropboxRefreshToken');
 
+        this.initLastLocalSave();
+
         if (this.dropboxAccessToken) {
             this.dropboxClient = new Dropbox.Dropbox({
                 accessToken: this.dropboxAccessToken
