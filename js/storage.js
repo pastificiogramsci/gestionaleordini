@@ -247,7 +247,62 @@ const Storage = {
         if (!this.dropboxClient) return;
 
         try {
-            const encryptedData = AuthManager.encrypt(data);
+            // 1. Crea metadata con timestamp e device info
+            const metadata = {
+                lastModified: new Date().toISOString(),
+                deviceId: this.getDeviceId(),
+                recordCount: Array.isArray(data) ? data.length : 0,
+                version: '2.1'
+            };
+
+            console.log(`📦 Preparazione salvataggio ${key}:`, {
+                records: metadata.recordCount,
+                device: metadata.deviceId
+            });
+
+            // 2. Controlla se ci sono conflitti prima di salvare
+            let dataToSave = data;
+
+            try {
+                const existingData = await this.loadDropbox(key);
+
+                if (existingData && existingData.metadata) {
+                    const remoteTime = new Date(existingData.metadata.lastModified);
+                    const localSaveTime = this.lastLocalSave[key]
+                        ? new Date(this.lastLocalSave[key])
+                        : new Date(0);
+
+                    console.log(`🔍 Controllo conflitti per ${key}:`, {
+                        remoto: remoteTime.toISOString(),
+                        locale: localSaveTime.toISOString(),
+                        remoteDevice: existingData.metadata.deviceId
+                    });
+
+                    // Se i dati remoti sono più recenti dell'ultimo nostro salvataggio locale
+                    if (remoteTime > localSaveTime) {
+                        console.warn(`🔀 CONFLITTO RILEVATO su ${key}!`);
+                        console.log('   Dati remoti più recenti, eseguo merge...');
+
+                        // Fai merge dei dati
+                        dataToSave = this.mergeData(key, data, existingData.data);
+
+                        Utils.showToast(
+                            `🔀 Dati sincronizzati con altro dispositivo`,
+                            'info'
+                        );
+                    } else {
+                        console.log('✅ Nessun conflitto, dati locali sono più recenti');
+                    }
+                }
+            } catch (loadError) {
+                // File non esiste ancora o errore di lettura - ok, salva normalmente
+                if (loadError.status !== 409) {
+                    console.log('ℹ️ Impossibile controllare conflitti, salvo comunque');
+                }
+            }
+
+            // 3. Cripta e prepara payload con metadata
+            const encryptedData = AuthManager.encrypt(dataToSave);
             if (!encryptedData) {
                 console.error('❌ Errore crittografia');
                 return;
@@ -255,12 +310,14 @@ const Storage = {
 
             const payload = {
                 encrypted: true,
-                version: '2.0',
+                version: '2.1',
+                metadata: metadata,
                 data: encryptedData
             };
 
+            // 4. Salva su Dropbox
             const content = JSON.stringify(payload);
-            const path = key.startsWith('/') ? key : `/${key}.json`; // ← FIX: usa key direttamente se inizia con /
+            const path = key.startsWith('/') ? key : `/${key}.json`;
 
             await this.dropboxClient.filesUpload({
                 path: path,
@@ -269,10 +326,16 @@ const Storage = {
                 autorename: false
             });
 
-            console.log(`📦 Salvato criptato su Dropbox: ${key}`);
-        } catch (error) {
-            console.error("Errore salvataggio Dropbox:", error);
+            // 5. Aggiorna timestamp del salvataggio locale
+            this.lastLocalSave[key] = new Date().toISOString();
+            localStorage.setItem('lastLocalSave_' + key, this.lastLocalSave[key]);
 
+            console.log(`✅ Salvato su Dropbox: ${key} (${metadata.recordCount} records)`);
+
+        } catch (error) {
+            console.error(`❌ Errore salvataggio Dropbox ${key}:`, error);
+
+            // Retry con token refresh se necessario
             if (error.status === 401 && this.dropboxRefreshToken) {
                 const newToken = await this.refreshAccessToken();
                 if (newToken) {
