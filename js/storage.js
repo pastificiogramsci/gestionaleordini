@@ -8,6 +8,7 @@ const Storage = {
     dropboxAccessToken: null,
     dropboxRefreshToken: null,
     autoSyncInterval: null,
+    lastLocalSave: {},
 
     // ==========================================
     // INIZIALIZZAZIONE DROPBOX
