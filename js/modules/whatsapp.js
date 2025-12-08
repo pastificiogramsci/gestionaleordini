@@ -83,8 +83,7 @@ Grazie per averci scelto!`;
         ${itemsList}
 
         📅 *Ritiro:* ${Utils.formatDate(order.deliveryDate)} ${order.deliveryTime || ''}
-        💶 *Totale:* ${Utils.formatPrice(order.totalAmount)}
-
+        
         Ci vediamo presto! 😊`;
 
         this.openWhatsApp(phone, message);
