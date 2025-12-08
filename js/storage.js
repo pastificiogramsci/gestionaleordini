@@ -439,15 +439,24 @@ const Storage = {
         if (!this.dropboxClient) return null;
 
         try {
-            const path = key.startsWith('/') ? key : `/${key}.json`; // ← FIX
+            const path = key.startsWith('/') ? key : `/${key}.json`;
             const response = await this.dropboxClient.filesDownload({ path });
-
 
             const reader = new FileReader();
             return new Promise((resolve, reject) => {
                 reader.onload = () => {
                     try {
                         const parsedData = JSON.parse(reader.result);
+
+                        // Salva metadata se presente
+                        if (parsedData.metadata) {
+                            console.log(`📥 Caricato da Dropbox con metadata:`, {
+                                key: key,
+                                records: parsedData.metadata.recordCount,
+                                lastModified: parsedData.metadata.lastModified,
+                                device: parsedData.metadata.deviceId
+                            });
+                        }
 
                         if (parsedData.encrypted) {
                             const decrypted = AuthManager.decrypt(parsedData.data);
@@ -456,10 +465,18 @@ const Storage = {
                                 reject(new Error('Decryption failed'));
                                 return;
                             }
-                            console.log(`📦 Caricato e decriptato: ${key}`);
-                            resolve(decrypted);
+
+                            // Ritorna oggetto con data E metadata
+                            resolve({
+                                data: decrypted,
+                                metadata: parsedData.metadata || null
+                            });
                         } else {
-                            resolve(parsedData);
+                            // Vecchio formato senza metadata
+                            resolve({
+                                data: parsedData,
+                                metadata: null
+                            });
                         }
                     } catch (e) {
                         reject(e);
@@ -481,6 +498,7 @@ const Storage = {
                 }
             }
 
+            console.error(`❌ Errore caricamento ${key}:`, error);
             return null;
         }
     },
