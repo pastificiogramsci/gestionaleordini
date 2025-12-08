@@ -43,29 +43,16 @@ const OrdersModule = {
     // UTILITY
     // ==========================================
 
-    generateOrderNumber() {
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const day = String(now.getDate()).padStart(2, '0');
-        const hours = String(now.getHours()).padStart(2, '0');
-        const minutes = String(now.getMinutes()).padStart(2, '0');
-        const seconds = String(now.getSeconds()).padStart(2, '0');
-
-        return `ORD-${year}${month}${day}-${hours}${minutes}${seconds}`;
-    },
-
-    // Genera numero ordine
-    generateOrderNumber(deliveryDate) {
+    // Genera numero ordine sequenziale
+    async generateOrderNumber(deliveryDate) {
         if (!deliveryDate) {
             deliveryDate = new Date().toISOString().split('T')[0];
         }
 
-        // Conta ordini esistenti con questa data di consegna
-        const ordersOnDate = this.orders.filter(o => o.deliveryDate === deliveryDate);
-        const nextNumber = ordersOnDate.length + 1;
+        // Ottieni prossimo numero dal counter centralizzato (dispenser)
+        const nextNumber = await Storage.getNextOrderNumber(deliveryDate);
 
-        // Formato: 1-05/12/2025
+        // Formato: 1-08/12/2025
         const [year, month, day] = deliveryDate.split('-');
         return `${nextNumber}-${day}/${month}/${year}`;
     },
