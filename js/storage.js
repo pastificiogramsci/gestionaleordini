@@ -358,16 +358,25 @@ const Storage = {
         console.log(`   Locale: ${localData.length} records`);
         console.log(`   Remoto: ${remoteData.length} records`);
 
+        // ✅ NUOVO: Determina quale campo ID usare
+        const getItemId = (item) => {
+            // Fidelity usa customerId, altri usano id
+            return item.id || item.customerId || null;
+        };
+
         // Usa Map per merge efficiente
         const merged = new Map();
 
         // 1. Aggiungi tutti i records remoti
         remoteData.forEach(item => {
-            if (item.id) {
-                merged.set(item.id, {
+            const itemId = getItemId(item);
+            if (itemId) {
+                merged.set(itemId, {
                     ...item,
                     _source: 'remote'
                 });
+            } else {
+                console.warn('⚠️ Record remoto senza ID:', item);
             }
         });
 
@@ -377,8 +386,10 @@ const Storage = {
         let kept = 0;
 
         localData.forEach(item => {
-            if (!item.id) {
-                console.warn('⚠️ Record senza ID, lo aggiungo comunque');
+            const itemId = getItemId(item);
+
+            if (!itemId) {
+                console.warn('⚠️ Record locale senza ID, lo aggiungo comunque');
                 merged.set(Math.random().toString(), {
                     ...item,
                     _source: 'local'
@@ -387,31 +398,31 @@ const Storage = {
                 return;
             }
 
-            const existing = merged.get(item.id);
+            const existing = merged.get(itemId);
 
             if (!existing) {
                 // Nuovo record locale che non esiste in remoto
-                merged.set(item.id, {
+                merged.set(itemId, {
                     ...item,
                     _source: 'local'
                 });
                 added++;
-                console.log(`   ➕ Aggiunto nuovo: ${item.id.substring(0, 8)}...`);
+                console.log(`   ➕ Aggiunto nuovo: ${itemId.substring(0, 8)}...`);
             } else {
                 // Record esiste in entrambi - usa il più recente
                 const localTime = new Date(item.updatedAt || item.createdAt || 0);
                 const remoteTime = new Date(existing.updatedAt || existing.createdAt || 0);
 
                 if (localTime > remoteTime) {
-                    merged.set(item.id, {
+                    merged.set(itemId, {
                         ...item,
                         _source: 'local'
                     });
                     updated++;
-                    console.log(`   ✏️ Aggiornato: ${item.id.substring(0, 8)}... (locale più recente)`);
+                    console.log(`   ✏️ Aggiornato: ${itemId.substring(0, 8)}... (locale più recente)`);
                 } else if (localTime.getTime() === remoteTime.getTime()) {
                     // Stesso timestamp - usa locale per sicurezza
-                    merged.set(item.id, {
+                    merged.set(itemId, {
                         ...item,
                         _source: 'local'
                     });
@@ -419,7 +430,7 @@ const Storage = {
                 } else {
                     // Remoto più recente, mantieni quello
                     kept++;
-                    console.log(`   ⏸️ Mantenuto remoto: ${item.id.substring(0, 8)}... (remoto più recente)`);
+                    console.log(`   ⏸️ Mantenuto remoto: ${itemId.substring(0, 8)}... (remoto più recente)`);
                 }
             }
         });
@@ -630,10 +641,16 @@ const Storage = {
                 try {
                     // 2. Leggi counter
                     let counter = await this.loadDropbox(counterKey);
-                    let currentNumber = 1;
+                    let currentNumber = null;
 
                     if (counter?.data?.number) {
                         currentNumber = counter.data.number;
+                        console.log(`📥 Counter esistente per ${deliveryDate}: ${currentNumber}`);
+                    } else {
+                        // ✅ NUOVO: Inizializza counter contando ordini esistenti
+                        console.log(`🆕 Counter non esiste, conto ordini esistenti per ${deliveryDate}...`);
+                        currentNumber = this.countExistingOrders(deliveryDate) + 1;
+                        console.log(`📊 Trovati ${currentNumber - 1} ordini esistenti, parto da ${currentNumber}`);
                     }
 
                     console.log(`🎫 Counter per ${deliveryDate}: assegno numero ${currentNumber}`);
@@ -641,7 +658,8 @@ const Storage = {
                     // 3. Incrementa e salva
                     const newCounter = {
                         number: currentNumber + 1,
-                        lastUpdate: new Date().toISOString()
+                        lastUpdate: new Date().toISOString(),
+                        initialized: true
                     };
 
                     await this.saveDropbox(counterKey, newCounter);
@@ -669,6 +687,19 @@ const Storage = {
         }
 
         return this.getNextOrderNumberLocal(deliveryDate);
+    },
+
+    // ✅ NUOVO METODO: Conta ordini esistenti
+    countExistingOrders(deliveryDate) {
+        let count = 0;
+
+        // Conta negli ordini in memoria
+        if (window.OrdersModule && Array.isArray(window.OrdersModule.orders)) {
+            count = window.OrdersModule.orders.filter(o => o.deliveryDate === deliveryDate).length;
+        }
+
+        console.log(`📊 Ordini esistenti per ${deliveryDate}: ${count}`);
+        return count;
     },
 
     async acquireLock(lockKey, timeout = 30000) {
@@ -741,7 +772,7 @@ const Storage = {
         return nextNumber;
     }
 
-}; 
+};
 
 window.Storage = Storage;
 console.log("✅ Storage caricato con merge intelligente v2.1");
