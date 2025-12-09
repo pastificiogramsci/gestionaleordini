@@ -594,7 +594,31 @@ const QRModule = {
         const result = FidelityModule.processFidelityQRScan(qrData);
 
         if (result) {
-            Utils.showToast("✅ Carta fidelity riconosciuta!", "success");
+            const customerId = qrData.customerId;
+            const customer = window.CustomersModule?.getCustomerById(customerId);
+
+            if (customer) {
+                Utils.showToast(`✅ Carta fidelity: ${customer.firstName} ${customer.lastName}`, "success");
+
+                console.log("📱 Apertura dettagli fidelity per:", customer.firstName);
+
+                // Chiudi lo scanner
+                this.closeScanner();
+
+                // Attendi chiusura scanner, poi apri dettagli
+                setTimeout(() => {
+                    if (window.App && window.App.openFidelityDetail) {
+                        window.App.openFidelityDetail(customerId);
+                    } else {
+                        console.error("❌ Funzione openFidelityDetail non trovata");
+                        Utils.showToast("Vai manualmente alla sezione Fidelity", "info");
+                    }
+                }, 300);
+            } else {
+                Utils.showToast("❌ Cliente non trovato", "error");
+            }
+        } else {
+            Utils.showToast("❌ QR non valido", "error");
         }
 
         return result;
@@ -607,14 +631,14 @@ const QRModule = {
         const customer = CustomersModule.getCustomerById(qrData.customerId);
 
         if (!customer || !customer.coupons) {
-            Utils.showToast("Coupon non trovato", "error");
+            Utils.showToast("❌ Coupon non trovato", "error");
             return null;
         }
 
         const coupon = customer.coupons.find(c => c.id === qrData.couponId);
 
         if (!coupon) {
-            Utils.showToast("Coupon non valido", "error");
+            Utils.showToast("❌ Coupon non valido", "error");
             return null;
         }
 
@@ -623,13 +647,29 @@ const QRModule = {
             return null;
         }
 
-        Utils.showToast("✅ Coupon valido!", "success");
+        Utils.showToast(`✅ Coupon valido: ${customer.firstName} ${customer.lastName}`, "success");
+
+        console.log("🎫 Apertura coupon per:", customer.firstName, "- Codice:", coupon.code);
+
+        // Chiudi lo scanner
+        this.closeScanner();
+
+        // Attendi chiusura scanner, poi apri coupon
+        setTimeout(() => {
+            if (window.App && window.App.openCustomerCoupons) {
+                window.App.openCustomerCoupons(qrData.customerId);
+            } else {
+                console.error("❌ Funzione openCustomerCoupons non trovata");
+                Utils.showToast("Vai manualmente alla sezione Coupon del cliente", "info");
+            }
+        }, 300);
 
         return {
             customer: customer,
             coupon: coupon
         };
     },
+
 
     // ==========================================
     // UTILITY
