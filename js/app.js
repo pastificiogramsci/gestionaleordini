@@ -1881,23 +1881,33 @@ const App = {
     orderItems: [],
 
     populateCustomersList() {
-        console.log("📋 INIZIO populateCustomersList"); // ← DEBUG
+        console.log("📋 INIZIO populateCustomersList");
 
         const allCustomers = CustomersModule.getAllCustomers('name');
-        console.log("📊 Tutti i clienti:", allCustomers.length); // ← DEBUG
+        console.log("📊 Tutti i clienti:", allCustomers.length);
 
         const customers = allCustomers.filter(c => c.type !== 'fornitore');
-        console.log("📊 Clienti (no fornitori):", customers.length); // ← DEBUG
+        console.log("📊 Clienti (no fornitori):", customers.length);
 
         const listContainer = document.getElementById('order-customer-list');
-        console.log("📦 Container trovato:", !!listContainer); // ← DEBUG
+        console.log("📦 Container trovato:", !!listContainer);
 
         if (!listContainer) {
             console.error("❌ order-customer-list non trovato!");
             return;
         }
 
-        listContainer.innerHTML = customers.map(c => {
+        // ✅ NUOVO: Pulsante "+ Nuovo Cliente" in cima
+        let html = `
+        <div class="new-customer-button sticky top-0 bg-green-50 border-b-2 border-green-200 p-3 hover:bg-green-100 cursor-pointer" onclick="App.openQuickAddCustomerModal()">
+            <div class="flex items-center justify-center gap-2 text-green-700 font-bold">
+                <span class="text-2xl">+</span>
+                <span>Aggiungi Nuovo Cliente</span>
+            </div>
+        </div>
+    `;
+
+        html += customers.map(c => {
             const fullName = `${c.firstName} ${c.lastName}`;
             return `
             <div class="customer-item p-3 hover:bg-blue-50 cursor-pointer border-b"
@@ -1909,22 +1919,24 @@ const App = {
         `;
         }).join('');
 
-        console.log("✅ HTML generato, lunghezza:", listContainer.innerHTML.length); // ← DEBUG
+        listContainer.innerHTML = html;
 
-        // Aggiungi event listener
+        console.log("✅ HTML generato, lunghezza:", listContainer.innerHTML.length);
+
+        // Aggiungi event listener ai clienti esistenti
         const items = document.querySelectorAll('.customer-item');
-        console.log("👥 Customer items trovati:", items.length); // ← DEBUG
+        console.log("👥 Customer items trovati:", items.length);
 
         items.forEach(item => {
             item.addEventListener('click', () => {
                 const id = item.dataset.id;
                 const name = item.dataset.name;
-                console.log("🖱️ Click su cliente:", name); // ← DEBUG
+                console.log("🖱️ Click su cliente:", name);
                 app.selectCustomer(id, name);
             });
         });
 
-        console.log("✅ FINE populateCustomersList"); // ← DEBUG
+        console.log("✅ FINE populateCustomersList");
     },
 
     filterCustomerDropdown() {
@@ -1966,6 +1978,106 @@ const App = {
         if (listContainer) {
             listContainer.classList.remove('hidden');
         }
+    },
+
+    // ✅ NUOVO: Modal veloce per aggiungere cliente
+    openQuickAddCustomerModal() {
+        const modalHtml = `
+        <div class="space-y-4">
+            <h3 class="text-xl font-bold">👤 Aggiungi Nuovo Cliente</h3>
+            
+            <div class="form-group">
+                <label class="block text-sm font-bold mb-2">Nome *</label>
+                <input type="text" id="quick-customer-firstname" class="w-full p-2 border rounded" placeholder="Mario" required>
+            </div>
+            
+            <div class="form-group">
+                <label class="block text-sm font-bold mb-2">Cognome *</label>
+                <input type="text" id="quick-customer-lastname" class="w-full p-2 border rounded" placeholder="Rossi" required>
+            </div>
+            
+            <div class="form-group">
+                <label class="block text-sm font-bold mb-2">Telefono *</label>
+                <input type="tel" id="quick-customer-phone" class="w-full p-2 border rounded" placeholder="+39 333 123 4567" required>
+            </div>
+            
+            <div class="bg-blue-50 border-l-4 border-blue-500 p-3 rounded text-sm">
+                <p class="text-gray-700">💡 <strong>Suggerimento:</strong> Inserisci solo i dati essenziali. Potrai completare il profilo cliente in seguito dalla sezione Clienti.</p>
+            </div>
+            
+            <div class="flex gap-2">
+                <button onclick="App.closeQuickAddCustomerModal()" class="flex-1 bg-gray-200 px-4 py-2 rounded hover:bg-gray-300">
+                    Annulla
+                </button>
+                <button onclick="App.saveQuickCustomer()" class="flex-1 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+                    ✅ Salva e Seleziona
+                </button>
+            </div>
+        </div>
+    `;
+
+        const div = document.createElement('div');
+        div.id = 'quick-add-customer-modal';
+        div.innerHTML = `
+        <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]" onclick="event.stopPropagation()">
+            <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4" onclick="event.stopPropagation()">
+                ${modalHtml}
+            </div>
+        </div>
+    `;
+        document.body.appendChild(div);
+
+        // Focus sul primo campo
+        setTimeout(() => {
+            document.getElementById('quick-customer-firstname').focus();
+        }, 100);
+    },
+
+    // ✅ NUOVO: Salva cliente veloce e seleziona
+    saveQuickCustomer() {
+        const firstName = document.getElementById('quick-customer-firstname').value.trim();
+        const lastName = document.getElementById('quick-customer-lastname').value.trim();
+        const phone = document.getElementById('quick-customer-phone').value.trim();
+
+        // Validazione
+        if (!firstName || !lastName || !phone) {
+            Utils.showToast("❌ Compila tutti i campi obbligatori", "error");
+            return;
+        }
+
+        // Crea nuovo cliente con dati minimi
+        const customerData = {
+            firstName: firstName,
+            lastName: lastName,
+            phone: phone,
+            email: '', // Vuoto, può essere aggiunto dopo
+            address: '', // Vuoto, può essere aggiunto dopo
+            notes: 'Cliente aggiunto rapidamente da ordine'
+        };
+
+        // Salva usando il modulo clienti
+        const newCustomer = CustomersModule.createCustomer(customerData);
+
+        if (newCustomer) {
+            console.log("✅ Cliente creato:", newCustomer.id);
+
+            // Chiudi modal veloce
+            this.closeQuickAddCustomerModal();
+
+            // Aggiorna lista clienti nel dropdown
+            this.populateCustomersList();
+
+            // Seleziona automaticamente il nuovo cliente
+            const fullName = `${firstName} ${lastName}`;
+            this.selectCustomer(newCustomer.id, fullName);
+
+            Utils.showToast(`✅ Cliente "${fullName}" aggiunto e selezionato!`, "success");
+        }
+    },
+
+    // ✅ NUOVO: Chiudi modal veloce
+    closeQuickAddCustomerModal() {
+        document.getElementById('quick-add-customer-modal')?.remove();
     },
 
     filterProducts(itemId) {
