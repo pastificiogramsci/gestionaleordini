@@ -1856,13 +1856,12 @@ const App = {
         this.orderItems = [];
         this.editingCartIndex = null;
 
-        // Popola dropdown prodotti
-        this.populateProductsDropdown();
+        // Reset form prodotti autocomplete
+        const searchInput = document.getElementById('cart-product-search');
+        if (searchInput) searchInput.value = '';
 
-        // Reset form prodotti
-        document.getElementById('cart-product-select').value = '';
-        document.getElementById('cart-quantity').value = '1';
-        document.getElementById('cart-price').value = '0';
+        const autocompleteList = document.getElementById('product-autocomplete-list');
+        if (autocompleteList) autocompleteList.classList.add('hidden');
 
         // Mostra carrello vuoto
         this.displayCartItems();
@@ -1903,7 +1902,7 @@ const App = {
                 <span>Aggiungi Nuovo Cliente</span>
             </div>
         </div>
-    `;
+        `;
 
         html += customers.map(c => {
             const fullName = `${c.firstName} ${c.lastName}`;
@@ -2036,39 +2035,37 @@ const App = {
         const lastName = document.getElementById('quick-customer-lastname').value.trim();
         const phone = document.getElementById('quick-customer-phone').value.trim();
 
-        // Validazione
         if (!firstName || !lastName || !phone) {
             Utils.showToast("❌ Compila tutti i campi obbligatori", "error");
             return;
         }
 
-        // Crea nuovo cliente con dati minimi
         const customerData = {
             firstName: firstName,
             lastName: lastName,
             phone: phone,
-            email: '', // Vuoto, può essere aggiunto dopo
-            address: '', // Vuoto, può essere aggiunto dopo
+            email: '',
+            address: '',
             notes: 'Cliente aggiunto rapidamente da ordine'
         };
 
-        // Salva usando il modulo clienti
-        const newCustomer = CustomersModule.createCustomer(customerData);
+        const newCustomer = CustomersModule.addCustomer(customerData);
 
         if (newCustomer) {
-            console.log("✅ Cliente creato:", newCustomer.id);
-
-            // Chiudi modal veloce
             this.closeQuickAddCustomerModal();
-
-            // Aggiorna lista clienti nel dropdown
             this.populateCustomersList();
 
-            // Seleziona automaticamente il nuovo cliente
             const fullName = `${firstName} ${lastName}`;
             this.selectCustomer(newCustomer.id, fullName);
 
-            Utils.showToast(`✅ Cliente "${fullName}" aggiunto e selezionato!`, "success");
+            Utils.showToast(`✅ Cliente "${fullName}" aggiunto!`, "success");
+
+            // ✅ AGGIUNGI: Invia messaggio WhatsApp con tessera fidelity
+            setTimeout(() => {
+                if (confirm(`Mandare messaggio di benvenuto a ${fullName} su WhatsApp con tessera fidelity?`)) {
+                    WhatsAppModule.sendWelcomeMessage(newCustomer, true);
+                }
+            }, 500);
         }
     },
 
@@ -2107,61 +2104,190 @@ const App = {
     },
 
     // Popola dropdown prodotti nel form
-    populateProductsDropdown() {
-        const select = document.getElementById('cart-product-select');
-        if (!select) return;
+    // ==========================================
+    // AUTOCOMPLETE PRODOTTI
+    // ==========================================
 
-        const products = ProductsModule.getAllProducts().filter(p => p.active);
+    showProductAutocomplete() {
+        const searchInput = document.getElementById('cart-product-search');
+        const list = document.getElementById('product-autocomplete-list');
+        const query = searchInput.value.toLowerCase().trim();
 
-        select.innerHTML = '<option value="">-- Seleziona prodotto --</option>' +
-            products.map(p => {
-                const modeIcon = p.mode === 'weight' ? '🍝' : p.mode === 'kg' ? '⚖️' : '🔢';
-                return `<option value="${p.id}" 
-                            data-price="${p.price}" 
-                            data-unit="${p.unit}"
-                            data-weight="${p.averageWeight || 0}"
-                            data-mode="${p.mode || 'pieces'}">
-                        ${modeIcon} ${p.name} - ${Utils.formatPrice(p.price)}/${p.unit}
-                    </option>`;
-            }).join('');
+        if (query.length < 2) {
+            list.classList.add('hidden');
+            return;
+        }
 
-        // Auto-aggiorna prezzo quando cambia prodotto
-        select.onchange = () => {
-            const option = select.options[select.selectedIndex];
-            const priceInput = document.getElementById('cart-price');
-            if (option && option.dataset.price) {
-                priceInput.value = option.dataset.price;
-            }
-        };
+        // Filtra prodotti attivi
+        const products = ProductsModule.products.filter(p =>
+            p.name.toLowerCase().includes(query) && p.active !== false
+        );
 
-        // Salva tutte le opzioni per il filtro
-        this.allProductOptions = Array.from(select.options);
+        if (products.length === 0) {
+            list.innerHTML = '<div class="no-results">Nessun prodotto trovato</div>';
+            list.classList.remove('hidden');
+            return;
+        }
+
+        // Genera lista
+        list.innerHTML = products.map((p, index) => `
+        <div class="product-autocomplete-item ${index === 0 ? 'selected' : ''}" 
+             data-product-id="${p.id}"
+             data-price="${p.price}"
+             data-unit="${p.unit}"
+             data-mode="${p.mode || 'pieces'}"
+             data-weight="${p.averageWeight || 0}"
+             onclick="app.selectProductFromAutocomplete('${p.id}')">
+            <div>
+                <div class="product-name">${p.name}</div>
+                <div class="text-xs text-gray-500">${p.category || ''}</div>
+            </div>
+            <div class="product-price">€${p.price.toFixed(2)}</div>
+        </div>
+    `).join('');
+
+        list.classList.remove('hidden');
     },
 
-    // Filtra prodotti nel dropdown
-    filterCartProducts() {
-        const searchInput = document.getElementById('cart-product-search');
-        const select = document.getElementById('cart-product-select');
+    handleProductKeydown(event) {
+        const list = document.getElementById('product-autocomplete-list');
 
-        if (!searchInput || !select || !this.allProductOptions) return;
+        if (event.key === 'Enter') {
+            event.preventDefault();
 
-        const query = searchInput.value.toLowerCase();
-
-        // Rimuovi tutte le opzioni
-        select.innerHTML = '';
-
-        // Filtra e ri-aggiungi
-        this.allProductOptions.forEach(option => {
-            if (option.value === '' || option.textContent.toLowerCase().includes(query)) {
-                select.appendChild(option.cloneNode(true));
+            // Seleziona primo prodotto (quello con classe 'selected')
+            const firstItem = list.querySelector('.product-autocomplete-item.selected');
+            if (firstItem) {
+                const productId = firstItem.getAttribute('data-product-id');
+                this.selectProductFromAutocomplete(productId);
             }
-        });
-
-        // Auto-seleziona se c'è solo 1 risultato (oltre al placeholder)
-        if (select.options.length === 2 && query.length > 2) {
-            select.selectedIndex = 1;
-            select.onchange(); // Trigger prezzo
+        } else if (event.key === 'Escape') {
+            list.classList.add('hidden');
+            document.getElementById('cart-product-search').value = '';
         }
+    },
+
+    selectProductFromAutocomplete(productId) {
+        const product = ProductsModule.getProductById(productId);
+        if (!product) return;
+
+        // Chiudi autocomplete
+        document.getElementById('product-autocomplete-list').classList.add('hidden');
+
+        // Mostra modal per quantità
+        this.showQuantityModal(product);
+    },
+
+    showQuantityModal(product) {
+        const modalHtml = `
+        <div class="space-y-responsive">
+            <h3 class="modal-heading-responsive">📦 ${product.name}</h3>
+            
+            <div class="alert-box-responsive" style="background-color: #f3e8ff; border-left: 4px solid #9333ea;">
+                <p class="text-lg font-bold text-purple-700">€${product.price.toFixed(2)} / ${product.unit || 'kg'}</p>
+                ${product.mode === 'weight' && product.averageWeight ? `<p class="text-sm text-gray-600">Peso medio: ${product.averageWeight.toFixed(2)} kg/pz</p>` : ''}
+            </div>
+            
+            <div class="form-group-responsive">
+                <label>Quantità ${product.unit === 'pz' ? '(pezzi)' : product.mode === 'weight' ? '(pezzi, converti automaticamente in kg)' : '(kg)'}</label>
+                <input type="number" id="quick-quantity" class="input-responsive" value="1" min="0.01" step="0.01" autofocus>
+            </div>
+            
+            <div class="button-group-responsive">
+                <button onclick="document.getElementById('quick-quantity-modal').remove(); document.getElementById('cart-product-search').value = ''" 
+                        class="btn-responsive btn-secondary-responsive" style="flex: 1;">
+                    Annulla
+                </button>
+                <button onclick="app.confirmQuickAddProduct('${product.id}')" 
+                        class="btn-responsive btn-primary-responsive" style="flex: 1; background-color: #9333ea;">
+                    ✓ Aggiungi al Carrello
+                </button>
+            </div>
+        </div>
+    `;
+
+        const div = document.createElement('div');
+        div.id = 'quick-quantity-modal';
+        div.innerHTML = `
+        <div class="modal-overlay" onclick="event.stopPropagation()">
+            <div class="modal-content-responsive" onclick="event.stopPropagation()">
+                ${modalHtml}
+            </div>
+        </div>
+    `;
+        document.body.appendChild(div);
+
+        // Focus su input quantità
+        setTimeout(() => {
+            const input = document.getElementById('quick-quantity');
+            input.focus();
+            input.select();
+
+            // Enter per confermare
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    this.confirmQuickAddProduct(product.id);
+                }
+            });
+        }, 100);
+    },
+
+    confirmQuickAddProduct(productId) {
+        const product = ProductsModule.getProductById(productId);
+        const quantity = parseFloat(document.getElementById('quick-quantity').value);
+
+        if (!product || !quantity || quantity <= 0) {
+            Utils.showToast("Quantità non valida", "error");
+            return;
+        }
+
+        // Calcola quantità finale e unità in base al mode
+        let finalQuantity = quantity;
+        let unit = product.unit || 'pz';
+
+        if (product.mode === 'weight' && product.averageWeight > 0) {
+            // Converti pezzi in kg
+            finalQuantity = quantity * product.averageWeight;
+            unit = 'kg';
+        } else if (product.mode === 'kg') {
+            finalQuantity = quantity;
+            unit = 'kg';
+        } else {
+            // mode === 'pieces' o default
+            finalQuantity = quantity;
+            unit = 'pz';
+        }
+
+        // Aggiungi al carrello
+        const cartItem = {
+            productId: product.id,
+            quantity: finalQuantity,
+            unit: unit,
+            mode: product.mode || 'pieces',
+            price: product.price,
+            prepared: false
+        };
+
+        if (this.editingCartIndex !== null) {
+            // Modifica esistente
+            this.orderItems[this.editingCartIndex] = cartItem;
+            this.editingCartIndex = null;
+            Utils.showToast(`✓ ${product.name} modificato!`, "success");
+        } else {
+            // Nuovo
+            this.orderItems.push(cartItem);
+            Utils.showToast(`✓ ${product.name} aggiunto!`, "success");
+        }
+
+        // Chiudi modal
+        document.getElementById('quick-quantity-modal').remove();
+
+        // Reset search
+        document.getElementById('cart-product-search').value = '';
+
+        // Aggiorna carrello
+        this.displayCartItems();
+        this.updateOrderTotal();
     },
 
     // Aggiungi prodotto al carrello
@@ -2286,20 +2412,22 @@ const App = {
         const product = ProductsModule.getProductById(item.productId);
         if (!product) return;
 
-        // Calcola quantità originale
+        // Calcola quantità originale (pezzi se weight mode)
         let displayQty = item.quantity;
         if (item.mode === 'weight' && product.averageWeight > 0) {
             displayQty = item.quantity / product.averageWeight;
         }
 
-        // Popola form
-        document.getElementById('cart-product-select').value = item.productId;
-        document.getElementById('cart-quantity').value = displayQty;
-        document.getElementById('cart-price').value = item.price;
-
+        // Imposta editing index
         this.editingCartIndex = index;
 
-        Utils.showToast("Modifica il prodotto e clicca 'Aggiungi Prodotto'", "info");
+        // Apri modal quantità con valore pre-compilato
+        this.showQuantityModal(product);
+
+        // Pre-compila quantità
+        setTimeout(() => {
+            document.getElementById('quick-quantity').value = displayQty.toFixed(2);
+        }, 100);
     },
 
     // Rimuovi prodotto dal carrello
