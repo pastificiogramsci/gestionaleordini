@@ -69,8 +69,8 @@ const CustomersModule = {
 
         const customer = {
             id: Utils.generateId(),
-            firstName: customerData.firstName,
-            lastName: customerData.lastName,
+            firstName: customerData.firstName || '',  // ← Permetti vuoto
+            lastName: customerData.lastName || '',    // ← Permetti vuoto
             phone: customerData.phone || '',
             email: customerData.email || '',
             address: customerData.address || '',
@@ -210,12 +210,12 @@ const CustomersModule = {
     validateCustomer(customerData) {
         const errors = [];
 
-        if (!customerData.firstName || customerData.firstName.trim() === '') {
-            errors.push("Nome obbligatorio");
-        }
+        // Almeno uno tra nome e cognome obbligatorio
+        const hasFirstName = customerData.firstName && customerData.firstName.trim() !== '';
+        const hasLastName = customerData.lastName && customerData.lastName.trim() !== '';
 
-        if (!customerData.lastName || customerData.lastName.trim() === '') {
-            errors.push("Cognome obbligatorio");
+        if (!hasFirstName && !hasLastName) {
+            errors.push("Inserisci almeno Nome o Cognome");
         }
 
         if (customerData.email && !Utils.isValidEmail(customerData.email)) {
