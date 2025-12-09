@@ -1202,52 +1202,50 @@ const App = {
             return;
         }
 
-        // Lista clienti
         const customerOptions = CustomersModule.customers
             .map(c => `<option value="${c.id}">${c.firstName} ${c.lastName}</option>`)
             .join('');
 
         const modalHtml = `
-        <div class="space-y-4">
-            <h3 class="text-xl font-bold">📦 Registra Acquisto in Negozio</h3>
+        <div class="space-y-responsive">
+            <h3 class="modal-heading-responsive">📦 Registra Acquisto in Negozio</h3>
             
-            <div class="form-group">
-                <label class="block text-sm font-bold mb-2">Cliente</label>
-                <select id="walkin-customer-id" class="w-full p-2 border rounded">
+            <div class="form-group-responsive">
+                <label>Cliente</label>
+                <select id="walkin-customer-id" class="select-responsive">
                     <option value="">Seleziona cliente...</option>
                     ${customerOptions}
                 </select>
             </div>
             
-            <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
-                <h4 class="font-bold mb-1">Campagna attiva oggi:</h4>
-                <p class="text-lg"><strong>${activeCampaign.name}</strong></p>
-                <p class="text-sm text-gray-600">${activeCampaign.description}</p>
+            <div class="alert-box-responsive" style="background-color: #dbeafe; border-left: 4px solid #3b82f6;">
+                <h4 style="font-weight: 700; margin-bottom: 0.25rem;">Campagna attiva oggi:</h4>
+                <p style="font-size: 1.125rem; font-weight: 600;">${activeCampaign.name}</p>
+                <p style="font-size: 0.875rem; color: #6b7280;">${activeCampaign.description}</p>
             </div>
             
-            <p class="text-green-600 font-bold">✅ Il cliente riceverà automaticamente il coupon</p>
+            <p style="color: #16a34a; font-weight: 600;">✅ Il cliente riceverà automaticamente il coupon</p>
             
-            <div class="flex gap-2">
-                <button onclick="App.closeModal('campaign-detail-modal')" class="flex-1 bg-gray-200 px-4 py-2 rounded hover:bg-gray-300">
+            <div class="button-group-responsive">
+                <button onclick="document.getElementById('walkin-purchase-modal').remove()" class="btn-responsive btn-secondary-responsive" style="flex: 1;">
                     Annulla
                 </button>
-                <button onclick="App.confirmWalkInPurchase()" class="flex-1 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                <button onclick="App.confirmWalkInPurchase()" class="btn-responsive btn-primary-responsive" style="flex: 1;">
                     Conferma e Invia WhatsApp
                 </button>
             </div>
         </div>
-    `;
+        `;
 
-        // Mostra in modal
         const div = document.createElement('div');
         div.id = 'walkin-purchase-modal';
         div.innerHTML = `
-        <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onclick="this.remove()">
-            <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4" onclick="event.stopPropagation()">
+        <div class="modal-overlay" onclick="this.parentElement.remove()">
+            <div class="modal-content-responsive" onclick="event.stopPropagation()">
                 ${modalHtml}
             </div>
         </div>
-    `;
+        `;
         document.body.appendChild(div);
     },
 
@@ -1983,51 +1981,50 @@ const App = {
     // ✅ NUOVO: Modal veloce per aggiungere cliente
     openQuickAddCustomerModal() {
         const modalHtml = `
-        <div class="space-y-4">
-            <h3 class="text-xl font-bold">👤 Aggiungi Nuovo Cliente</h3>
+        <div class="space-y-responsive">
+            <h3 class="modal-heading-responsive">👤 Aggiungi Nuovo Cliente</h3>
             
-            <div class="form-group">
-                <label class="block text-sm font-bold mb-2">Nome *</label>
-                <input type="text" id="quick-customer-firstname" class="w-full p-2 border rounded" placeholder="Mario" required>
+            <div class="form-group-responsive">
+                <label>Nome *</label>
+                <input type="text" id="quick-customer-firstname" class="input-responsive" placeholder="Mario" required>
             </div>
             
-            <div class="form-group">
-                <label class="block text-sm font-bold mb-2">Cognome *</label>
-                <input type="text" id="quick-customer-lastname" class="w-full p-2 border rounded" placeholder="Rossi" required>
+            <div class="form-group-responsive">
+                <label>Cognome *</label>
+                <input type="text" id="quick-customer-lastname" class="input-responsive" placeholder="Rossi" required>
             </div>
             
-            <div class="form-group">
-                <label class="block text-sm font-bold mb-2">Telefono *</label>
-                <input type="tel" id="quick-customer-phone" class="w-full p-2 border rounded" placeholder="+39 333 123 4567" required>
+            <div class="form-group-responsive">
+                <label>Telefono *</label>
+                <input type="tel" id="quick-customer-phone" class="input-responsive" placeholder="+39 333 123 4567" required>
             </div>
             
-            <div class="bg-blue-50 border-l-4 border-blue-500 p-3 rounded text-sm">
-                <p class="text-gray-700">💡 <strong>Suggerimento:</strong> Inserisci solo i dati essenziali. Potrai completare il profilo cliente in seguito dalla sezione Clienti.</p>
+            <div class="alert-box-responsive" style="background-color: #dbeafe; border-left: 4px solid #3b82f6;">
+                <p>💡 <strong>Suggerimento:</strong> Inserisci solo i dati essenziali. Potrai completare il profilo cliente in seguito dalla sezione Clienti.</p>
             </div>
             
-            <div class="flex gap-2">
-                <button onclick="App.closeQuickAddCustomerModal()" class="flex-1 bg-gray-200 px-4 py-2 rounded hover:bg-gray-300">
+            <div class="button-group-responsive">
+                <button onclick="App.closeQuickAddCustomerModal()" class="btn-responsive btn-secondary-responsive" style="flex: 1;">
                     Annulla
                 </button>
-                <button onclick="App.saveQuickCustomer()" class="flex-1 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+                <button onclick="App.saveQuickCustomer()" class="btn-responsive btn-success-responsive" style="flex: 1;">
                     ✅ Salva e Seleziona
                 </button>
             </div>
         </div>
-    `;
+        `;
 
         const div = document.createElement('div');
         div.id = 'quick-add-customer-modal';
         div.innerHTML = `
-        <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]" onclick="event.stopPropagation()">
-            <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4" onclick="event.stopPropagation()">
+        <div class="modal-overlay" onclick="event.stopPropagation()">
+            <div class="modal-content-responsive" onclick="event.stopPropagation()">
                 ${modalHtml}
             </div>
         </div>
-    `;
+        `;
         document.body.appendChild(div);
 
-        // Focus sul primo campo
         setTimeout(() => {
             document.getElementById('quick-customer-firstname').focus();
         }, 100);
