@@ -324,6 +324,70 @@
                 min-height: 40px;
             }
         }
+
+        /* ============================================
+   AUTOCOMPLETE PRODOTTI
+   ============================================ */
+
+        /* Card Prodotto nell'autocomplete */
+        .product-autocomplete-item {
+            padding: 1rem;
+            border-bottom: 1px solid #e5e7eb;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            min-height: 60px;
+            /* Touch target */
+        }
+
+        .product-autocomplete-item:hover,
+        .product-autocomplete-item.selected {
+            background-color: #f3e8ff;
+            /* Purple light */
+        }
+
+        .product-autocomplete-item:active {
+            background-color: #e9d5ff;
+        }
+
+        /* Nome prodotto */
+        .product-name {
+            font-weight: 600;
+            color: #374151;
+            font-size: 1rem;
+        }
+
+        /* Prezzo prodotto */
+        .product-price {
+            font-weight: 700;
+            color: #9333ea;
+            /* Purple */
+            font-size: 1.125rem;
+        }
+
+        /* No results message */
+        .no-results {
+            padding: 2rem;
+            text-align: center;
+            color: #6b7280;
+        }
+
+        @media (min-width: 768px) {
+            .product-autocomplete-item {
+                min-height: 50px;
+                padding: 0.75rem;
+            }
+
+            .product-name {
+                font-size: 0.875rem;
+            }
+
+            .product-price {
+                font-size: 1rem;
+            }
+        }
     </style>
 </head>
 
@@ -862,37 +926,32 @@
                         <div class="bg-white border-2 border-purple-300 rounded-lg p-4 mb-4">
                             <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
 
-                                <!-- Prodotto con Ricerca -->
-                                <div class="col-span-1 md:col-span-5">
-                                    <label class="block text-xs font-medium text-gray-600 mb-1">Prodotto</label>
-                                    <input type="text" id="cart-product-search" placeholder="🔍 Cerca prodotto..."
-                                        class="w-full px-3 py-2 border rounded-lg mb-2"
-                                        oninput="app.filterCartProducts()">
-                                    <select id="cart-product-select" class="w-full px-3 py-2 border rounded-lg">
-                                        <option value="">-- Seleziona prodotto --</option>
-                                    </select>
-                                </div>
+                                <!-- Prodotto con Autocomplete -->
+                                <div class="col-span-1 md:col-span-12">
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">🔍 Cerca e Aggiungi
+                                        Prodotto</label>
 
-                                <!-- Quantità -->
-                                <div class="col-span-1 md:col-span-2">
-                                    <label class="block text-xs font-medium text-gray-600 mb-1">Quantità</label>
-                                    <input type="number" id="cart-quantity" step="0.01" value="1" min="0.01"
-                                        class="w-full px-3 py-2 border rounded-lg">
-                                </div>
+                                    <div class="relative">
+                                        <!-- Input Ricerca -->
+                                        <input type="text" id="cart-product-search"
+                                            placeholder="Digita per cercare... (es: 'anti', 'agno')"
+                                            class="w-full px-4 py-3 text-lg border-2 border-purple-300 rounded-lg focus:border-purple-500 focus:outline-none"
+                                            oninput="app.showProductAutocomplete()"
+                                            onkeydown="app.handleProductKeydown(event)" autocomplete="off">
 
-                                <!-- Prezzo -->
-                                <div class="col-span-1 md:col-span-2"> <label
-                                        class="block text-xs font-medium text-gray-600 mb-1">Prezzo €</label>
-                                    <input type="number" id="cart-price" step="0.01" value="0"
-                                        class="w-full px-3 py-2 border rounded-lg" readonly>
-                                </div>
+                                        <!-- Lista Autocomplete (nascosta di default) -->
+                                        <div id="product-autocomplete-list"
+                                            class="hidden absolute z-10 w-full mt-2 bg-white border-2 border-purple-300 rounded-lg shadow-xl max-h-80 overflow-y-auto">
+                                            <!-- Popolato dinamicamente da JavaScript -->
+                                        </div>
+                                    </div>
 
-                                <!-- Bottone Aggiungi -->
-                                <div class="col-span-1 md:col-span-3">
-                                    <button type="button" onclick="app.addProductToCart()"
-                                        class="w-full bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 font-bold">
-                                        ➕ Aggiungi Prodotto
-                                    </button>
+                                    <!-- Hidden fields per prodotto selezionato -->
+                                    <input type="hidden" id="cart-product-select">
+                                    <input type="hidden" id="cart-price" value="0">
+
+                                    <p class="text-xs text-gray-500 mt-2">💡 Premi Enter per aggiungere il primo
+                                        risultato, o clicca sulla card</p>
                                 </div>
                             </div>
                         </div>
