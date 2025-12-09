@@ -922,55 +922,88 @@ const App = {
         const container = document.getElementById('campaigns-list');
         if (!container) return;
 
+        // ✅ NUOVO: Banner campagna attiva oggi
+        const today = new Date().toISOString().split('T')[0];
+        const activeTodayCampaigns = campaigns.filter(c =>
+            c.active && OrdersModule.isDateInCampaign(today, c)
+        );
+
+        let html = '';
+
+        // Mostra banner solo se c'è campagna attiva oggi
+        if (activeTodayCampaigns.length > 0) {
+            const campaign = activeTodayCampaigns[0];
+            html += `
+            <div class="bg-gradient-to-r from-green-400 to-blue-500 text-white rounded-lg shadow-lg p-6 mb-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-2xl font-bold mb-2">🟢 Campagna Attiva Oggi!</h3>
+                        <p class="text-lg mb-1"><strong>${campaign.name}</strong></p>
+                        <p class="text-sm opacity-90">${campaign.description}</p>
+                    </div>
+                    <button 
+                        onclick="App.openWalkInPurchaseModal()" 
+                        class="bg-white text-blue-600 px-6 py-3 rounded-lg font-bold hover:bg-gray-100 shadow-lg transition">
+                        📦 Registra Acquisto in Negozio
+                    </button>
+                </div>
+            </div>
+        `;
+        }
+
+        // Mostra campagne
         if (campaigns.length === 0) {
             container.innerHTML = '<p class="text-center text-gray-500 py-8">Nessuna campagna attiva</p>';
             return;
         }
 
-        container.innerHTML = campaigns.map(c => {
+        html += campaigns.map(c => {
             if (!c || !c.id) return '';
-            const eligible = this.getEligibleCustomers(c); const assigned = eligible.filter(cust => {
+            const eligible = this.getEligibleCustomers(c);
+            const assigned = eligible.filter(cust => {
                 const customer = CustomersModule.getCustomerById(cust.customerId);
                 return customer?.coupons?.some(cp => cp.campaignId === c.id);
             }).length;
 
             return `
-            <div class="bg-white rounded-lg shadow-lg overflow-hidden">
-                <div class="bg-gradient-to-r from-pink-500 to-purple-500 text-white p-4">
-                    <h3 class="text-xl font-bold">${c.name}</h3>
-                    <p class="text-sm">${c.description}</p>
+        <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+            <div class="bg-gradient-to-r from-pink-500 to-purple-500 text-white p-4">
+                <h3 class="text-xl font-bold">${c.name}</h3>
+                <p class="text-sm">${c.description}</p>
+            </div>
+            
+            <div class="p-4">
+                <div class="grid grid-cols-2 gap-3 mb-3">
+                    <div class="bg-gray-50 p-3 rounded">
+                        <p class="text-xs text-gray-600">Clienti idonei</p>
+                        <p class="text-2xl font-bold">${eligible.length}</p>
+                    </div>
+                    <div class="bg-green-50 p-3 rounded">
+                        <p class="text-xs text-gray-600">Coupon assegnati</p>
+                        <p class="text-2xl font-bold text-green-600">${assigned}</p>
+                    </div>
                 </div>
                 
-                <div class="p-4">
-                    <div class="grid grid-cols-2 gap-3 mb-3">
-                        <div class="bg-gray-50 p-3 rounded">
-                            <p class="text-xs text-gray-600">Clienti idonei</p>
-                            <p class="text-2xl font-bold">${eligible.length}</p>
-                        </div>
-                        <div class="bg-green-50 p-3 rounded">
-                            <p class="text-xs text-gray-600">Coupon assegnati</p>
-                            <p class="text-2xl font-bold text-green-600">${assigned}</p>
-                        </div>
-                    </div>
-                    
-                    <p class="text-sm text-gray-600 mb-2">📅 ${this.formatCampaignDates(c)}</p>
-                    <p class="text-sm text-gray-600 mb-3">⏰ Scade: ${Utils.formatDate(c.expiryDate)}</p>
-                    
-                    <div class="flex gap-2">
-                        <button onclick="app.assignCoupons('${c.id}')" class="flex-1 bg-pink-600 text-white px-4 py-2 rounded hover:bg-pink-700">
-                            Assegna Coupon
-                        </button>
-                        <button onclick="app.viewCampaignDetails('${c.id}')" class="flex-1 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-                            Dettagli
-                        </button>
-                        <button onclick="app.deleteCampaign('${c.id}')" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">
-                            🗑️
-                        </button>
-                    </div>
+                <p class="text-sm text-gray-600 mb-2">📅 ${this.formatCampaignDates(c)}</p>
+                <p class="text-sm text-gray-600 mb-3">⏰ Scade: ${Utils.formatDate(c.expiryDate)}</p>
+                
+                <div class="flex gap-2">
+                    <button onclick="app.assignCoupons('${c.id}')" class="flex-1 bg-pink-600 text-white px-4 py-2 rounded hover:bg-pink-700">
+                        Assegna Coupon
+                    </button>
+                    <button onclick="app.viewCampaignDetails('${c.id}')" class="flex-1 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                        Dettagli
+                    </button>
+                    <button onclick="app.deleteCampaign('${c.id}')" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">
+                        🗑️
+                    </button>
                 </div>
             </div>
+        </div>
         `;
         }).join('');
+
+        container.innerHTML = html;
     },
 
     getEligibleCustomers(campaign) {
@@ -1154,6 +1187,93 @@ const App = {
             return `Ritiri: ${campaign.dates.map(d => Utils.formatDate(d)).join(', ')}`;
         } else {
             return `Ritiri dal ${Utils.formatDate(campaign.dateFrom)} al ${Utils.formatDate(campaign.dateTo)}`;
+        }
+    },
+
+    // ✅ NUOVO: Modal acquisto in negozio
+    openWalkInPurchaseModal() {
+        const today = new Date().toISOString().split('T')[0];
+        const activeCampaign = CouponsModule.campaigns.find(c =>
+            c.active && OrdersModule.isDateInCampaign(today, c)
+        );
+
+        if (!activeCampaign) {
+            Utils.showToast("❌ Nessuna campagna attiva oggi", "error");
+            return;
+        }
+
+        // Lista clienti
+        const customerOptions = CustomersModule.customers
+            .map(c => `<option value="${c.id}">${c.firstName} ${c.lastName}</option>`)
+            .join('');
+
+        const modalHtml = `
+        <div class="space-y-4">
+            <h3 class="text-xl font-bold">📦 Registra Acquisto in Negozio</h3>
+            
+            <div class="form-group">
+                <label class="block text-sm font-bold mb-2">Cliente</label>
+                <select id="walkin-customer-id" class="w-full p-2 border rounded">
+                    <option value="">Seleziona cliente...</option>
+                    ${customerOptions}
+                </select>
+            </div>
+            
+            <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
+                <h4 class="font-bold mb-1">Campagna attiva oggi:</h4>
+                <p class="text-lg"><strong>${activeCampaign.name}</strong></p>
+                <p class="text-sm text-gray-600">${activeCampaign.description}</p>
+            </div>
+            
+            <p class="text-green-600 font-bold">✅ Il cliente riceverà automaticamente il coupon</p>
+            
+            <div class="flex gap-2">
+                <button onclick="App.closeModal('campaign-detail-modal')" class="flex-1 bg-gray-200 px-4 py-2 rounded hover:bg-gray-300">
+                    Annulla
+                </button>
+                <button onclick="App.confirmWalkInPurchase()" class="flex-1 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                    Conferma e Invia WhatsApp
+                </button>
+            </div>
+        </div>
+    `;
+
+        // Mostra in modal
+        const div = document.createElement('div');
+        div.id = 'walkin-purchase-modal';
+        div.innerHTML = `
+        <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onclick="this.remove()">
+            <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4" onclick="event.stopPropagation()">
+                ${modalHtml}
+            </div>
+        </div>
+    `;
+        document.body.appendChild(div);
+    },
+
+    // ✅ NUOVO: Conferma acquisto in negozio
+    confirmWalkInPurchase() {
+        const customerId = document.getElementById('walkin-customer-id').value;
+
+        if (!customerId) {
+            Utils.showToast("❌ Seleziona un cliente", "error");
+            return;
+        }
+
+        // Registra acquisto e assegna coupon
+        const result = CouponsModule.registerWalkInPurchase(customerId);
+
+        if (result) {
+            // Chiudi modal
+            document.getElementById('walkin-purchase-modal')?.remove();
+
+            // Chiedi conferma WhatsApp
+            if (confirm(`Inviare coupon "${result.campaign.name}" a ${result.customer.firstName} su WhatsApp?`)) {
+                WhatsAppModule.sendCouponMessage(result.customer, result.coupon);
+            }
+
+            // Ricarica lista coupon
+            this.loadCoupons();
         }
     },
 
@@ -2093,7 +2213,7 @@ const App = {
         }
     },
 
-    async saveOrder() {  
+    async saveOrder() {
         const customerId = document.getElementById('order-customer').value;
 
         if (!customerId) {
