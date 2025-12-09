@@ -9,17 +9,18 @@ const WhatsAppModule = {
 
         const message = `🎉 Ciao ${customer.firstName}!
 
-        Benvenuto/a nel programma *Fidelity* del Pastificio Gramsci! 🎊
+Benvenuto/a nel programma *Fidelity* del Pastificio Gramsci! 🎊
 
-        Come funziona:
-        - Ogni 20€ di spesa = 1 bollino ⭐
-        - Ogni 10 bollini = 1 premio 🎁
+Come funziona:
+- Ogni 20€ di spesa = 1 bollino ⭐
+- Ogni 10 bollini = 1 premio 🎁
 
-        Scarica la tua tessera digitale dal link e accumula punti ad ogni acquisto!
+Ti ho appena inviato la tua tessera digitale! 
+Salvala sul telefono e mostrala ad ogni acquisto per accumulare punti.
 
-        Grazie per averci scelto! 😊
+Grazie per averci scelto! 😊
 
-        _Pastificio Gramsci_`;
+_Pastificio Gramsci_`;
 
         if (withCard) {
             QRModule.generateFidelityQR(customer.id, (blob) => {
