@@ -30,7 +30,15 @@
             align-items: center;
             justify-content: center;
             z-index: 50;
-            padding: 1rem;
+            padding: 0.5rem;
+            /* Mobile: padding ridotto */
+        }
+
+        /* Tablet/Desktop: più spazio */
+        @media (min-width: 768px) {
+            .modal-overlay {
+                padding: 1.5rem;
+            }
         }
 
         /* Modal Content - Mobile First */
@@ -267,6 +275,53 @@
             input[type="radio"] {
                 width: 16px;
                 height: 16px;
+            }
+        }
+
+        /* ============================================
+       TOUCH TARGET MOBILE - iOS/Android
+       ============================================ */
+
+        /* Input Touch Friendly */
+        input[type="text"],
+        input[type="tel"],
+        input[type="email"],
+        input[type="number"],
+        input[type="date"],
+        input[type="time"],
+        input[type="password"],
+        select,
+        textarea {
+            min-height: 44px;
+            font-size: 16px;
+            /* Previene zoom automatico iOS */
+        }
+
+        @media (min-width: 768px) {
+
+            input[type="text"],
+            input[type="tel"],
+            input[type="email"],
+            input[type="number"],
+            input[type="date"],
+            input[type="time"],
+            input[type="password"],
+            select,
+            textarea {
+                min-height: auto;
+                font-size: 1rem;
+            }
+        }
+
+        /* Bottoni Touch Friendly */
+        button {
+            min-height: 48px;
+            touch-action: manipulation;
+        }
+
+        @media (min-width: 768px) {
+            button {
+                min-height: 40px;
             }
         }
     </style>
@@ -748,7 +803,7 @@
 
         <!-- Modal Nuovo Ordine -->
         <div id="new-order-modal"
-            class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4 z-50">
+            class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4 z-50 hidden">
             <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
 
                 <!-- Header Colorato -->
@@ -887,7 +942,7 @@
                     </div>
 
                     <!-- Bottoni -->
-                    <div class="flex gap-3">
+                    <div class="flex flex-col md:flex-row gap-3">
                         <button type="button" onclick="app.closeModal('new-order-modal')"
                             class="flex-1 bg-gray-200 text-gray-700 px-6 py-4 rounded-xl hover:bg-gray-300 font-bold text-lg">
                             ✕ Annulla
@@ -903,7 +958,7 @@
 
         <!-- Modal Dettagli Ordine -->
         <div id="order-details-modal"
-            class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4 z-50">
+            class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4 z-50 hidden">
             <div class="bg-white rounded-lg p-6 w-full max-w-lg">
                 <div class="flex justify-between mb-4">
                     <h3 class="text-xl font-bold">Dettagli Ordine</h3>
@@ -994,7 +1049,7 @@
 
         <!-- Modal Nuovo Cliente -->
         <div id="new-customer-modal"
-            class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4 z-50">
+            class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4 z-50 hidden">
             <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
 
                 <!-- Header Colorato -->
@@ -1054,7 +1109,7 @@
                     </div>
 
                     <!-- Bottoni -->
-                    <div class="flex gap-3">
+                    <div class="flex flex-col md:flex-row gap-3">
                         <button type="button" onclick="app.closeModal('new-customer-modal')"
                             class="flex-1 bg-gray-200 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-300 font-bold">
                             ✕ Annulla
@@ -1124,9 +1179,8 @@
         </div>
 
         <!-- Modal Nuovo Prodotto -->
-        <!-- Modal Nuovo Prodotto -->
         <div id="new-product-modal"
-            class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4 z-50">
+            class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4 z-50 hidden">
             <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
 
                 <!-- Header Colorato -->
@@ -1320,7 +1374,7 @@
                     </div>
 
                     <!-- Bottoni -->
-                    <div class="flex gap-3">
+                    <div class="flex flex-col md:flex-row gap-3">
                         <button type="button" onclick="app.closeModal('new-product-modal')"
                             class="flex-1 bg-gray-200 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-300 font-bold">
                             ✕ Annulla
@@ -1341,7 +1395,7 @@
             </div>
 
             <!-- Bottoni Azioni -->
-            <div class="flex gap-3 mb-4">
+            <div class="flex flex-col md:flex-row gap-3 mb-4">
                 <button onclick="app.addAllCustomersToFidelity()"
                     class="flex-1 bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700">
                     ➕ Aggiungi Tutti i Clienti
@@ -1364,7 +1418,7 @@
 
         <!-- Modal Dettaglio Cliente Fidelity -->
         <div id="fidelity-detail-modal"
-            class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4 z-50">
+            class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4 z-50 hidden">
             <div class="bg-white rounded-lg p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
                 <div class="flex justify-between items-center mb-4">
                     <h3 class="text-xl font-bold" id="fidelity-customer-name"></h3>
@@ -1435,7 +1489,7 @@
 
         <!-- Modal Coupon Cliente -->
         <div id="customer-coupons-modal"
-            class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4 z-50">
+            class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4 z-50 hidden">
             <div class="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
                 <div class="flex justify-between items-center mb-4">
                     <h3 class="text-xl font-bold">🎫 Coupon Cliente</h3>
@@ -1460,12 +1514,12 @@
 
         <!-- Modal Bollini Personalizzati -->
         <div id="custom-stamps-modal"
-            class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4 z-50">
+            class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4 z-50 hidden">
             <div class="bg-white rounded-lg p-6 w-full max-w-sm">
                 <h3 class="text-xl font-bold mb-4">Bollini Personalizzati</h3>
                 <input type="number" id="custom-stamps-input" min="1" placeholder="Numero bollini"
                     class="w-full px-3 py-2 border rounded mb-4">
-                <div class="flex gap-3">
+                <div class="flex flex-col md:flex-row gap-3">
                     <button onclick="app.closeModal('custom-stamps-modal')"
                         class="flex-1 bg-gray-200 px-4 py-2 rounded">Annulla</button>
                     <button onclick="app.saveCustomStamps()"
@@ -1476,7 +1530,7 @@
 
         <!-- Modal Aggiungi Bollini -->
         <div id="add-stamps-modal"
-            class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4 z-50">
+            class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4 z-50 hidden">
             <div class="bg-white rounded-lg p-6 w-full max-w-md">
                 <h3 class="text-xl font-bold mb-4">Aggiungi Bollini</h3>
 
@@ -1487,7 +1541,7 @@
                 <input type="number" id="stamps-qty" placeholder="Numero bollini" min="1"
                     class="w-full px-3 py-2 border rounded mb-3">
 
-                <div class="flex gap-3">
+                <div class="flex flex-col md:flex-row gap-3">
                     <button onclick="app.closeModal('add-stamps-modal')"
                         class="flex-1 bg-gray-200 px-4 py-2 rounded">Annulla</button>
                     <button onclick="app.saveStamps()"
@@ -1513,7 +1567,7 @@
 
         <!-- Modal Nuova Campagna -->
         <div id="new-campaign-modal"
-            class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4 z-50">
+            class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4 z-50 hidden">
             <div class="bg-white rounded-lg p-6 w-full max-w-md">
                 <h3 class="text-xl font-bold mb-4">Nuova Campagna Coupon</h3>
 
@@ -1556,7 +1610,7 @@
                 <label class="block text-sm mb-1">Data scadenza coupon</label>
                 <input type="date" id="campaign-expiry" class="w-full px-3 py-2 border rounded mb-3">
 
-                <div class="flex gap-3">
+                <div class="flex flex-col md:flex-row gap-3">
                     <button onclick="app.closeModal('new-campaign-modal')"
                         class="flex-1 bg-gray-200 px-4 py-2 rounded">Annulla</button>
                     <button onclick="app.saveCampaign()"
@@ -1692,7 +1746,7 @@
 
     <!-- Modal Scanner QR Fidelity -->
     <div id="fidelity-qr-scanner-modal"
-        class="modal fixed inset-0 bg-black bg-opacity-90 items-center justify-center p-4 z-50">
+        class="modal fixed inset-0 bg-black bg-opacity-90 items-center justify-center p-4 z-50 hidden">
         <div class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-lg">
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-2xl font-bold">📷 Scanner QR</h2>
