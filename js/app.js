@@ -2185,7 +2185,7 @@ const App = {
             
             <div class="alert-box-responsive" style="background-color: #f3e8ff; border-left: 4px solid #9333ea;">
                 <p class="text-lg font-bold text-purple-700">€${product.price.toFixed(2)} / ${product.unit || 'kg'}</p>
-                ${product.mode === 'weight' && product.averageWeight ? `<p class="text-sm text-gray-600">Peso medio: ${product.averageWeight.toFixed(2)} kg/pz</p>` : ''}
+                ${product.mode === 'weight' && product.averageWeight ? `<p class="text-sm text-gray-600">Peso medio: ${parseFloat(product.averageWeight).toFixed(2)} kg/pz</p>` : ''}
             </div>
             
             <div class="form-group-responsive">
@@ -2245,10 +2245,18 @@ const App = {
         let finalQuantity = quantity;
         let unit = product.unit || 'pz';
 
-        if (product.mode === 'weight' && product.averageWeight > 0) {
-            // Converti pezzi in kg
-            finalQuantity = quantity * product.averageWeight;
-            unit = 'kg';
+        if (product.mode === 'weight') {
+            const avgWeight = parseFloat(product.averageWeight);
+            if (avgWeight && avgWeight > 0) {
+                // Converti pezzi in kg
+                finalQuantity = quantity * avgWeight;
+                unit = 'kg';
+            } else {
+                // Se non c'è peso medio valido, tratta come pezzi normali
+                console.warn(`⚠️ Prodotto ${product.name} ha mode='weight' ma averageWeight non valido:`, product.averageWeight);
+                finalQuantity = quantity;
+                unit = 'pz';
+            }
         } else if (product.mode === 'kg') {
             finalQuantity = quantity;
             unit = 'kg';

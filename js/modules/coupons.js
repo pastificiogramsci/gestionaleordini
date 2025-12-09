@@ -230,6 +230,54 @@ const CouponsModule = {
         return assigned;
     },
 
+    // Registra acquisto in negozio e assegna coupon se c'è campagna attiva
+    registerWalkInPurchase(customerId) {
+        const today = new Date().toISOString().split('T')[0];
+
+        // Trova campagna attiva per oggi
+        const activeCampaign = this.campaigns.find(c => {
+            if (!c.active) return false;
+
+            // Usa la funzione di OrdersModule per verificare la data
+            if (window.OrdersModule && window.OrdersModule.isDateInCampaign) {
+                return window.OrdersModule.isDateInCampaign(today, c);
+            }
+
+            return false;
+        });
+
+        if (!activeCampaign) {
+            Utils.showToast("❌ Nessuna campagna attiva oggi", "error");
+            return null;
+        }
+
+        const customer = CustomersModule.getCustomerById(customerId);
+        if (!customer) {
+            Utils.showToast("❌ Cliente non trovato", "error");
+            return null;
+        }
+
+        // Controlla se ha già il coupon per questa campagna
+        if (customer.coupons?.some(cp => cp.campaignId === activeCampaign.id && !cp.used)) {
+            Utils.showToast(`⚠️ ${customer.firstName} ha già questo coupon`, "warning");
+            return null;
+        }
+
+        // Assegna coupon usando la funzione esistente
+        const coupon = this.assignCoupon(customerId, activeCampaign.id);
+
+        if (coupon) {
+            console.log(`🎫 Coupon "${activeCampaign.name}" assegnato a ${customer.firstName} (acquisto in negozio)`);
+            Utils.showToast(`✅ Coupon assegnato a ${customer.firstName}!`, "success");
+        }
+
+        return {
+            customer: customer,
+            coupon: coupon,
+            campaign: activeCampaign
+        };
+    },
+
     // Usa coupon
     useCoupon(customerId, couponId, orderAmount) {
         if (!CustomersModule) return null;
