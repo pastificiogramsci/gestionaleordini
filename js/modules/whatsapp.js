@@ -7,18 +7,21 @@ const WhatsAppModule = {
             return;
         }
 
-        const message = `Ciao ${customer.firstName}! 🎉
+        const message = `🎉 Ciao ${customer.firstName}!
 
-Benvenuto/a nel nostro programma Fidelity di Pastificio Gramsci!
+        Benvenuto/a nel programma *Fidelity* del Pastificio Gramsci! 🎊
 
-✨ Ogni 10 bollini ottieni un premio
-📱 Scarica la tua tessera digitale dal link
-🎁 Accumula punti ad ogni acquisto
+        Come funziona:
+        - Ogni 20€ di spesa = 1 bollino ⭐
+        - Ogni 10 bollini = 1 premio 🎁
 
-Grazie per averci scelto!`;
+        Scarica la tua tessera digitale dal link e accumula punti ad ogni acquisto!
+
+        Grazie per averci scelto! 😊
+
+        _Pastificio Gramsci_`;
 
         if (withCard) {
-            // Prima genera e scarica la card
             QRModule.generateFidelityQR(customer.id, (blob) => {
                 if (blob) {
                     const url = URL.createObjectURL(blob);
@@ -28,12 +31,11 @@ Grazie per averci scelto!`;
                     a.click();
                     URL.revokeObjectURL(url);
 
-                    // Poi apri WhatsApp
                     setTimeout(() => {
                         this.openWhatsApp(phone, message);
                     }, 1000);
 
-                    Utils.showToast("📱 Tessera scaricata! Mandala su WhatsApp", "success");
+                    Utils.showToast("✅ Tessera scaricata! Mandala su WhatsApp", "success");
                 } else {
                     this.openWhatsApp(phone, message);
                 }
@@ -53,21 +55,16 @@ Grazie per averci scelto!`;
         const itemsList = order.items.map(item => {
             const product = ProductsModule.getProductById(item.productId);
 
-            // Calcola display in base al mode
             let displayQty = '';
 
             if (item.mode === 'weight' && product?.averageWeight) {
-                // Peso medio: mostra pezzi
                 const pezzi = Math.round(item.quantity / product.averageWeight);
                 displayQty = `${pezzi} pz`;
             } else if (item.mode === 'pieces') {
-                // Pezzi diretti
                 displayQty = `${item.quantity} pz`;
             } else if (item.mode === 'kg') {
-                // Kg diretti
                 displayQty = `${item.quantity.toFixed(2)} kg`;
             } else {
-                // Fallback
                 displayQty = `${item.quantity.toFixed(2)} ${item.unit || 'kg'}`;
             }
 
@@ -83,8 +80,10 @@ Grazie per averci scelto!`;
         ${itemsList}
 
         📅 *Ritiro:* ${Utils.formatDate(order.deliveryDate)} ${order.deliveryTime || ''}
-        
-        Ci vediamo presto! 😊`;
+
+        Grazie per averci scelto! 😊
+
+        _Pastificio Gramsci_`;
 
         this.openWhatsApp(phone, message);
     },
@@ -93,20 +92,21 @@ Grazie per averci scelto!`;
         const phone = this.formatPhone(customer.phone);
         if (!phone) return;
 
-        const message = `Ciao ${customer.firstName}! 🎁
+        const message = `🎫 Ciao ${customer.firstName}!
 
-    Hai ricevuto un nuovo coupon sconto!
+        Hai ricevuto un *nuovo coupon sconto*! 🎉
 
-    🎫 ${coupon.campaignName}
-    💝 ${coupon.description}
-    🔢 Codice: ${coupon.code}
-    ⏰ Valido fino al ${Utils.formatDate(coupon.expiryDate)}
+        *Campagna:* ${coupon.campaignName}
+        *Descrizione:* ${coupon.description}
+        *Codice:* ${coupon.code}
+        *Valido fino al:* ${Utils.formatDate(coupon.expiryDate)}
 
-    Mostra questo messaggio alla cassa per usare lo sconto!
+        Mostra questo coupon alla cassa per usare lo sconto!
 
-    Grazie per la tua fedeltà! ❤️`;
+        Grazie per la tua fedeltà! 😊
 
-        // Prima genera e scarica la card coupon
+        _Pastificio Gramsci_`;
+
         QRModule.generateCouponQR(customer.id, coupon.id, (blob) => {
             if (blob) {
                 const url = URL.createObjectURL(blob);
@@ -116,14 +116,12 @@ Grazie per averci scelto!`;
                 a.click();
                 URL.revokeObjectURL(url);
 
-                // Poi apri WhatsApp
                 setTimeout(() => {
                     this.openWhatsApp(phone, message);
                 }, 1000);
 
-                Utils.showToast("📱 Card coupon scaricata! Mandala su WhatsApp", "success");
+                Utils.showToast("✅ Card coupon scaricata! Mandala su WhatsApp", "success");
             } else {
-                // Fallback: solo messaggio senza card
                 this.openWhatsApp(phone, message);
             }
         });
@@ -136,11 +134,11 @@ Grazie per averci scelto!`;
         const phone = this.formatPhone(customer.phone);
         if (!phone) return;
 
-        let message = `Ciao ${customer.firstName}! ✅
+        let message = `📦 Ciao ${customer.firstName}!
 
-    Il tuo ordine #${order.orderNumber} è pronto per il ritiro!
+        Il tuo ordine *#${order.orderNumber}* è pronto per il ritiro! ✅
 
-    📍 Vieni a ritirarlo quando vuoi`;
+        Vieni a ritirarlo quando vuoi! 😊`;
 
         if (hasCoupon) {
             // Trova il coupon appena assegnato
@@ -148,15 +146,21 @@ Grazie per averci scelto!`;
             if (coupon) {
                 message += `
 
-    🎁 SORPRESA! Hai ricevuto un coupon sconto!
-    🎫 ${coupon.description}
-    🔢 Codice: ${coupon.code}
+        🎁 *SORPRESA!* Hai ricevuto un coupon sconto!
 
-    Usalo nel tuo prossimo acquisto!`;
+        *Descrizione:* ${coupon.description}
+        *Codice:* ${coupon.code}
+
+        Usalo nel tuo prossimo acquisto!`;
 
                 // Marca coupon come notificato
                 coupon.notified = true;
                 CustomersModule.saveCustomers();
+
+                // Aggiungi firma PRIMA di generare QR
+                message += `
+
+        _Pastificio Gramsci_`;
 
                 // GENERA E INVIA CARD COUPON
                 QRModule.generateCouponQR(customer.id, coupon.id, (blob) => {
@@ -184,12 +188,14 @@ Grazie per averci scelto!`;
             }
         }
 
+        // Se non c'è coupon, aggiungi firma normale
         message += `
 
-    Grazie e a presto! 😊`;
+        _Pastificio Gramsci_`;
 
         this.openWhatsApp(phone, message);
     },
+
     formatPhone(phone) {
         if (!phone) return null;
 
@@ -211,11 +217,35 @@ Grazie per averci scelto!`;
 
     openWhatsApp(phone, message) {
         const encodedMessage = encodeURIComponent(message);
-        const url = `https://wa.me/${phone}?text=${encodedMessage}`;
 
-        // Su mobile apre l'app, su desktop apre WhatsApp Web
-        window.open(url, '_blank');
-    }
+        // Rimuovi il + iniziale se c'è (WhatsApp URI scheme non lo vuole)
+        const phoneClean = phone.replace('+', '');
+
+        // Rileva se è mobile
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+        let url;
+
+        if (isMobile) {
+            // Mobile: usa schema WhatsApp nativo (apre l'APP direttamente!)
+            url = `whatsapp://send?phone=${phoneClean}&text=${encodedMessage}`;
+            console.log('📱 Apertura WhatsApp APP (mobile)');
+        } else {
+            // Desktop: usa WhatsApp Web
+            url = `https://wa.me/${phoneClean}?text=${encodedMessage}`;
+            console.log('💻 Apertura WhatsApp Web (desktop)');
+        }
+
+        console.log('🔗 URL WhatsApp:', url);
+
+        // Su mobile usa window.location invece di window.open
+        if (isMobile) {
+            window.location.href = url;
+        } else {
+            window.open(url, '_blank');
+        }
+    },
+
 };
 
 window.WhatsAppModule = WhatsAppModule;
