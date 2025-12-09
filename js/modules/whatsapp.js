@@ -1,5 +1,21 @@
 const WhatsAppModule = {
 
+    // ✅ NUOVA FUNZIONE: Gestisce nome/cognome vuoti
+    getDisplayName(customer) {
+        const firstName = (customer.firstName || '').trim();
+        const lastName = (customer.lastName || '').trim();
+
+        if (firstName && lastName) {
+            return `${firstName} ${lastName}`;
+        } else if (firstName) {
+            return firstName;
+        } else if (lastName) {
+            return lastName;
+        } else {
+            return 'Cliente';
+        }
+    },
+
     sendWelcomeMessage(customer, withCard = true) {
         const phone = this.formatPhone(customer.phone);
         if (!phone) {
@@ -7,7 +23,9 @@ const WhatsAppModule = {
             return;
         }
 
-        const message = `🎉 Ciao ${customer.firstName}!
+        const displayName = this.getDisplayName(customer);
+
+        const message = `🎉 Ciao ${displayName}!
 
 Benvenuto/a nel programma *Fidelity* del Pastificio Gramsci! 🎊
 
@@ -28,7 +46,8 @@ _Pastificio Gramsci_`;
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `tessera-${customer.firstName}-${customer.lastName}.png`;
+                    const fileName = this.getDisplayName(customer).replace(/\s+/g, '-');
+                    a.download = `tessera-${fileName}.png`;
                     a.click();
                     URL.revokeObjectURL(url);
 
@@ -53,6 +72,8 @@ _Pastificio Gramsci_`;
         const phone = this.formatPhone(customer.phone);
         if (!phone) return;
 
+        const displayName = this.getDisplayName(customer);
+
         const itemsList = order.items.map(item => {
             const product = ProductsModule.getProductById(item.productId);
 
@@ -72,19 +93,20 @@ _Pastificio Gramsci_`;
             return `• ${product?.name || 'Prodotto'} - ${displayQty}`;
         }).join('\n');
 
+        // ✅ FORMATTAZIONE CORRETTA (NO spazi extra!)
         const message = `🎉 *ORDINE CONFERMATO* 🎉
 
-        📦 *#${order.orderNumber}*
+📦 *#${order.orderNumber}*
 
-        Ciao ${customer.firstName}!
+Ciao ${displayName}!
 
-        ${itemsList}
+${itemsList}
 
-        📅 *Ritiro:* ${Utils.formatDate(order.deliveryDate)} ${order.deliveryTime || ''}
+📅 *Ritiro:* ${Utils.formatDate(order.deliveryDate)} ${order.deliveryTime || ''}
 
-        Grazie per averci scelto! 😊
+Grazie per averci scelto! 😊
 
-        _Pastificio Gramsci_`;
+_Pastificio Gramsci_`;
 
         this.openWhatsApp(phone, message);
     },
@@ -93,27 +115,30 @@ _Pastificio Gramsci_`;
         const phone = this.formatPhone(customer.phone);
         if (!phone) return;
 
-        const message = `🎫 Ciao ${customer.firstName}!
+        const displayName = this.getDisplayName(customer);
 
-        Hai ricevuto un *nuovo coupon sconto*! 🎉
+        const message = `🎫 Ciao ${displayName}!
 
-        *Campagna:* ${coupon.campaignName}
-        *Descrizione:* ${coupon.description}
-        *Codice:* ${coupon.code}
-        *Valido fino al:* ${Utils.formatDate(coupon.expiryDate)}
+Hai ricevuto un *nuovo coupon sconto*! 🎉
 
-        Mostra questo coupon alla cassa per usare lo sconto!
+*Campagna:* ${coupon.campaignName}
+*Descrizione:* ${coupon.description}
+*Codice:* ${coupon.code}
+*Valido fino al:* ${Utils.formatDate(coupon.expiryDate)}
 
-        Grazie per la tua fedeltà! 😊
+Mostra questo coupon alla cassa per usare lo sconto!
 
-        _Pastificio Gramsci_`;
+Grazie per la tua fedeltà! 😊
+
+_Pastificio Gramsci_`;
 
         QRModule.generateCouponQR(customer.id, coupon.id, (blob) => {
             if (blob) {
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
+                const fileName = this.getDisplayName(customer).replace(/\s+/g, '-');
                 a.href = url;
-                a.download = `coupon-${customer.firstName}-${customer.lastName}.png`;
+                a.download = `coupon-${fileName}.png`;
                 a.click();
                 URL.revokeObjectURL(url);
 
@@ -135,64 +160,60 @@ _Pastificio Gramsci_`;
         const phone = this.formatPhone(customer.phone);
         if (!phone) return;
 
-        let message = `📦 Ciao ${customer.firstName}!
+        const displayName = this.getDisplayName(customer);
 
-        Il tuo ordine *#${order.orderNumber}* è pronto per il ritiro! ✅
+        let message = `📦 Ciao ${displayName}!
 
-        Vieni a ritirarlo quando vuoi! 😊`;
+Il tuo ordine *#${order.orderNumber}* è pronto per il ritiro! ✅
+
+Vieni a ritirarlo quando vuoi! 😊`;
 
         if (hasCoupon) {
-            // Trova il coupon appena assegnato
             const coupon = customer.coupons?.find(c => !c.used && !c.notified);
             if (coupon) {
                 message += `
 
-        🎁 *SORPRESA!* Hai ricevuto un coupon sconto!
+🎁 *SORPRESA!* Hai ricevuto un coupon sconto!
 
-        *Descrizione:* ${coupon.description}
-        *Codice:* ${coupon.code}
+*Descrizione:* ${coupon.description}
+*Codice:* ${coupon.code}
 
-        Usalo nel tuo prossimo acquisto!`;
+Usalo nel tuo prossimo acquisto!`;
 
-                // Marca coupon come notificato
                 coupon.notified = true;
                 CustomersModule.saveCustomers();
 
-                // Aggiungi firma PRIMA di generare QR
                 message += `
 
-        _Pastificio Gramsci_`;
+_Pastificio Gramsci_`;
 
-                // GENERA E INVIA CARD COUPON
                 QRModule.generateCouponQR(customer.id, coupon.id, (blob) => {
                     if (blob) {
                         const url = URL.createObjectURL(blob);
                         const a = document.createElement('a');
+                        const fileName = this.getDisplayName(customer).replace(/\s+/g, '-');
                         a.href = url;
-                        a.download = `coupon-${customer.firstName}-${customer.lastName}.png`;
+                        a.download = `coupon-${fileName}.png`;
                         a.click();
                         URL.revokeObjectURL(url);
 
                         Utils.showToast("📱 Card coupon scaricata! Mandala su WhatsApp", "success");
 
-                        // Poi apri WhatsApp
                         setTimeout(() => {
                             this.openWhatsApp(phone, message);
                         }, 1000);
                     } else {
-                        // Fallback: solo messaggio
                         this.openWhatsApp(phone, message);
                     }
                 });
 
-                return; // ← IMPORTANTE: esci qui per aspettare il callback
+                return;
             }
         }
 
-        // Se non c'è coupon, aggiungi firma normale
         message += `
 
-        _Pastificio Gramsci_`;
+_Pastificio Gramsci_`;
 
         this.openWhatsApp(phone, message);
     },
@@ -200,15 +221,12 @@ _Pastificio Gramsci_`;
     formatPhone(phone) {
         if (!phone) return null;
 
-        // Rimuovi spazi, trattini, parentesi
         let cleaned = phone.replace(/[\s\-\(\)]/g, '');
 
-        // Se inizia con 0, sostituisci con +39
         if (cleaned.startsWith('0')) {
             cleaned = '39' + cleaned.substring(1);
         }
 
-        // Se non inizia con +, aggiungi +
         if (!cleaned.startsWith('+')) {
             cleaned = '+' + cleaned;
         }
@@ -216,34 +234,68 @@ _Pastificio Gramsci_`;
         return cleaned;
     },
 
+    // ✅ AGGIUNTO: Copia numero negli appunti
+    copyToClipboard(text) {
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(text).then(() => {
+                console.log('📋 Numero copiato negli appunti:', text);
+            }).catch(err => {
+                console.error('Errore copia clipboard:', err);
+            });
+        } else {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.style.position = 'fixed';
+            textArea.style.opacity = '0';
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                console.log('📋 Numero copiato (fallback):', text);
+            } catch (err) {
+                console.error('Errore copia fallback:', err);
+            }
+            document.body.removeChild(textArea);
+        }
+    },
+
     openWhatsApp(phone, message) {
         const encodedMessage = encodeURIComponent(message);
-
-        // Rimuovi il + iniziale se c'è (WhatsApp URI scheme non lo vuole)
         const phoneClean = phone.replace('+', '');
-
-        // Rileva se è mobile
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+        // ✅ Copia numero negli appunti (per messaggi effimeri)
+        this.copyToClipboard(phoneClean);
 
         let url;
 
         if (isMobile) {
-            // Mobile: usa schema WhatsApp nativo (apre l'APP direttamente!)
             url = `whatsapp://send?phone=${phoneClean}&text=${encodedMessage}`;
             console.log('📱 Apertura WhatsApp APP (mobile)');
         } else {
-            // Desktop: usa WhatsApp Web
             url = `https://wa.me/${phoneClean}?text=${encodedMessage}`;
             console.log('💻 Apertura WhatsApp Web (desktop)');
         }
 
         console.log('🔗 URL WhatsApp:', url);
 
-        // Su mobile usa window.location invece di window.open
-        if (isMobile) {
-            window.location.href = url;
-        } else {
-            window.open(url, '_blank');
+        try {
+            if (isMobile) {
+                window.location.href = url;
+            } else {
+                window.open(url, '_blank');
+            }
+
+            // Toast informativo solo se potrebbe essere utile
+            setTimeout(() => {
+                Utils.showToast(`📱 WhatsApp aperto
+                
+💡 Numero copiato negli appunti (${phoneClean}) se hai messaggi effimeri attivi`, "info", 4000);
+            }, 500);
+
+        } catch (error) {
+            console.error('Errore apertura WhatsApp:', error);
+            Utils.showToast(`❌ Errore apertura WhatsApp. Numero copiato: ${phoneClean}`, "error");
         }
     },
 
