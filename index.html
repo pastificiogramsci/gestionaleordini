@@ -1805,15 +1805,32 @@
 
     <!-- Modal Scanner QR Fidelity -->
     <div id="fidelity-qr-scanner-modal"
-        class="modal fixed inset-0 bg-black bg-opacity-90 items-center justify-center p-4 z-50 hidden">
+        class="modal fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center p-4 z-50 hidden">
         <div class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-lg">
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-2xl font-bold">📷 Scanner QR</h2>
                 <button onclick="app.closeFidelityQRScanner()"
                     class="text-gray-500 hover:text-gray-700 text-3xl">×</button>
             </div>
-            <video id="fidelity-qr-video" class="w-full rounded-lg" autoplay playsinline></video>
-            <p class="text-sm text-gray-600 text-center mt-4">Inquadra il QR code della tessera fidelity</p>
+
+            <!-- Video scanner -->
+            <div class="relative">
+                <video id="fidelity-qr-video" class="w-full rounded-lg bg-gray-900" style="min-height: 300px;" autoplay
+                    playsinline></video>
+
+                <!-- Indicatore scansione -->
+                <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div class="border-4 border-green-500 rounded-lg animate-pulse"
+                        style="width: 200px; height: 200px;"></div>
+                </div>
+            </div>
+
+            <!-- Istruzioni -->
+            <div class="mt-4 space-y-2">
+                <p class="text-sm font-bold text-green-600 text-center animate-pulse">🔍 Scansionando...</p>
+                <p class="text-xs text-gray-600 text-center">Inquadra il QR code della tessera fidelity</p>
+                <p class="text-xs text-gray-500 text-center">Lo scanner resta attivo fino alla scansione</p>
+            </div>
         </div>
     </div>
 

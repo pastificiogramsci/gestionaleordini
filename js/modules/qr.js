@@ -563,14 +563,16 @@ const QRModule = {
             try {
                 qrData = JSON.parse(qrData);
             } catch (e) {
-                Utils.showToast("QR Code non valido", "error");
+                console.warn("⚠️ QR non JSON valido, riprovo...");
+                // ✅ NON chiudere, continua a scansionare
                 return null;
             }
         }
 
         // Controlla tipo
         if (!qrData.type) {
-            Utils.showToast("QR Code senza tipo", "error");
+            console.warn("⚠️ QR senza tipo, potrebbe non essere una tessera");
+            // ✅ NON chiudere, continua a scansionare
             return null;
         }
 
@@ -582,7 +584,8 @@ const QRModule = {
                 return this.processCouponQR(qrData);
 
             default:
-                Utils.showToast("Tipo QR non riconosciuto", "error");
+                console.warn("⚠️ Tipo QR non riconosciuto:", qrData.type);
+                // ✅ NON chiudere, continua a scansionare
                 return null;
         }
     },
