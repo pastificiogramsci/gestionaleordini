@@ -878,6 +878,69 @@ const App = {
         this.loadFidelity();
     },
 
+    removeStampsFromCustomer(customerId) {
+        const fidelity = FidelityModule.getFidelityCustomer(customerId);
+
+        if (!fidelity) {
+            Utils.showToast("Cliente non nel programma fidelity", "error");
+            return;
+        }
+
+        if (fidelity.stamps === 0) {
+            Utils.showToast("⚠️ Il cliente non ha bollini da rimuovere", "warning");
+            return;
+        }
+
+        // ⚠️ CONFERMA CON AVVISO
+        const stampsToRemove = prompt(
+            `⚠️ ATTENZIONE: RIMOZIONE BOLLINI ⚠️\n\n` +
+            `Cliente ha attualmente ${fidelity.stamps} bollini.\n\n` +
+            `Quanti bollini vuoi RIMUOVERE?\n` +
+            `(Questa azione è irreversibile)`,
+            '1'
+        );
+
+        if (!stampsToRemove) return; // Annullato
+
+        const stamps = parseInt(stampsToRemove);
+
+        if (isNaN(stamps) || stamps <= 0) {
+            Utils.showToast("❌ Numero non valido", "error");
+            return;
+        }
+
+        if (stamps > fidelity.stamps) {
+            Utils.showToast(`⚠️ Il cliente ha solo ${fidelity.stamps} bollini`, "warning");
+            return;
+        }
+
+        // ⚠️ SECONDA CONFERMA
+        if (!confirm(
+            `⚠️ CONFERMA RIMOZIONE ⚠️\n\n` +
+            `Stai per RIMUOVERE ${stamps} bollini.\n\n` +
+            `Bollini attuali: ${fidelity.stamps}\n` +
+            `Bollini dopo: ${fidelity.stamps - stamps}\n\n` +
+            `Sei sicuro?`
+        )) {
+            Utils.showToast("Operazione annullata", "info");
+            return;
+        }
+
+        // Chiedi motivo (opzionale)
+        const reason = prompt(
+            `Motivo della rimozione?\n(opzionale, per cronologia)`,
+            'Correzione errore'
+        );
+
+        // Rimuovi bollini
+        FidelityModule.removeStamps(customerId, stamps, reason || 'Correzione manuale');
+
+        // Ricarica dettagli
+        this.openFidelityDetail(customerId);
+
+        Utils.showToast(`✅ Rimossi ${stamps} bollini`, "success");
+    },
+
     showHistory() {
         const history = document.getElementById('fidelity-detail-history');
         history.classList.toggle('hidden');
@@ -1479,7 +1542,7 @@ const App = {
                             </tr>
                         ` : ''}
                     `;
-                    }).join('')}
+            }).join('')}
                 </tbody>
                 </table>
                 </div>
@@ -1487,12 +1550,12 @@ const App = {
                 <!-- Mobile: Card (visibile solo su schermi piccoli) -->
                 <div class="block md:hidden space-y-3">
                     ${p.orders.map(o => {
-                            const order = OrdersModule.getOrderById(o.orderId);
-                            const itemIdx = order.items.findIndex(i => i.productId === p.productId);
-                            const item = order.items[itemIdx];
-                            const isPrepared = item?.prepared;
+                const order = OrdersModule.getOrderById(o.orderId);
+                const itemIdx = order.items.findIndex(i => i.productId === p.productId);
+                const item = order.items[itemIdx];
+                const isPrepared = item?.prepared;
 
-                            return `
+                return `
                             <div class="border-2 rounded-lg p-4 ${isPrepared ? 'bg-green-50 border-green-300' : 'border-gray-300'}">
                                 <div class="flex justify-between items-start mb-3">
                                     <div>
@@ -1524,13 +1587,13 @@ const App = {
                                 `}
                             </div>
                         `;
-                        }).join('')}
+            }).join('')}
                 </div>
             </div>
             </div>
             `;
-            }).join('');
-         },
+        }).join('');
+    },
 
     markItemPrepared(orderId, itemIndex) {
         const order = OrdersModule.getOrderById(orderId);

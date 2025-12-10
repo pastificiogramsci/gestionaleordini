@@ -1477,7 +1477,7 @@
 
         <!-- Modal Dettaglio Cliente Fidelity -->
         <div id="fidelity-detail-modal"
-            class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4 z-50 hidden">
+            class="modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
             <div class="bg-white rounded-lg p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
                 <div class="flex justify-between items-center mb-4">
                     <h3 class="text-xl font-bold" id="fidelity-customer-name"></h3>
@@ -1510,6 +1510,7 @@
                     <p class="text-xs text-gray-500 mt-1" id="fidelity-detail-missing"></p>
                 </div>
 
+                <!-- Aggiungi Bollini Rapidi -->
                 <div class="grid grid-cols-4 gap-2 mb-4">
                     <button onclick="app.quickAddStamps(1)"
                         class="bg-blue-600 text-white py-2 rounded font-bold">+1</button>
@@ -1521,6 +1522,15 @@
                         class="bg-blue-600 text-white py-2 rounded font-bold">+N</button>
                 </div>
 
+                <!-- ✅ NUOVO: Bottone Rimuovi Bollini -->
+                <div class="mb-4">
+                    <button onclick="app.removeStampsFromCustomer(app.currentFidelityCustomer)"
+                        class="w-full bg-orange-600 text-white py-3 rounded-lg hover:bg-orange-700 font-bold">
+                        ⚠️ Rimuovi Bollini
+                    </button>
+                </div>
+
+                <!-- Azioni Tessera -->
                 <div class="grid grid-cols-2 gap-2 mb-4">
                     <button onclick="app.showFidelityCard()"
                         class="bg-purple-600 text-white py-3 rounded-lg hover:bg-purple-700 font-bold">
@@ -1532,6 +1542,7 @@
                     </button>
                 </div>
 
+                <!-- Cronologia -->
                 <div class="mb-4">
                     <h4 class="font-bold mb-2">📜 Vedi Cronologia Completa</h4>
                     <button onclick="app.showHistory()" class="w-full bg-gray-200 py-2 rounded">Mostra
@@ -1542,6 +1553,7 @@
                     <div class="bg-gray-50 rounded p-3 max-h-48 overflow-y-auto" id="fidelity-history-list"></div>
                 </div>
 
+                <!-- Coupon Attivi -->
                 <div id="fidelity-detail-coupons"></div>
             </div>
         </div>

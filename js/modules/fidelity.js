@@ -136,8 +136,8 @@ const FidelityModule = {
         return fidelity;
     },
 
-    // Rimuovi bollini (raramente usato, ma utile per correzioni)
-    removeStamps(customerId, stampsToRemove) {
+    // Rimuovi bollini (per correzioni errori)
+    removeStamps(customerId, stampsToRemove, reason = '') {
         const fidelity = this.getFidelityCustomer(customerId);
 
         if (!fidelity) {
@@ -145,17 +145,22 @@ const FidelityModule = {
             return null;
         }
 
+        const stampsBefore = fidelity.stamps;
         fidelity.stamps = Math.max(0, fidelity.stamps - stampsToRemove);
+        const actualRemoved = stampsBefore - fidelity.stamps;
 
+        // Cronologia con motivo
         fidelity.history.push({
             id: Utils.generateId(),
             type: 'stamps_removed',
-            stamps: stampsToRemove,
+            stamps: actualRemoved,
+            reason: reason || 'Correzione manuale',
             date: new Date().toISOString()
         });
 
         this.saveFidelity();
-        Utils.showToast(`Rimossi ${stampsToRemove} bollini`, "info");
+        Utils.showToast(`⚠️ Rimossi ${actualRemoved} bollini`, "warning");
+
         return fidelity;
     },
 
