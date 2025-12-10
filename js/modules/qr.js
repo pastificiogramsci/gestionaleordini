@@ -587,6 +587,70 @@ const QRModule = {
         }
     },
 
+    // Processa QR fidelity
+    processFidelityQR(qrData) {
+        console.log("🎫 Processamento QR Fidelity:", qrData);
+
+        // Validazione base
+        if (!qrData.customerId) {
+            console.error("❌ QR non valido: customerId mancante", qrData);
+            Utils.showToast("❌ QR non valido: dati incompleti", "error");
+            return null;
+        }
+
+        // Trova cliente
+        const customer = window.CustomersModule?.getCustomerById(qrData.customerId);
+
+        if (!customer) {
+            console.error("❌ Cliente non trovato:", qrData.customerId);
+            Utils.showToast("❌ Cliente non trovato nel sistema", "error");
+            return null;
+        }
+
+        console.log("✅ Cliente trovato:", customer.firstName, customer.lastName);
+
+        // Trova/crea fidelity
+        let fidelity = window.FidelityModule?.getFidelityCustomer(qrData.customerId);
+
+        if (!fidelity) {
+            console.warn("⚠️ Cliente senza fidelity, lo iscrivo ora");
+            fidelity = window.FidelityModule?.registerCustomer(qrData.customerId);
+        }
+
+        if (!fidelity) {
+            console.error("❌ Impossibile creare fidelity");
+            Utils.showToast("❌ Errore nel sistema fidelity", "error");
+            return null;
+        }
+
+        // Successo!
+        const displayName = window.WhatsAppModule?.getDisplayName(customer) || customer.firstName || 'Cliente';
+        Utils.showToast(`✅ Carta fidelity: ${displayName}`, "success");
+
+        console.log("📱 Apertura dettagli fidelity per:", displayName);
+
+        // Chiudi lo scanner
+        this.closeScanner();
+
+        // Attendi chiusura scanner, poi apri dettagli
+        setTimeout(() => {
+            if (window.App && window.App.openFidelityDetail) {
+                window.App.openFidelityDetail(qrData.customerId);
+            } else if (window.app && window.app.openFidelityDetail) {
+                window.app.openFidelityDetail(qrData.customerId);
+            } else {
+                console.error("❌ Funzione openFidelityDetail non trovata");
+                Utils.showToast("💡 Vai alla sezione Fidelity per vedere i dettagli", "info", 4000);
+            }
+        }, 300);
+
+        return {
+            success: true,
+            customer: customer,
+            fidelity: fidelity
+        };
+    },
+
     // Processa QR coupon
     processCouponQR(qrData) {
         console.log("🎫 Processamento QR Coupon:", qrData);
@@ -668,52 +732,6 @@ const QRModule = {
 
         return {
             success: true,
-            customer: customer,
-            coupon: coupon
-        };
-    },
-
-    // Processa QR coupon
-    processCouponQR(qrData) {
-        if (!CustomersModule || !CouponsModule) return null;
-
-        const customer = CustomersModule.getCustomerById(qrData.customerId);
-
-        if (!customer || !customer.coupons) {
-            Utils.showToast("❌ Coupon non trovato", "error");
-            return null;
-        }
-
-        const coupon = customer.coupons.find(c => c.id === qrData.couponId);
-
-        if (!coupon) {
-            Utils.showToast("❌ Coupon non valido", "error");
-            return null;
-        }
-
-        if (coupon.used) {
-            Utils.showToast("⚠️ Coupon già utilizzato", "warning");
-            return null;
-        }
-
-        Utils.showToast(`✅ Coupon valido: ${customer.firstName} ${customer.lastName}`, "success");
-
-        console.log("🎫 Apertura coupon per:", customer.firstName, "- Codice:", coupon.code);
-
-        // Chiudi lo scanner
-        this.closeScanner();
-
-        // Attendi chiusura scanner, poi apri coupon
-        setTimeout(() => {
-            if (window.App && window.App.openCustomerCoupons) {
-                window.App.openCustomerCoupons(qrData.customerId);
-            } else {
-                console.error("❌ Funzione openCustomerCoupons non trovata");
-                Utils.showToast("Vai manualmente alla sezione Coupon del cliente", "info");
-            }
-        }, 300);
-
-        return {
             customer: customer,
             coupon: coupon
         };
