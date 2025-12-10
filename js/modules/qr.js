@@ -587,41 +587,90 @@ const QRModule = {
         }
     },
 
-    // Processa QR fidelity
-    processFidelityQR(qrData) {
-        if (!FidelityModule) return null;
+    // Processa QR coupon
+    processCouponQR(qrData) {
+        console.log("🎫 Processamento QR Coupon:", qrData);
 
-        const result = FidelityModule.processFidelityQRScan(qrData);
-
-        if (result) {
-            const customerId = qrData.customerId;
-            const customer = window.CustomersModule?.getCustomerById(customerId);
-
-            if (customer) {
-                Utils.showToast(`✅ Carta fidelity: ${customer.firstName} ${customer.lastName}`, "success");
-
-                console.log("📱 Apertura dettagli fidelity per:", customer.firstName);
-
-                // Chiudi lo scanner
-                this.closeScanner();
-
-                // Attendi chiusura scanner, poi apri dettagli
-                setTimeout(() => {
-                    if (window.App && window.App.openFidelityDetail) {
-                        window.App.openFidelityDetail(customerId);
-                    } else {
-                        console.error("❌ Funzione openFidelityDetail non trovata");
-                        Utils.showToast("Vai manualmente alla sezione Fidelity", "info");
-                    }
-                }, 300);
-            } else {
-                Utils.showToast("❌ Cliente non trovato", "error");
-            }
-        } else {
-            Utils.showToast("❌ QR non valido", "error");
+        // Validazione base
+        if (!qrData.customerId || !qrData.couponId) {
+            console.error("❌ QR non valido: dati mancanti", qrData);
+            Utils.showToast("❌ QR coupon non valido", "error");
+            return null;
         }
 
-        return result;
+        // Trova cliente
+        const customer = window.CustomersModule?.getCustomerById(qrData.customerId);
+
+        if (!customer) {
+            console.error("❌ Cliente non trovato:", qrData.customerId);
+            Utils.showToast("❌ Cliente non trovato", "error");
+            return null;
+        }
+
+        console.log("✅ Cliente trovato:", customer.firstName, customer.lastName);
+
+        // Trova coupon
+        if (!customer.coupons || customer.coupons.length === 0) {
+            console.error("❌ Cliente senza coupon");
+            Utils.showToast("❌ Nessun coupon trovato per questo cliente", "error");
+            return null;
+        }
+
+        const coupon = customer.coupons.find(c => c.id === qrData.couponId);
+
+        if (!coupon) {
+            console.error("❌ Coupon non trovato:", qrData.couponId);
+            Utils.showToast("❌ Coupon non valido o scaduto", "error");
+            return null;
+        }
+
+        console.log("✅ Coupon trovato:", coupon.code);
+
+        // Verifica se già usato
+        if (coupon.used) {
+            console.warn("⚠️ Coupon già utilizzato");
+            Utils.showToast("⚠️ Coupon già utilizzato il " + Utils.formatDate(coupon.usedAt), "warning");
+            return null;
+        }
+
+        // Verifica scadenza
+        if (new Date(coupon.expiryDate) < new Date()) {
+            console.warn("⚠️ Coupon scaduto");
+            Utils.showToast("⚠️ Coupon scaduto il " + Utils.formatDate(coupon.expiryDate), "warning");
+            return null;
+        }
+
+        // Successo!
+        const displayName = window.WhatsAppModule?.getDisplayName(customer) || customer.firstName || 'Cliente';
+        Utils.showToast(`✅ Coupon valido: ${displayName}`, "success");
+
+        console.log("📱 Coupon pronto per essere usato");
+
+        // Chiudi scanner
+        this.closeScanner();
+
+        // Mostra dialog per confermare uso
+        setTimeout(() => {
+            if (confirm(`🎫 Coupon: ${coupon.description}\n\nConfermi l'utilizzo del coupon?`)) {
+                // Marca come usato
+                coupon.used = true;
+                coupon.usedAt = new Date().toISOString();
+                window.CustomersModule?.saveCustomers();
+
+                Utils.showToast("✅ Coupon utilizzato con successo!", "success");
+
+                // Aggiorna UI se in sezione clienti
+                if (window.app && window.app.loadCustomers) {
+                    window.app.loadCustomers();
+                }
+            }
+        }, 300);
+
+        return {
+            success: true,
+            customer: customer,
+            coupon: coupon
+        };
     },
 
     // Processa QR coupon
