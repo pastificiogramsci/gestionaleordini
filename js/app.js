@@ -1468,52 +1468,69 @@ const App = {
                                 ` : '<span class="text-green-600 text-xs">Completato</span>'}
                             </td>
                         </tr>
+                        ${order.notes && order.notes.trim() ? `
+                            <tr class="${isPrepared ? 'bg-green-50' : ''}">
+                                <td colspan="5" class="px-3 py-2">
+                                    <div class="bg-yellow-50 border-l-4 border-yellow-400 p-2 rounded">
+                                        <span class="text-xs font-bold text-yellow-800">📝 Note:</span>
+                                        <span class="text-xs text-gray-700 ml-2">${order.notes}</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        ` : ''}
                     `;
-            }).join('')}
-            </tbody>
-        </table>
-    </div>
-    
-    <!-- Mobile: Card (visibile solo su schermi piccoli) -->
-    <div class="block md:hidden space-y-3">
-        ${p.orders.map(o => {
-                const order = OrdersModule.getOrderById(o.orderId);
-                const itemIdx = order.items.findIndex(i => i.productId === p.productId);
-                const item = order.items[itemIdx];
-                const isPrepared = item?.prepared;
-
-                return `
-                <div class="border-2 rounded-lg p-4 ${isPrepared ? 'bg-green-50 border-green-300' : 'border-gray-300'}">
-                    <div class="flex justify-between items-start mb-3">
-                        <div>
-                            <span class="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-bold">#${o.orderNumber}</span>
-                            <p class="font-bold text-lg mt-2">${o.customerName}</p>
-                        </div>
-                        <div class="text-right">
-                            <p class="text-2xl font-bold text-orange-600">${o.quantity.toFixed(2)}</p>
-                            <p class="text-xs text-gray-500">Quantità</p>
-                        </div>
-                    </div>
-                    
-                    ${isPrepared ? `
-                        <div class="bg-green-100 border-2 border-green-400 rounded-lg p-3 text-center">
-                            <span class="text-green-600 font-bold text-lg">✓ Completato</span>
-                        </div>
-                    ` : `
-                        <button onclick="app.markItemPrepared('${o.orderId}', ${itemIdx})" 
-                                class="w-full bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 font-bold text-lg">
-                            ✓ Fatto
-                        </button>
-                    `}
+                    }).join('')}
+                </tbody>
+                </table>
                 </div>
+    
+                <!-- Mobile: Card (visibile solo su schermi piccoli) -->
+                <div class="block md:hidden space-y-3">
+                    ${p.orders.map(o => {
+                            const order = OrdersModule.getOrderById(o.orderId);
+                            const itemIdx = order.items.findIndex(i => i.productId === p.productId);
+                            const item = order.items[itemIdx];
+                            const isPrepared = item?.prepared;
+
+                            return `
+                            <div class="border-2 rounded-lg p-4 ${isPrepared ? 'bg-green-50 border-green-300' : 'border-gray-300'}">
+                                <div class="flex justify-between items-start mb-3">
+                                    <div>
+                                        <span class="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-bold">#${o.orderNumber}</span>
+                                        <p class="font-bold text-lg mt-2">${o.customerName}</p>
+                                    </div>
+                                    <div class="text-right">
+                                        <p class="text-2xl font-bold text-orange-600">${o.quantity.toFixed(2)}</p>
+                                        <p class="text-xs text-gray-500">Quantità</p>
+                                    </div>
+                                </div>
+                                
+                                ${order.notes && order.notes.trim() ? `
+                                    <div class="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded mb-3">
+                                        <p class="text-xs font-bold text-yellow-800 mb-1">📝 Note:</p>
+                                        <p class="text-sm text-gray-700">${order.notes}</p>
+                                    </div>
+                                ` : ''}
+                                
+                                ${isPrepared ? `
+                                    <div class="bg-green-100 border-2 border-green-400 rounded-lg p-3 text-center">
+                                        <span class="text-green-600 font-bold text-lg">✓ Completato</span>
+                                    </div>
+                                ` : `
+                                    <button onclick="app.markItemPrepared('${o.orderId}', ${itemIdx})" 
+                                            class="w-full bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 font-bold text-lg">
+                                        ✓ Fatto
+                                    </button>
+                                `}
+                            </div>
+                        `;
+                        }).join('')}
+                </div>
+            </div>
+            </div>
             `;
-            }).join('')}
-            </div>
-        </div>
-            </div>
-        `;
-        }).join('');
-    },
+            }).join('');
+         },
 
     markItemPrepared(orderId, itemIndex) {
         const order = OrdersModule.getOrderById(orderId);
