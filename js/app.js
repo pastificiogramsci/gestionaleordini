@@ -1984,13 +1984,13 @@ const App = {
             <h3 class="modal-heading-responsive">👤 Aggiungi Nuovo Cliente</h3>
             
             <div class="form-group-responsive">
-                <label>Nome *</label>
-                <input type="text" id="quick-customer-firstname" class="input-responsive" placeholder="Mario" required>
+                <label>Nome</label>
+                <input type="text" id="quick-customer-firstname" class="input-responsive" placeholder="Mario">
             </div>
             
             <div class="form-group-responsive">
-                <label>Cognome *</label>
-                <input type="text" id="quick-customer-lastname" class="input-responsive" placeholder="Rossi" required>
+                <label>Cognome</label>
+                <input type="text" id="quick-customer-lastname" class="input-responsive" placeholder="Rossi">
             </div>
             
             <div class="form-group-responsive">
@@ -1999,7 +1999,7 @@ const App = {
             </div>
             
             <div class="alert-box-responsive" style="background-color: #dbeafe; border-left: 4px solid #3b82f6;">
-                <p>💡 <strong>Suggerimento:</strong> Inserisci solo i dati essenziali. Potrai completare il profilo cliente in seguito dalla sezione Clienti.</p>
+                <p>💡 <strong>Suggerimento:</strong> Inserisci almeno Nome o Cognome. Potrai completare il profilo in seguito dalla sezione Clienti.</p>
             </div>
             
             <div class="button-group-responsive">
@@ -2011,7 +2011,7 @@ const App = {
                 </button>
             </div>
         </div>
-        `;
+    `;
 
         const div = document.createElement('div');
         div.id = 'quick-add-customer-modal';
@@ -2021,7 +2021,7 @@ const App = {
                 ${modalHtml}
             </div>
         </div>
-        `;
+    `;
         document.body.appendChild(div);
 
         setTimeout(() => {
@@ -2029,14 +2029,19 @@ const App = {
         }, 100);
     },
 
-    // ✅ NUOVO: Salva cliente veloce e seleziona
     saveQuickCustomer() {
         const firstName = document.getElementById('quick-customer-firstname').value.trim();
         const lastName = document.getElementById('quick-customer-lastname').value.trim();
         const phone = document.getElementById('quick-customer-phone').value.trim();
 
-        if (!firstName || !lastName || !phone) {
-            Utils.showToast("❌ Compila tutti i campi obbligatori", "error");
+        // ✅ Validazione: almeno uno tra nome e cognome + telefono obbligatorio
+        if (!firstName && !lastName) {
+            Utils.showToast("❌ Inserisci almeno Nome o Cognome", "error");
+            return;
+        }
+
+        if (!phone) {
+            Utils.showToast("❌ Il telefono è obbligatorio", "error");
             return;
         }
 
@@ -2055,12 +2060,13 @@ const App = {
             this.closeQuickAddCustomerModal();
             this.populateCustomersList();
 
-            const fullName = `${firstName} ${lastName}`;
+            // Usa display name per fullName
+            const fullName = WhatsAppModule.getDisplayName(newCustomer);
             this.selectCustomer(newCustomer.id, fullName);
 
             Utils.showToast(`✅ Cliente "${fullName}" aggiunto!`, "success");
 
-            // ✅ AGGIUNGI: Invia messaggio WhatsApp con tessera fidelity
+            // ✅ Invia messaggio WhatsApp con tessera fidelity
             setTimeout(() => {
                 if (confirm(`Mandare messaggio di benvenuto a ${fullName} su WhatsApp con tessera fidelity?`)) {
                     WhatsAppModule.sendWelcomeMessage(newCustomer, true);
@@ -2881,12 +2887,18 @@ const App = {
         event.preventDefault();
 
         const data = {
-            firstName: document.getElementById('customer-firstname').value,
-            lastName: document.getElementById('customer-lastname').value,
+            firstName: document.getElementById('customer-firstname').value.trim(),
+            lastName: document.getElementById('customer-lastname').value.trim(),
             phone: document.getElementById('customer-phone').value,
             email: document.getElementById('customer-email').value,
             address: document.getElementById('customer-address').value
         };
+
+        // ✅ VALIDAZIONE: Almeno uno tra nome e cognome
+        if (!data.firstName && !data.lastName) {
+            Utils.showToast("❌ Inserisci almeno Nome o Cognome", "error");
+            return;
+        }
 
         // MODIFICA o CREA
         if (this.editingCustomerId) {
@@ -2900,6 +2912,12 @@ const App = {
         } else {
             // CREA nuovo
             const newCustomer = CustomersModule.addCustomer(data);
+
+            if (!newCustomer) {
+                // addCustomer ha già mostrato l'errore (duplicato)
+                return;
+            }
+
             this.closeModal('new-customer-modal');
             this.loadCustomers();
             this.loadDashboard();
