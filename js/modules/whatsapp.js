@@ -65,6 +65,64 @@ _Pastificio Gramsci_`;
         }
     },
 
+    sendStampsNotification(customer, stampsAdded, currentStamps, stampsNeeded, availableRewards = 0) {
+        const phone = this.formatPhone(customer.phone);
+        if (!phone) {
+            console.warn("⚠️ Numero telefono non valido per notifica bollini");
+            return;
+        }
+
+        const displayName = this.getDisplayName(customer);
+
+        // Genera stelline visuali
+        const stars = '⭐'.repeat(Math.min(stampsAdded, 10));
+
+        let message = '';
+
+        // Se ha appena sbloccato premi
+        if (availableRewards > 0 && stampsAdded >= 10) {
+            message = `🎉 PREMIO SBLOCCATO! 🎉
+
+Ciao ${displayName}!
+
+Hai appena guadagnato ${availableRewards} premio/i! 🎁
+
+📊 Stato tessera:
+- Bollini attuali: ${currentStamps}
+- Mancano ${stampsNeeded} bollini al prossimo premio
+
+Vieni a ritirare il tuo premio! 😊
+
+_Pastificio Gramsci_`;
+        } else {
+            message = `🎉 Ciao ${displayName}!
+
+Ti abbiamo appena aggiunto ${stampsAdded} bollini! ${stars}
+
+📊 Stato tessera:
+- Bollini attuali: ${currentStamps}
+- Mancano ${stampsNeeded} bollini al prossimo premio`;
+
+            // Se ha premi disponibili non riscattati
+            if (availableRewards > 0) {
+                message += `
+- 🎁 Hai ${availableRewards} premio/i disponibile/i da riscattare!
+
+Non dimenticare di usare ${availableRewards === 1 ? 'il tuo premio' : 'i tuoi premi'}! 😊`;
+            } else {
+                message += `
+
+Continua così! 🎁`;
+            }
+
+            message += `
+
+_Pastificio Gramsci_`;
+        }
+
+        this.openWhatsApp(phone, message);
+    },
+
     sendOrderConfirmation(order) {
         const customer = CustomersModule.getCustomerById(order.customerId);
         if (!customer) return;

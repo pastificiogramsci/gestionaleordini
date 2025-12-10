@@ -73,13 +73,14 @@ const FidelityModule = {
     // ==========================================
 
     // Aggiungi bollini a un cliente
-    addStamps(customerId, stampsToAdd, orderId = null) {
+    addStamps(customerId, stampsToAdd, orderId = null, sendWhatsApp = true) {
         let fidelity = this.getFidelityCustomer(customerId);
 
         if (!fidelity) {
             fidelity = this.registerCustomer(customerId);
         }
 
+        const stampsBefore = fidelity.stamps;
         fidelity.stamps += stampsToAdd;
         fidelity.totalStamps += stampsToAdd;
 
@@ -102,10 +103,34 @@ const FidelityModule = {
 
         this.saveFidelity();
 
+        // Calcola premi disponibili
+        const availableRewards = this.getAvailableRewards(customerId).length;
+        const stampsNeeded = CONFIG.FIDELITY.STAMPS_FOR_REWARD - fidelity.stamps;
+
+        // Toast feedback
         if (rewardsEarned > 0) {
             Utils.showToast(`🎉 ${rewardsEarned} premio/i sbloccato/i!`, "success");
         } else {
             Utils.showToast(`✅ +${stampsToAdd} bollini!`, "success");
+        }
+
+        // ✅ NUOVO: Invia notifica WhatsApp automatica
+        if (sendWhatsApp && window.WhatsAppModule) {
+            const customer = window.CustomersModule?.getCustomerById(customerId);
+            if (customer && customer.phone) {
+                // Chiedi conferma
+                setTimeout(() => {
+                    if (confirm(`📱 Inviare notifica bollini a ${customer.firstName || customer.lastName}?`)) {
+                        window.WhatsAppModule.sendStampsNotification(
+                            customer,
+                            stampsToAdd,
+                            fidelity.stamps,
+                            stampsNeeded,
+                            availableRewards
+                        );
+                    }
+                }, 500);
+            }
         }
 
         return fidelity;
