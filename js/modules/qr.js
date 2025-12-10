@@ -635,24 +635,51 @@ const QRModule = {
         // Chiudi scanner (camera)
         this.closeScanner();
 
+        console.log("🔍 Tentativo chiusura modal scanner...");
+
         // Chiudi modal scanner
+        const modalElement = document.getElementById('fidelity-qr-scanner-modal');
+        if (modalElement) {
+            modalElement.classList.add('hidden');
+            console.log("✅ Modal nascosto direttamente");
+        }
+
+        // Prova anche con le funzioni app
         if (window.app && window.app.closeFidelityQRScanner) {
             window.app.closeFidelityQRScanner();
+            console.log("✅ Chiuso via window.app");
         } else if (window.App && window.App.closeFidelityQRScanner) {
             window.App.closeFidelityQRScanner();
+            console.log("✅ Chiuso via window.App");
         }
+
+        console.log("🔍 Ricerca funzione openFidelityDetail...");
+        console.log("window.app:", typeof window.app);
+        console.log("window.App:", typeof window.App);
+        console.log("window.app.openFidelityDetail:", typeof window.app?.openFidelityDetail);
 
         // Attendi chiusura, poi apri dettagli
         setTimeout(() => {
-            if (window.App && window.App.openFidelityDetail) {
-                window.App.openFidelityDetail(qrData.customerId);
-            } else if (window.app && window.app.openFidelityDetail) {
+            console.log("⏰ Timeout raggiunto, apro dettagli fidelity");
+
+            let opened = false;
+
+            if (window.app && typeof window.app.openFidelityDetail === 'function') {
+                console.log("✅ Apro via window.app.openFidelityDetail");
                 window.app.openFidelityDetail(qrData.customerId);
-            } else {
-                console.error("❌ Funzione openFidelityDetail non trovata");
-                Utils.showToast("💡 Vai alla sezione Fidelity per vedere i dettagli", "info", 4000);
+                opened = true;
+            } else if (window.App && typeof window.App.openFidelityDetail === 'function') {
+                console.log("✅ Apro via window.App.openFidelityDetail");
+                window.App.openFidelityDetail(qrData.customerId);
+                opened = true;
             }
-        }, 500);
+
+            if (!opened) {
+                console.error("❌ Funzione openFidelityDetail non trovata!");
+                console.log("window.app keys:", Object.keys(window.app || {}));
+                Utils.showToast("❌ Errore apertura dettagli. Vai manualmente alla sezione Fidelity", "error", 5000);
+            }
+        }, 1000);
 
         return {
             success: true,
