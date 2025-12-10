@@ -260,42 +260,75 @@ _Pastificio Gramsci_`;
     },
 
     openWhatsApp(phone, message) {
-        const encodedMessage = encodeURIComponent(message);
-        const phoneClean = phone.replace('+', '');
+        const phoneFormatted = this.formatPhone(phone);
+
+        if (!phoneFormatted) {
+            Utils.showToast("❌ Numero telefono non valido", "error");
+            return;
+        }
+
+        // Rimuovi + per WhatsApp
+        const phoneClean = phoneFormatted.replace(/\+/g, '');
+
+        // ✅ IMPORTANTE: Valida che il numero sia solo cifre
+        if (!/^\d+$/.test(phoneClean)) {
+            console.error('❌ Numero contiene caratteri non validi:', phoneClean);
+            Utils.showToast(`❌ Numero non valido: ${phoneClean}`, "error");
+            return;
+        }
+
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
-        // ✅ Copia numero negli appunti (per messaggi effimeri)
+        // ✅ Copia numero negli appunti come backup
         this.copyToClipboard(phoneClean);
 
         let url;
 
         if (isMobile) {
-            url = `whatsapp://send?phone=${phoneClean}&text=${encodedMessage}`;
-            console.log('📱 Apertura WhatsApp APP (mobile)');
-        } else {
-            url = `https://wa.me/${phoneClean}?text=${encodedMessage}`;
-            console.log('💻 Apertura WhatsApp Web (desktop)');
-        }
+            // ✅ Mobile: encoding più sicuro per whatsapp://
+            // Usa encodeURIComponent E poi sostituisci caratteri problematici
+            const safeMessage = encodeURIComponent(message)
+                .replace(/'/g, '%27')  // Apostrofi
+                .replace(/\(/g, '%28')  // Parentesi
+                .replace(/\)/g, '%29')
+                .replace(/\*/g, '%2A')  // Asterischi (bold WhatsApp)
+                .replace(/_/g, '%5F');   // Underscore (italic WhatsApp)
 
-        console.log('🔗 URL WhatsApp:', url);
+            url = `whatsapp://send?phone=${phoneClean}&text=${safeMessage}`;
+
+            console.log('📱 Mobile - App WhatsApp');
+            console.log('📞 Numero:', phoneClean);
+            console.log('📝 Messaggio length:', message.length);
+            console.log('🔗 URL:', url.substring(0, 200) + '...');
+
+        } else {
+            // ✅ Desktop: wa.me funziona meglio
+            const encodedMessage = encodeURIComponent(message);
+            url = `https://wa.me/${phoneClean}?text=${encodedMessage}`;
+
+            console.log('💻 Desktop - WhatsApp Web');
+            console.log('📞 Numero:', phoneClean);
+        }
 
         try {
             if (isMobile) {
-                window.location.href = url;
+                // ✅ IMPORTANTE: Mostra alert PRIMA di aprire per verificare
+                // (rimuovi dopo aver verificato che funziona)
+                if (confirm(`📱 Apro WhatsApp per:\n${phoneClean}\n\n(Il numero è negli appunti)\n\nContinua?`)) {
+                    window.location.href = url;
+                }
             } else {
-                window.open(url, '_blank');
+                const newWindow = window.open(url, '_blank');
+
+                if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+                    Utils.showToast(`❌ Popup bloccato. Numero copiato: ${phoneClean}`, "error", 5000);
+                    return;
+                }
             }
 
-            // Toast informativo solo se potrebbe essere utile
-            setTimeout(() => {
-                Utils.showToast(`📱 WhatsApp aperto
-                
-💡 Numero copiato negli appunti (${phoneClean}) se hai messaggi effimeri attivi`, "info", 4000);
-            }, 500);
-
         } catch (error) {
-            console.error('Errore apertura WhatsApp:', error);
-            Utils.showToast(`❌ Errore apertura WhatsApp. Numero copiato: ${phoneClean}`, "error");
+            console.error('❌ Errore apertura WhatsApp:', error);
+            Utils.showToast(`❌ Errore. Numero copiato negli appunti: ${phoneClean}`, "error");
         }
     },
 
