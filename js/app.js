@@ -1433,44 +1433,83 @@ const App = {
                 </div>
                 
                 <div id="prep-${idx}" class="p-4 hidden">
-                    <button onclick="app.markAllProduct('${p.productId}')" class="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 mb-3 font-bold">
-                        ✓ Segna tutti
-                    </button>
-                    
-                    <table class="w-full text-sm">
-                        <thead class="bg-gray-100">
-                            <tr>
-                                <th class="px-3 py-2 text-left">Ordine</th>
-                                <th class="px-3 py-2 text-left">Cliente</th>
-                                <th class="px-3 py-2 text-right">Quantità</th>
-                                <th class="px-3 py-2 text-center">Stato</th>
-                                <th class="px-3 py-2 text-center">Azione</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${p.orders.map(o => {
+    <button onclick="app.markAllProduct('${p.productId}')" class="w-full bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 mb-3 font-bold text-lg">
+        ✓ Segna tutti come preparati
+    </button>
+    
+    <!-- Desktop: Tabella (visibile solo su schermi medi+) -->
+    <div class="hidden md:block">
+        <table class="w-full text-sm">
+            <thead class="bg-gray-100">
+                <tr>
+                    <th class="px-3 py-2 text-left">Ordine</th>
+                    <th class="px-3 py-2 text-left">Cliente</th>
+                    <th class="px-3 py-2 text-right">Quantità</th>
+                    <th class="px-3 py-2 text-center">Stato</th>
+                    <th class="px-3 py-2 text-center">Azione</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${p.orders.map(o => {
                 const order = OrdersModule.getOrderById(o.orderId);
                 const itemIdx = order.items.findIndex(i => i.productId === p.productId);
                 const item = order.items[itemIdx];
                 const isPrepared = item?.prepared;
 
                 return `
-                                    <tr class="border-b ${isPrepared ? 'bg-green-50' : ''}">
-                                        <td class="px-3 py-2"><span class="bg-blue-600 text-white px-2 py-1 rounded text-xs">${o.orderNumber}</span></td>
-                                        <td class="px-3 py-2">${o.customerName}</td>
-                                        <td class="px-3 py-2 text-right font-bold">${o.quantity.toFixed(2)}</td>
-                                        <td class="px-3 py-2 text-center">${isPrepared ? '<span class="text-green-600 font-bold">✓</span>' : '-'}</td>
-                                        <td class="px-3 py-2 text-center">
-                                            ${!isPrepared ? `
-                                                <button onclick="app.markItemPrepared('${o.orderId}', ${itemIdx})" class="bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700">Fatto</button>
-                                            ` : '<span class="text-green-600 text-xs">Completato</span>'}
-                                        </td>
-                                    </tr>
-                                `;
+                        <tr class="border-b ${isPrepared ? 'bg-green-50' : ''}">
+                            <td class="px-3 py-2"><span class="bg-blue-600 text-white px-2 py-1 rounded text-xs">${o.orderNumber}</span></td>
+                            <td class="px-3 py-2">${o.customerName}</td>
+                            <td class="px-3 py-2 text-right font-bold">${o.quantity.toFixed(2)}</td>
+                            <td class="px-3 py-2 text-center">${isPrepared ? '<span class="text-green-600 font-bold">✓</span>' : '-'}</td>
+                            <td class="px-3 py-2 text-center">
+                                ${!isPrepared ? `
+                                    <button onclick="app.markItemPrepared('${o.orderId}', ${itemIdx})" class="bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700">Fatto</button>
+                                ` : '<span class="text-green-600 text-xs">Completato</span>'}
+                            </td>
+                        </tr>
+                    `;
             }).join('')}
-                        </tbody>
-                    </table>
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Mobile: Card (visibile solo su schermi piccoli) -->
+    <div class="block md:hidden space-y-3">
+        ${p.orders.map(o => {
+                const order = OrdersModule.getOrderById(o.orderId);
+                const itemIdx = order.items.findIndex(i => i.productId === p.productId);
+                const item = order.items[itemIdx];
+                const isPrepared = item?.prepared;
+
+                return `
+                <div class="border-2 rounded-lg p-4 ${isPrepared ? 'bg-green-50 border-green-300' : 'border-gray-300'}">
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <span class="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-bold">#${o.orderNumber}</span>
+                            <p class="font-bold text-lg mt-2">${o.customerName}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-2xl font-bold text-orange-600">${o.quantity.toFixed(2)}</p>
+                            <p class="text-xs text-gray-500">Quantità</p>
+                        </div>
+                    </div>
+                    
+                    ${isPrepared ? `
+                        <div class="bg-green-100 border-2 border-green-400 rounded-lg p-3 text-center">
+                            <span class="text-green-600 font-bold text-lg">✓ Completato</span>
+                        </div>
+                    ` : `
+                        <button onclick="app.markItemPrepared('${o.orderId}', ${itemIdx})" 
+                                class="w-full bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 font-bold text-lg">
+                            ✓ Fatto
+                        </button>
+                    `}
                 </div>
+            `;
+            }).join('')}
+            </div>
+        </div>
             </div>
         `;
         }).join('');
@@ -1729,13 +1768,21 @@ const App = {
                         <p class="text-sm text-gray-600">${o.items.length} prodotti</p>
                         ${o.deliveryDate ? `<p class="text-sm text-gray-600">📅 Consegna: ${Utils.formatDate(o.deliveryDate)} ${o.deliveryTime || ''}</p>` : ''}
                         ${o.deposit > 0 ? `<p class="text-sm font-medium ${o.depositPaid ? 'text-green-600' : 'text-orange-600'}">💰 Acconto: ${Utils.formatPrice(o.deposit)} ${o.depositPaid ? '(Ricevuto)' : '(Da ricevere)'}</p>` : ''}
+                        
+                        ${o.notes && o.notes.trim() ? `
+                        <div class="mt-3 bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded">
+                            <p class="text-sm font-bold text-yellow-800 mb-1">📝 Note:</p>
+                            <p class="text-sm text-gray-700">${o.notes}</p>
+                        </div>
+                        ` : ''}
+
                         <p class="text-xs text-gray-500">Creato: ${Utils.formatDateTime(o.createdAt)}</p>
-                    </div>
-                    <div class="text-right">
+                        </div>
+                        <div class="text-right">
                         <p class="text-2xl font-bold text-blue-600">${Utils.formatPrice(o.totalAmount)}</p>
                         ${o.deposit > 0 && !o.depositPaid ? `<p class="text-sm text-orange-600 font-medium">Residuo: ${Utils.formatPrice(o.totalAmount - o.deposit)}</p>` : ''}
                         <span class="text-xs px-2 py-1 rounded ${statusColors[o.status]}">${statusNames[o.status]}</span>
-                    </div>
+                        </div>
                 </div>
             
             <div class="flex gap-2 mt-3">
