@@ -629,10 +629,17 @@ const QRModule = {
 
         console.log("📱 Apertura dettagli fidelity per:", displayName);
 
-        // Chiudi lo scanner
+        // Chiudi scanner (camera)
         this.closeScanner();
 
-        // Attendi chiusura scanner, poi apri dettagli
+        // Chiudi modal scanner
+        if (window.app && window.app.closeFidelityQRScanner) {
+            window.app.closeFidelityQRScanner();
+        } else if (window.App && window.App.closeFidelityQRScanner) {
+            window.App.closeFidelityQRScanner();
+        }
+
+        // Attendi chiusura, poi apri dettagli
         setTimeout(() => {
             if (window.App && window.App.openFidelityDetail) {
                 window.App.openFidelityDetail(qrData.customerId);
@@ -642,7 +649,7 @@ const QRModule = {
                 console.error("❌ Funzione openFidelityDetail non trovata");
                 Utils.showToast("💡 Vai alla sezione Fidelity per vedere i dettagli", "info", 4000);
             }
-        }, 300);
+        }, 500);
 
         return {
             success: true,
@@ -710,8 +717,15 @@ const QRModule = {
 
         console.log("📱 Coupon pronto per essere usato");
 
-        // Chiudi scanner
+        // Chiudi scanner (camera)
         this.closeScanner();
+
+        // Chiudi modal scanner
+        if (window.app && window.app.closeFidelityQRScanner) {
+            window.app.closeFidelityQRScanner();
+        } else if (window.App && window.App.closeFidelityQRScanner) {
+            window.App.closeFidelityQRScanner();
+        }
 
         // Mostra dialog per confermare uso
         setTimeout(() => {
@@ -728,7 +742,7 @@ const QRModule = {
                     window.app.loadCustomers();
                 }
             }
-        }, 300);
+        }, 500);
 
         return {
             success: true,
