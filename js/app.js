@@ -1934,11 +1934,17 @@ const App = {
                 </div>
             
             <div class="flex gap-2 mt-3">
-                ${o.status === 'pending' ? `<button onclick="OrdersModule.changeOrderStatus('${o.id}', 'in_preparation'); app.loadOrders()" class="text-xs px-3 py-1 bg-blue-600 text-white rounded">Conferma</button>` : ''}
-                ${o.status === 'ready' ? `<button onclick="OrdersModule.changeOrderStatus('${o.id}', 'delivered'); app.loadOrders()" class="text-xs px-3 py-1 bg-gray-600 text-white rounded">Consegnato</button>` : ''}
-                ${o.status === 'delivered' ? `<button onclick="app.undoDelivery('${o.id}')" class="text-xs px-3 py-1 bg-orange-600 text-white rounded">↩️ Annulla consegna</button>` : ''}
-                ${o.status !== 'delivered' ? `<button onclick="app.editOrder('${o.id}')" class="text-xs px-3 py-1 bg-gray-200 rounded">✏️ Modifica</button>` : ''}
-                <button onclick="app.deleteOrder('${o.id}')" class="text-red-600 text-sm ml-auto">🗑️</button>
+                ${o.status === 'pending' ? `<button onclick="OrdersModule.changeOrderStatus('${o.id}', 'in_preparation'); app.loadOrders(); app.loadDashboard()" class="text-xs px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">✓ Conferma</button>` : ''}
+                
+                ${o.status === 'confirmed' || o.status === 'in_preparation' ? `<button onclick="app.markOrderAsReady('${o.id}')" class="text-xs px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700">✓ Pronto</button>` : ''}
+                
+                ${o.status === 'ready' ? `<button onclick="OrdersModule.changeOrderStatus('${o.id}', 'delivered'); app.loadOrders(); app.loadDashboard()" class="text-xs px-3 py-1 bg-gray-600 text-white rounded hover:bg-gray-700">✓ Consegnato</button>` : ''}
+                
+                ${o.status === 'delivered' ? `<button onclick="app.undoDelivery('${o.id}')" class="text-xs px-3 py-1 bg-orange-600 text-white rounded hover:bg-orange-700">↩️ Annulla consegna</button>` : ''}
+                
+                ${o.status !== 'delivered' ? `<button onclick="app.editOrder('${o.id}')" class="text-xs px-3 py-1 bg-gray-200 rounded hover:bg-gray-300">✏️ Modifica</button>` : ''}
+                
+                <button onclick="app.deleteOrder('${o.id}')" class="text-red-600 text-sm ml-auto hover:text-red-800">🗑️</button>
             </div>
         </div>
     `;
@@ -2859,6 +2865,40 @@ const App = {
                 this.updateCustomerStats(order.customerId);
             }
         }
+    },
+
+    markOrderAsReady(orderId) {
+        const order = OrdersModule.getOrderById(orderId);
+
+        if (!order) {
+            Utils.showToast("❌ Ordine non trovato", "error");
+            return;
+        }
+
+        // Controlla se tutti gli item sono preparati
+        const allPrepared = order.items.every(item => item.prepared);
+
+        if (!allPrepared) {
+            const unprepared = order.items.filter(item => !item.prepared).length;
+
+            if (!confirm(
+                `⚠️ ATTENZIONE\n\n` +
+                `Ci sono ancora ${unprepared} prodotto/i NON preparato/i.\n\n` +
+                `Vuoi comunque segnare l'ordine come PRONTO?`
+            )) {
+                return;
+            }
+        }
+
+        // Cambia stato a ready
+        OrdersModule.changeOrderStatus(orderId, 'ready');
+
+        // Aggiorna tutto
+        this.loadOrders();
+        this.loadDashboard();
+        this.loadPreparation();
+
+        Utils.showToast("✅ Ordine pronto!", "success");
     },
 
     async deleteAllOrders() {
