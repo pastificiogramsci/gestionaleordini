@@ -100,9 +100,34 @@ const OrdersModule = {
     },
 
     // Aggiorna ordine esistente
-    updateOrder(orderId, updates) {
+    async updateOrder(orderId, updates) {
+        console.log("🔧 [DEBUG] updateOrder chiamata");
+        console.log("   orderId:", orderId);
+        console.log("   updates:", updates);
+
         const order = this.getOrderById(orderId);
-        if (!order) return null;
+        if (!order) {
+            console.error("❌ Ordine non trovato!");
+            return null;
+        }
+
+        console.log("📦 Ordine trovato:", order.orderNumber);
+        console.log("   Data vecchia:", order.deliveryDate);
+        console.log("   Data nuova:", updates.deliveryDate);
+        console.log("   Sono uguali?", updates.deliveryDate === order.deliveryDate);
+
+        // ✅ Se cambia la data di consegna, rigenera numero ordine
+        if (updates.deliveryDate && updates.deliveryDate !== order.deliveryDate) {
+            console.log("🔄 CAMBIO DATA RILEVATO!");
+
+            const newOrderNumber = await this.generateOrderNumber(updates.deliveryDate);
+            console.log("✅ Nuovo numero generato:", newOrderNumber);
+            updates.orderNumber = newOrderNumber;
+        } else {
+            console.log("⏭️ Data NON cambiata, skip rigenera numero");
+            console.log("   Motivo: updates.deliveryDate =", updates.deliveryDate);
+            console.log("   Motivo: order.deliveryDate =", order.deliveryDate);
+        }
 
         // Preserva flag prepared degli item esistenti
         if (updates.items) {
@@ -113,12 +138,22 @@ const OrdersModule = {
                     prepared: oldItem ? oldItem.prepared : false
                 };
             });
+
+            // ✅ RICALCOLA TOTALE se cambiano i prodotti
+            console.log("🧮 Ricalcolo totale ordine...");
+            updates.totalAmount = this.calculateTotal(updates.items);
+            console.log(`   Vecchio totale: €${order.totalAmount}`);
+            console.log(`   Nuovo totale: €${updates.totalAmount}`);
         }
 
         Object.assign(order, updates);
         order.updatedAt = new Date().toISOString();
 
-        this.saveOrders();
+        console.log("💾 Salvataggio ordine...");
+        await this.saveOrders();
+        console.log("✅ Ordine salvato:", order.orderNumber);
+        console.log("   Totale finale: €" + order.totalAmount);
+
         return order;
     },
 
@@ -234,6 +269,12 @@ const OrdersModule = {
         };
 
         Utils.showToast(`✅ Ordine → ${statusNames[newStatus]}`, "success");
+
+        // ✅ Notifica app di ricaricare dashboard
+        if (window.app && window.app.loadDashboard) {
+            window.app.loadDashboard();
+        }
+
         return order;
     },
 
