@@ -6,6 +6,7 @@ const App = {
 
     initialized: false,
     currentTab: 'dashboard',
+    isProcessing: false,
 
     // ==========================================
     // INIZIALIZZAZIONE
@@ -175,6 +176,7 @@ const App = {
 
             // 7. Carica tab iniziale
             this.switchTab('dashboard');
+            this.loadDashboard();
 
             this.initialized = true;
             console.log("✅ App inizializzata con successo!");
@@ -241,6 +243,46 @@ const App = {
     logout() {
         if (confirm('Sei sicuro di voler uscire?')) {
             AuthManager.logout();
+        }
+    },
+
+    // ==========================================
+    // PREVENZIONE DOPPIO CLICK
+    // ==========================================
+
+    // Previeni doppio click su qualsiasi operazione
+    async withLoadingState(buttonElement, asyncFunction) {
+        // Se già in elaborazione, blocca
+        if (this.isProcessing) {
+            console.warn("⚠️ Operazione già in corso, attendere...");
+            return;
+        }
+
+        // Disabilita tutto
+        this.isProcessing = true;
+        const originalText = buttonElement?.textContent;
+
+        if (buttonElement) {
+            buttonElement.disabled = true;
+            buttonElement.classList.add('opacity-50', 'cursor-not-allowed');
+            buttonElement.textContent = '⏳ Elaborazione...';
+        }
+
+        try {
+            await asyncFunction();
+        } catch (error) {
+            console.error("❌ Errore:", error);
+            Utils.showToast("❌ Errore durante l'operazione", "error");
+            throw error;
+        } finally {
+            // Riabilita tutto
+            this.isProcessing = false;
+
+            if (buttonElement) {
+                buttonElement.disabled = false;
+                buttonElement.classList.remove('opacity-50', 'cursor-not-allowed');
+                buttonElement.textContent = originalText;
+            }
         }
     },
 
@@ -339,7 +381,40 @@ const App = {
     loadDashboard() {
         console.log("📊 Caricamento dashboard...");
 
-        const stats = StatsModule.getDashboardStats();
+        // ✅ Calcola stats direttamente (StatsModule non esiste!)
+        const today = new Date().toISOString().split('T')[0];
+        const allOrders = OrdersModule.getAllOrders() || [];
+
+        const stats = {
+            orders: {
+                total: allOrders.length,
+                todayOrders: allOrders.filter(o => o.deliveryDate === today).length,
+                active: allOrders.filter(o => o.status !== 'delivered' && o.status !== 'cancelled').length,
+                byStatus: {
+                    pending: allOrders.filter(o => o.status === 'pending').length,
+                    in_preparation: allOrders.filter(o => o.status === 'in_preparation' || o.status === 'confirmed').length,
+                    ready: allOrders.filter(o => o.status === 'ready').length,
+                    delivered: allOrders.filter(o => o.status === 'delivered').length,
+                    cancelled: allOrders.filter(o => o.status === 'cancelled').length
+                }
+            },
+            customers: {
+                total: CustomersModule?.customers?.length || 0
+            },
+            products: {
+                active: ProductsModule?.products?.filter(p => p.active !== false).length || 0
+            },
+            revenue: {
+                total: allOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0),
+                today: allOrders.filter(o => o.deliveryDate === today).reduce((sum, o) => sum + (o.totalAmount || 0), 0)
+            },
+            fidelity: FidelityModule?.getFidelityStats() || { totalCustomers: 0, availableRewards: 0 },
+            coupons: {
+                activeCoupons: CouponsModule?.campaigns?.filter(c => c.active).length || 0
+            }
+        };
+
+        console.log("📈 Stats calcolate:", stats);
 
         // Aggiorna cards statistiche
         this.updateStatsCards(stats);
@@ -349,10 +424,6 @@ const App = {
             const recentOrders = OrdersModule.getAllOrders('recent').slice(0, 5);
             this.displayRecentOrders(recentOrders);
         }
-
-        // Stats Fidelity
-        const fidelityStats = FidelityModule.getFidelityStats();
-        // Aggiungi card o aggiorna esistente se serve
     },
 
     updateStatsCards(stats) {
@@ -360,23 +431,19 @@ const App = {
         if (stats.orders) {
             this.updateElement('stat-orders', stats.orders.total);
             this.updateElement('stat-active-orders', stats.orders.active);
-            this.updateElement('stat-today-orders', stats.orders.todayOrders);
 
-            // Stati ordini con percentuali
-            const total = stats.orders.total || 1; // evita divisione per 0
-            this.updateElement('stat-pending-orders', stats.orders.byStatus?.pending || 0);
+            // ✅ USA GLI ID CORRETTI DELL'HTML
+            this.updateElement('orders-stat-today', stats.orders.todayOrders || 0);
+            this.updateElement('orders-stat-pending', stats.orders.byStatus?.pending || 0);
+            this.updateElement('orders-stat-preparation', stats.orders.byStatus?.in_preparation || 0);
+            this.updateElement('orders-stat-ready', stats.orders.byStatus?.ready || 0);
+
+            // Altri elementi con percentuali (se esistono nell'HTML)
+            const total = stats.orders.total || 1;
             this.updateElement('stat-pending-percent', `(${((stats.orders.byStatus?.pending || 0) / total * 100).toFixed(0)}%)`);
-
-            this.updateElement('stat-preparation-orders', stats.orders.byStatus?.in_preparation || 0);
             this.updateElement('stat-preparation-percent', `(${((stats.orders.byStatus?.in_preparation || 0) / total * 100).toFixed(0)}%)`);
-
-            this.updateElement('stat-ready-orders', stats.orders.byStatus?.ready || 0);
             this.updateElement('stat-ready-percent', `(${((stats.orders.byStatus?.ready || 0) / total * 100).toFixed(0)}%)`);
-
-            this.updateElement('stat-delivered-orders', stats.orders.byStatus?.delivered || 0);
             this.updateElement('stat-delivered-percent', `(${((stats.orders.byStatus?.delivered || 0) / total * 100).toFixed(0)}%)`);
-
-            this.updateElement('stat-to-prepare', stats.orders.byStatus?.pending || 0);
         }
 
         // Clienti
@@ -1608,6 +1675,7 @@ const App = {
 
         OrdersModule.markItemPrepared(orderId, itemIndex);
         this.loadPreparation();
+        this.loadDashboard();
     },
 
     markAllProduct(productId) {
@@ -2591,7 +2659,18 @@ const App = {
         }
     },
 
-    async saveOrder() {
+    async saveOrder(buttonElement = null) {
+        // Se c'è il bottone, usa protezione doppio click
+        if (buttonElement) {
+            await this.withLoadingState(buttonElement, async () => {
+                await this._doSaveOrder();
+            });
+        } else {
+            await this._doSaveOrder();
+        }
+    },
+
+    async _doSaveOrder() {
         const customerId = document.getElementById('order-customer').value;
 
         if (!customerId) {
@@ -2618,11 +2697,33 @@ const App = {
 
         try {
             if (this.editingOrderId) {
-                await OrdersModule.updateOrder(this.editingOrderId, orderData);  // ← Aggiungi await
+                // ✅ MODIFICA ORDINE ESISTENTE
+                console.log("🎯 [APP] STO MODIFICANDO ORDINE");
+                console.log("   editingOrderId:", this.editingOrderId);
+                console.log("   Nuova data:", orderData.deliveryDate);
+
+                const result = await OrdersModule.updateOrder(this.editingOrderId, orderData);
+
+                console.log("🎯 [APP] RISULTATO updateOrder:", result);
+                console.log("   Numero ordine finale:", result?.orderNumber);
+
                 Utils.showToast("✅ Ordine modificato!", "success");
+
+                // ✅ CHIEDI NOTIFICA WHATSAPP MODIFICA
+                if (result && WhatsAppModule && this.originalOrder) {
+                    setTimeout(() => {
+                        if (confirm("💬 Inviare notifica modifica ordine su WhatsApp?")) {
+                            WhatsAppModule.sendOrderModification(result, this.originalOrder);
+                        }
+                    }, 500);
+                }
+
                 this.editingOrderId = null;
+                this.originalOrder = null; // Pulisci ordine originale
+
             } else {
-                const newOrder = await OrdersModule.createOrder(orderData);  // ← Aggiungi await
+                // ✅ NUOVO ORDINE
+                const newOrder = await OrdersModule.createOrder(orderData);
 
                 if (newOrder && confirm("💬 Mandare conferma ordine su WhatsApp?")) {
                     WhatsAppModule.sendOrderConfirmation(newOrder);
@@ -2631,14 +2732,14 @@ const App = {
 
             this.closeModal('new-order-modal');
             this.loadOrders();
+            this.loadDashboard();
+            this.applyOrderFilters();
+            this.updateCustomerStats(customerId);
 
         } catch (error) {
             console.error("❌ Errore salvataggio ordine:", error);
             Utils.showToast("❌ Errore: " + error.message, "error");
         }
-
-        this.updateCustomerStats(customerId);
-        this.loadDashboard();
     },
 
     updateCustomerStats(customerId) {
@@ -2699,6 +2800,9 @@ const App = {
             Utils.showToast("⛔ Ordine già consegnato, non modificabile", "error");
             return;
         }
+
+        // ✅ SALVA COPIA ORDINE ORIGINALE per confronto
+        this.originalOrder = JSON.parse(JSON.stringify(order));
 
         this.editingOrderId = orderId;
         this.openModal('new-order-modal');

@@ -169,6 +169,64 @@ _Pastificio Gramsci_`;
         this.openWhatsApp(phone, message);
     },
 
+    // Invia notifica modifica ordine
+    sendOrderModification(order, oldOrder = null) {
+        const customer = CustomersModule.getCustomerById(order.customerId);
+        if (!customer?.phone) {
+            Utils.showToast("❌ Cliente senza numero di telefono", "error");
+            return;
+        }
+
+        const customerName = this.getDisplayName(customer);
+        const formattedDate = Utils.formatDate(order.deliveryDate);
+        const formattedTime = order.deliveryTime || '';
+
+        let message = `🔔 MODIFICA ORDINE #${order.orderNumber}\n\n`;
+        message += `Ciao ${customerName},\nabbiamo modificato il tuo ordine:\n\n`;
+
+        // Se la data è cambiata
+        if (oldOrder && oldOrder.deliveryDate !== order.deliveryDate) {
+            const oldFormattedDate = Utils.formatDate(oldOrder.deliveryDate);
+            message += `📅 Nuova data consegna: ${formattedDate}`;
+            if (formattedTime) message += ` ore ${formattedTime}`;
+            message += `\n(prima era: ${oldFormattedDate}`;
+            if (oldOrder.deliveryTime) message += ` ore ${oldOrder.deliveryTime}`;
+            message += `)\n\n`;
+        } else {
+            message += `📅 Data consegna: ${formattedDate}`;
+            if (formattedTime) message += ` ore ${formattedTime}`;
+            message += `\n\n`;
+        }
+
+        // Prodotti
+        message += `📦 Prodotti:\n`;
+        order.items.forEach(item => {
+            const product = ProductsModule.getProductById(item.productId);
+            const productName = product?.name || 'Prodotto';
+            message += `• ${productName} - ${item.quantity} kg (€${item.price * item.quantity})\n`;
+        });
+
+        // Totale
+        message += `\n💰 Totale: €${order.totalAmount.toFixed(2)}`;
+        if (order.deposit > 0) {
+            message += `\n💵 Acconto: €${order.deposit.toFixed(2)}`;
+            if (order.depositPaid) {
+                message += ` ✅ pagato`;
+            } else {
+                message += ` ⏳ da pagare`;
+            }
+        }
+
+        // Note
+        if (order.notes) {
+            message += `\n\n📝 Note: ${order.notes}`;
+        }
+
+        message += `\n\n✅ Ti confermiamo la modifica!`;
+
+        this.openWhatsApp(customer.phone, message);
+    },
+
     sendCouponMessage(customer, coupon) {
         const phone = this.formatPhone(customer.phone);
         if (!phone) return;
