@@ -3226,6 +3226,142 @@ const App = {
         this.populateCategoryFilters();
     },
 
+    // ✅ SCANSIONE E GESTIONE DUPLICATI
+    scanForDuplicateProducts() {
+        const duplicates = ProductsModule.findExistingDuplicates();
+
+        if (duplicates.length === 0) {
+            Utils.showToast("✅ Nessun duplicato trovato!", "success");
+            return;
+        }
+
+        // Crea modal con duplicati
+        this.showDuplicatesModal(duplicates);
+    },
+
+    showDuplicatesModal(duplicates) {
+        const modal = document.createElement('div');
+        modal.className = 'modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50';
+        modal.id = 'duplicates-modal';
+
+        let html = `
+        <div class="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold">⚠️ Prodotti Duplicati Trovati (${duplicates.length})</h3>
+                <button onclick="app.closeModal('duplicates-modal')" class="text-gray-500 text-2xl">×</button>
+            </div>
+            
+            <p class="text-sm text-gray-600 mb-4">
+                Trovati ${duplicates.length} gruppi di prodotti con nomi duplicati.
+                Puoi unirli, rinominarli o eliminarli.
+            </p>
+    `;
+
+        duplicates.forEach((group, index) => {
+            html += `
+            <div class="bg-gray-50 rounded-lg p-4 mb-4 border-l-4 border-orange-500">
+                <h4 class="font-bold mb-3">📦 "${group.products[0].name}" (${group.products.length} duplicati)</h4>
+                <div class="space-y-2">
+        `;
+
+            group.products.forEach((product, pIndex) => {
+                html += `
+                <div class="bg-white p-3 rounded flex justify-between items-center">
+                    <div class="flex-1">
+                        <p class="font-medium">${product.name}</p>
+                        <p class="text-sm text-gray-600">
+                            €${product.price}/kg • ${product.category} • 
+                            ${product.active ? '✅ Attivo' : '❌ Disattivato'}
+                        </p>
+                        ${product.description ? `<p class="text-xs text-gray-500 mt-1">${product.description}</p>` : ''}
+                    </div>
+                    <div class="flex gap-2 ml-4">
+                        <button onclick="app.renameDuplicateProduct('${product.id}')" 
+                            class="text-xs px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">
+                            ✏️ Rinomina
+                        </button>
+                        ${pIndex > 0 ? `
+                            <button onclick="app.mergeDuplicateProducts('${group.products[0].id}', '${product.id}')" 
+                                class="text-xs px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700">
+                                ⬆️ Unisci al primo
+                            </button>
+                        ` : ''}
+                        <button onclick="app.deleteDuplicateProduct('${product.id}')" 
+                            class="text-xs px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700">
+                            🗑️ Elimina
+                        </button>
+                    </div>
+                </div>
+            `;
+            });
+
+            html += `
+                </div>
+            </div>
+        `;
+        });
+
+        html += `
+            <div class="flex gap-2 mt-4">
+                <button onclick="app.closeModal('duplicates-modal')" 
+                    class="flex-1 bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
+                    Chiudi
+                </button>
+            </div>
+        </div>
+    `;
+
+        modal.innerHTML = html;
+        document.body.appendChild(modal);
+    },
+
+    renameDuplicateProduct(productId) {
+        const product = ProductsModule.getProductById(productId);
+        if (!product) return;
+
+        const newName = prompt(`Nuovo nome per "${product.name}":`, product.name);
+
+        if (newName && newName.trim() && newName !== product.name) {
+            ProductsModule.renameProduct(productId, newName.trim());
+
+            // Ricarica modal
+            this.closeModal('duplicates-modal');
+            this.scanForDuplicateProducts();
+            this.loadProducts();
+        }
+    },
+
+    mergeDuplicateProducts(keepId, removeId) {
+        const keep = ProductsModule.getProductById(keepId);
+        const remove = ProductsModule.getProductById(removeId);
+
+        if (!keep || !remove) return;
+
+        if (confirm(
+            `⚠️ UNISCI PRODOTTI\n\n` +
+            `MANTIENI: ${keep.name} (€${keep.price}/kg)\n` +
+            `ELIMINA: ${remove.name} (€${remove.price}/kg)\n\n` +
+            `Tutti gli ordini con "${remove.name}" useranno "${keep.name}".\n\n` +
+            `Confermi?`
+        )) {
+            if (ProductsModule.mergeDuplicateProducts(keepId, removeId)) {
+                // Ricarica modal
+                this.closeModal('duplicates-modal');
+                this.scanForDuplicateProducts();
+                this.loadProducts();
+            }
+        }
+    },
+
+    deleteDuplicateProduct(productId) {
+        if (ProductsModule.deleteProduct(productId)) {
+            // Ricarica modal
+            this.closeModal('duplicates-modal');
+            this.scanForDuplicateProducts();
+            this.loadProducts();
+        }
+    },
+
     updateProductsStats() {
         const products = ProductsModule.getAllProducts();
         const active = products.filter(p => p.active).length;

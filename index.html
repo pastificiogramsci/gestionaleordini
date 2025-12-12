@@ -1006,7 +1006,7 @@
                             class="flex-1 bg-gray-200 text-gray-700 px-6 py-4 rounded-xl hover:bg-gray-300 font-bold text-lg">
                             ✕ Annulla
                         </button>
-                        <button type="button" onclick="app.saveOrder()"
+                        <button type="button" onclick="app.saveOrder(this)"
                             class="flex-1 bg-gradient-to-r from-orange-500 to-red-500 text-white px-6 py-4 rounded-xl hover:from-orange-600 hover:to-red-600 font-bold text-lg shadow-lg">
                             ✓ Salva Ordine
                         </button>
@@ -1212,10 +1212,16 @@
             <!-- Azioni Rapide -->
             <div class="flex justify-between items-center mb-6">
                 <h3 class="text-xl font-bold">Catalogo Prodotti</h3>
-                <button onclick="app.openNewProductModal()"
-                    class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 font-bold shadow-lg">
-                    ➕ Nuovo Prodotto
-                </button>
+                <div class="flex gap-3">
+                    <button onclick="app.scanForDuplicateProducts()"
+                        class="bg-orange-600 text-white px-6 py-3 rounded-lg hover:bg-orange-700 font-bold shadow-lg">
+                        🔍 Trova Duplicati
+                    </button>
+                    <button onclick="app.openNewProductModal()"
+                        class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 font-bold shadow-lg">
+                        ➕ Nuovo Prodotto
+                    </button>
+                </div>
             </div>
 
             <!-- Ricerca e Filtri -->

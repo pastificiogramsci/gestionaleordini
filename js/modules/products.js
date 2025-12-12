@@ -34,7 +34,28 @@ const ProductsModule = {
     // ==========================================
 
     // Aggiungi nuovo prodotto
+    // Aggiungi nuovo prodotto
     addProduct(productData) {
+        // ✅ CONTROLLO DUPLICATI
+        const nameClean = productData.name.toLowerCase().trim();
+        const existing = this.products.find(p =>
+            p.name.toLowerCase().trim() === nameClean
+        );
+
+        if (existing) {
+            const message = `⚠️ Prodotto già esistente!\n\n` +
+                `Nome: ${existing.name}\n` +
+                `Prezzo: €${existing.price}/kg\n` +
+                `Categoria: ${existing.category}\n` +
+                `Stato: ${existing.active ? 'Attivo' : 'Disattivato'}\n\n` +
+                `Vuoi comunque creare un duplicato?`;
+
+            if (!confirm(message)) {
+                Utils.showToast("❌ Creazione prodotto annullata", "warning");
+                return null;
+            }
+        }
+
         const product = {
             id: Utils.generateId(),
             name: productData.name,
@@ -43,7 +64,7 @@ const ProductsModule = {
             description: productData.description || '',
             unit: productData.unit || 'kg',
             averageWeight: productData.averageWeight || null,
-            mode: productData.mode || 'pieces', // ← AGGIUNGI
+            mode: productData.mode || 'pieces',
             ingredients: productData.ingredients || '',
             allergens: productData.allergens || [],
             active: true,
@@ -55,6 +76,100 @@ const ProductsModule = {
 
         Utils.showToast(`✅ Prodotto "${product.name}" aggiunto!`, "success");
         return product;
+    },
+
+    // ✅ TROVA DUPLICATI ESISTENTI NEL DATABASE
+    findExistingDuplicates() {
+        const duplicates = [];
+        const seen = new Map();
+
+        this.products.forEach(product => {
+            const nameClean = product.name.toLowerCase().trim();
+
+            if (seen.has(nameClean)) {
+                // Questo è un duplicato
+                const existing = seen.get(nameClean);
+
+                // Trova se questo gruppo di duplicati esiste già
+                let group = duplicates.find(d =>
+                    d.products.some(p => p.id === existing.id)
+                );
+
+                if (!group) {
+                    // Crea nuovo gruppo
+                    group = {
+                        name: nameClean,
+                        products: [existing]
+                    };
+                    duplicates.push(group);
+                }
+
+                // Aggiungi questo prodotto al gruppo
+                group.products.push(product);
+            } else {
+                seen.set(nameClean, product);
+            }
+        });
+
+        return duplicates;
+    },
+
+    // ✅ UNISCI DUE PRODOTTI DUPLICATI
+    mergeDuplicateProducts(keepId, removeId) {
+        const keep = this.getProductById(keepId);
+        const remove = this.getProductById(removeId);
+
+        if (!keep || !remove) {
+            Utils.showToast("❌ Prodotti non trovati", "error");
+            return false;
+        }
+
+        // Trova tutti gli ordini che usano il prodotto da rimuovere
+        const orders = OrdersModule.getAllOrders();
+        let ordersUpdated = 0;
+
+        orders.forEach(order => {
+            order.items.forEach(item => {
+                if (item.productId === removeId) {
+                    item.productId = keepId;
+                    item.price = keep.price; // Aggiorna anche il prezzo
+                    ordersUpdated++;
+                }
+            });
+        });
+
+        // Salva ordini aggiornati
+        if (ordersUpdated > 0) {
+            OrdersModule.saveOrders();
+            console.log(`✅ Aggiornati ${ordersUpdated} item in ordini`);
+        }
+
+        // Elimina il prodotto duplicato
+        const index = this.products.findIndex(p => p.id === removeId);
+        if (index !== -1) {
+            this.products.splice(index, 1);
+            this.saveProducts();
+
+            Utils.showToast(
+                `✅ Prodotti uniti!\n${ordersUpdated} ordini aggiornati`,
+                "success"
+            );
+            return true;
+        }
+
+        return false;
+    },
+
+    // ✅ RINOMINA PRODOTTO
+    renameProduct(productId, newName) {
+        const product = this.getProductById(productId);
+        if (!product) return false;
+
+        product.name = newName;
+        this.saveProducts();
+
+        Utils.showToast(`✅ Prodotto rinominato in "${newName}"`, "success");
+        return true;
     },
 
     // Aggiorna prodotto esistente
