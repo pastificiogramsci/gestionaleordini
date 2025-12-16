@@ -203,7 +203,7 @@ _Pastificio Gramsci_`;
         order.items.forEach(item => {
             const product = ProductsModule.getProductById(item.productId);
             const productName = product?.name || 'Prodotto';
-            message += `• ${productName} - ${item.quantity} kg (€${item.price * item.quantity})\n`;
+            message += `• ${productName} - ${item.quantity} kg \n`;
         });
 
         // Totale

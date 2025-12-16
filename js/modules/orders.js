@@ -215,7 +215,7 @@ const OrdersModule = {
             );
 
             if (!hasCouponCampaign) {
-                const stampsToAdd = Math.floor(order.totalAmount / 10);
+                const stampsToAdd = Math.floor(order.totalAmount / 20);
                 if (stampsToAdd > 0) {
                     FidelityModule.addStamps(order.customerId, stampsToAdd, order.id);
                 }
