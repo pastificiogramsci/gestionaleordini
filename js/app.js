@@ -1962,47 +1962,62 @@ const App = {
 
                 return `
                 <div class="bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-lg transition" onclick="app.viewOrderDetails('${o.id}')">
-                    <div class="flex justify-between items-start mb-2">
-                        <div>
-                            <h3 class="font-bold text-lg">
-                                #${o.orderNumber || 'N/A'} - ${customerName}
-                                ${o.modifications ? '<span class="ml-2 bg-orange-500 text-white px-2 py-1 rounded-full text-xs">⚠️ Da modificare</span>' : ''}
-                                ${o.deliveryDate && o.deliveryDate < new Date().toISOString().split('T')[0] && o.status !== 'delivered' ? '<span class="ml-2 bg-red-500 text-white px-2 py-1 rounded-full text-xs">📅 Data passata</span>' : ''}
-                                ${o.deposit > 0 ? (o.depositPaid ? '<span class="ml-2 bg-green-500 text-white px-2 py-1 rounded-full text-xs">✓ Acconto</span>' : '<span class="ml-2 bg-yellow-500 text-white px-2 py-1 rounded-full text-xs">⚠️ Acconto richiesto</span>') : ''}
-                            </h3>
-                            <p class="text-sm text-gray-600">${o.items.length} prodotti ${o.deliveryTime ? '• Ore: ' + o.deliveryTime : ''}</p>
-                            ${o.deposit > 0 ? `<p class="text-sm font-medium ${o.depositPaid ? 'text-green-600' : 'text-orange-600'}">💰 Acconto: ${Utils.formatPrice(o.deposit)} ${o.depositPaid ? '(Ricevuto)' : '(Da ricevere)'}</p>` : ''}
-                            
-                            ${o.notes && o.notes.trim() ? `
-                            <div class="mt-3 bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded">
-                                <p class="text-sm font-bold text-yellow-800 mb-1">📝 Note:</p>
-                                <p class="text-sm text-gray-700">${o.notes}</p>
-                            </div>
-                            ` : ''}
-
-                            <p class="text-xs text-gray-500 mt-2">Creato: ${Utils.formatDateTime(o.createdAt)}</p>
-                        </div>
-                        <div class="text-right">
-                            <p class="text-2xl font-bold text-blue-600">${Utils.formatPrice(o.totalAmount)}</p>
-                            ${o.deposit > 0 && !o.depositPaid ? `<p class="text-sm text-orange-600 font-medium">Residuo: ${Utils.formatPrice(o.totalAmount - o.deposit)}</p>` : ''}
-                            <span class="text-xs px-2 py-1 rounded ${statusColors[o.status]}">${statusNames[o.status]}</span>
-                        </div>
-                    </div>
-                
-                    <div class="flex gap-2 mt-3">
-                        ${o.status === 'pending' ? `<button onclick="event.stopPropagation(); OrdersModule.changeOrderStatus('${o.id}', 'in_preparation'); app.loadOrders(); app.loadDashboard()" class="text-xs px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">✓ Conferma</button>` : ''}
-                        
-                        ${o.status === 'confirmed' || o.status === 'in_preparation' ? `<button onclick="event.stopPropagation(); app.markOrderAsReady('${o.id}')" class="text-xs px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700">✓ Pronto</button>` : ''}
-                        
-                        ${o.status === 'ready' ? `<button onclick="event.stopPropagation(); OrdersModule.changeOrderStatus('${o.id}', 'delivered'); app.loadOrders(); app.loadDashboard()" class="text-xs px-3 py-1 bg-gray-600 text-white rounded hover:bg-gray-700">✓ Consegnato</button>` : ''}
-                        
-                        ${o.status === 'delivered' ? `<button onclick="event.stopPropagation(); app.undoDelivery('${o.id}')" class="text-xs px-3 py-1 bg-orange-600 text-white rounded hover:bg-orange-700">↩️ Annulla consegna</button>` : ''}
-                        
-                        ${o.status !== 'delivered' ? `<button onclick="event.stopPropagation(); app.editOrder('${o.id}')" class="text-xs px-3 py-1 bg-gray-200 rounded hover:bg-gray-300">✏️ Modifica</button>` : ''}
-                        
-                        <button onclick="event.stopPropagation(); app.deleteOrder('${o.id}')" class="text-red-600 text-sm ml-auto hover:text-red-800">🗑️</button>
-                    </div>
+    <div class="flex justify-between items-start mb-2">
+        <div class="flex-1 mr-4">
+            <h3 class="font-bold text-lg">
+                #${o.orderNumber || 'N/A'} - ${customerName}
+                ${o.modifications ? '<span class="ml-2 bg-orange-500 text-white px-2 py-1 rounded-full text-xs">⚠️ Da modificare</span>' : ''}
+                ${o.deliveryDate && o.deliveryDate < new Date().toISOString().split('T')[0] && o.status !== 'delivered' ? '<span class="ml-2 bg-red-500 text-white px-2 py-1 rounded-full text-xs">📅 Data passata</span>' : ''}
+                ${o.deposit > 0 ? (o.depositPaid ? '<span class="ml-2 bg-green-500 text-white px-2 py-1 rounded-full text-xs">✓ Acconto</span>' : '<span class="ml-2 bg-yellow-500 text-white px-2 py-1 rounded-full text-xs">⚠️ Acconto richiesto</span>') : ''}
+            </h3>
+            <p class="text-sm text-gray-600 mb-2">${o.items.length} prodotti ${o.deliveryTime ? '• Ore: ' + o.deliveryTime : ''}</p>
+            
+            <!-- Lista Prodotti -->
+            <div class="bg-gray-50 rounded p-2 mb-2">
+                <div class="text-xs text-gray-700 space-y-1">
+                    ${o.items.slice(0, 3).map(item => {
+                    const product = ProductsModule.getProductById(item.productId);
+                    return `<div class="flex justify-between">
+                            <span>• ${product?.name || 'Prodotto'} (${item.quantity} ${item.unit || 'kg'})</span>
+                            <span class="font-medium">${Utils.formatPrice(item.price * item.quantity)}</span>
+                        </div>`;
+                }).join('')}
+                    ${o.items.length > 3 ? `<div class="text-gray-500 italic text-center mt-1">...e altri ${o.items.length - 3} prodotti</div>` : ''}
                 </div>
+            </div>
+            
+            ${o.deposit > 0 ? `<p class="text-sm font-medium ${o.depositPaid ? 'text-green-600' : 'text-orange-600'}">💰 Acconto: ${Utils.formatPrice(o.deposit)} ${o.depositPaid ? '(Ricevuto)' : '(Da ricevere)'}</p>` : ''}
+            
+            ${o.notes && o.notes.trim() ? `
+            <div class="mt-3 bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded">
+                <p class="text-sm font-bold text-yellow-800 mb-1">📝 Note:</p>
+                <p class="text-sm text-gray-700">${o.notes}</p>
+            </div>
+            ` : ''}
+
+            <p class="text-xs text-gray-500 mt-2">Creato: ${Utils.formatDateTime(o.createdAt)}</p>
+        </div>
+        <div class="text-right">
+            <p class="text-2xl font-bold text-blue-600">${Utils.formatPrice(o.totalAmount)}</p>
+            ${o.deposit > 0 && !o.depositPaid ? `<p class="text-sm text-orange-600 font-medium">Residuo: ${Utils.formatPrice(o.totalAmount - o.deposit)}</p>` : ''}
+            <span class="text-xs px-2 py-1 rounded ${statusColors[o.status]}">${statusNames[o.status]}</span>
+        </div>
+    </div>
+
+    <div class="flex gap-2 mt-3">
+        ${o.status === 'pending' ? `<button onclick="event.stopPropagation(); OrdersModule.changeOrderStatus('${o.id}', 'in_preparation'); app.loadOrders(); app.loadDashboard()" class="text-xs px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">✓ Conferma</button>` : ''}
+        
+        ${o.status === 'confirmed' || o.status === 'in_preparation' ? `<button onclick="event.stopPropagation(); app.markOrderAsReady('${o.id}')" class="text-xs px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700">✓ Pronto</button>` : ''}
+        
+        ${o.status === 'ready' ? `<button onclick="event.stopPropagation(); OrdersModule.changeOrderStatus('${o.id}', 'delivered'); app.loadOrders(); app.loadDashboard()" class="text-xs px-3 py-1 bg-gray-600 text-white rounded hover:bg-gray-700">✓ Consegnato</button>` : ''}
+        
+        ${o.status === 'delivered' ? `<button onclick="event.stopPropagation(); app.undoDelivery('${o.id}')" class="text-xs px-3 py-1 bg-orange-600 text-white rounded hover:bg-orange-700">↩️ Annulla consegna</button>` : ''}
+        
+        ${o.status !== 'delivered' ? `<button onclick="event.stopPropagation(); app.editOrder('${o.id}')" class="text-xs px-3 py-1 bg-gray-200 rounded hover:bg-gray-300">✏️ Modifica</button>` : ''}
+        
+        <button onclick="event.stopPropagation(); app.deleteOrder('${o.id}')" class="text-red-600 text-sm ml-auto hover:text-red-800">🗑️</button>
+    </div>
+</div>
             `;
             }).join('');
 
@@ -3103,47 +3118,140 @@ const App = {
         console.log("👁️ Visualizza ordine:", orderId);
 
         const order = OrdersModule.formatOrderDetails(orderId);
-        console.log("📦 Order ricevuto:", order); // ← AGGIUNGI
-
         if (!order) {
-            console.log("❌ Order è null!"); // ← AGGIUNGI
             Utils.showToast("Ordine non trovato", "error");
             return;
         }
 
-        const content = document.getElementById('order-details-content');
-        console.log("📄 Content element:", content); // ← AGGIUNGI
+        const statusColors = {
+            pending: "bg-yellow-500",
+            confirmed: "bg-blue-500",
+            in_preparation: "bg-purple-500",
+            ready: "bg-green-500",
+            delivered: "bg-gray-500",
+            cancelled: "bg-red-500"
+        };
 
+        const statusNames = {
+            pending: "In attesa",
+            confirmed: "Confermato",
+            in_preparation: "In preparazione",
+            ready: "Pronto",
+            delivered: "Consegnato",
+            cancelled: "Annullato"
+        };
+
+        const statusColor = statusColors[order.status] || "bg-gray-500";
+        const statusName = statusNames[order.status] || order.status;
+
+        const content = document.getElementById('order-details-content');
         content.innerHTML = `
-        <p class="mb-2"><strong>Cliente:</strong> ${order.customerName}</p>
-        <p class="mb-2"><strong>Data consegna:</strong> ${order.deliveryDate ? Utils.formatDate(order.deliveryDate) : '-'} ${order.deliveryTime || ''}</p>
-        <p class="mb-4"><strong>Note:</strong> ${order.notes || '-'}</p>
-        
-        <h4 class="font-bold mb-2">Prodotti:</h4>
-        <div class="space-y-1 mb-4">
-            ${order.items.map(item => `
-                <div class="flex justify-between text-sm">
-                    <span>${item.productName} x${item.quantity}</span>
-                    <span>${Utils.formatPrice(item.price * item.quantity)}</span>
+        <!-- Header Colorato con Numero Ordine e Stato -->
+        <div class="${statusColor} text-white p-4 rounded-lg mb-4 -mt-2 -mx-2">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h3 class="text-2xl font-bold">📦 Ordine #${order.orderNumber || 'N/A'}</h3>
+                    <p class="text-sm opacity-90 mt-1">Creato: ${Utils.formatDateTime(order.createdAt)}</p>
                 </div>
-            `).join('')}
+                <div class="text-right">
+                    <span class="bg-white bg-opacity-30 px-3 py-1 rounded-full text-sm font-bold">${statusName}</span>
+                </div>
+            </div>
         </div>
-        
-        <div class="text-right">
-            <p class="text-2xl font-bold">Totale: ${Utils.formatPrice(order.totalAmount)}</p>
+
+        <!-- Info Cliente -->
+        <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded mb-4">
+            <h4 class="font-bold text-blue-800 mb-2">👤 Cliente</h4>
+            <p class="text-sm mb-1"><strong>Nome:</strong> ${order.customerName}</p>
+            ${order.customerPhone ? `<p class="text-sm mb-1"><strong>📞 Telefono:</strong> ${order.customerPhone}</p>` : ''}
         </div>
+
+        <!-- Info Consegna -->
+        <div class="bg-green-50 border-l-4 border-green-500 p-4 rounded mb-4">
+            <h4 class="font-bold text-green-800 mb-2">📅 Consegna</h4>
+            <p class="text-sm mb-1">
+                <strong>Data:</strong> ${order.deliveryDate ? Utils.formatDateWithDay(order.deliveryDate) : 'Non specificata'}
+            </p>
+            ${order.deliveryTime ? `<p class="text-sm"><strong>⏰ Ora:</strong> ${order.deliveryTime}</p>` : ''}
+        </div>
+
+        <!-- Prodotti -->
+        <div class="bg-white border rounded-lg mb-4 overflow-hidden">
+            <div class="bg-gray-100 px-4 py-2 border-b">
+                <h4 class="font-bold text-gray-800">📋 Prodotti</h4>
+            </div>
+            <div class="divide-y">
+                ${order.items.map(item => `
+                    <div class="flex justify-between items-center p-3 hover:bg-gray-50">
+                        <div class="flex-1">
+                            <p class="font-medium text-gray-800">${item.productName}</p>
+                            <p class="text-sm text-gray-600">Quantità: ${item.quantity} ${item.unit || 'kg'}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="font-bold text-gray-800">${Utils.formatPrice(item.price * item.quantity)}</p>
+                            <p class="text-xs text-gray-500">${Utils.formatPrice(item.price)}/${item.unit || 'kg'}</p>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+
+        <!-- Totale -->
+        <div class="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-4 rounded-lg mb-4">
+            <div class="flex justify-between items-center">
+                <span class="text-lg font-bold">💰 TOTALE</span>
+                <span class="text-3xl font-bold">${Utils.formatPrice(order.totalAmount)}</span>
+            </div>
+            ${order.deposit > 0 ? `
+                <div class="mt-3 pt-3 border-t border-white border-opacity-30">
+                    <div class="flex justify-between text-sm mb-1">
+                        <span>Acconto:</span>
+                        <span class="font-bold">${Utils.formatPrice(order.deposit)}</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span>Residuo:</span>
+                        <span class="font-bold">${Utils.formatPrice(order.totalAmount - order.deposit)}</span>
+                    </div>
+                    <div class="mt-2 text-center">
+                        <span class="px-3 py-1 rounded-full text-xs font-bold ${order.depositPaid ? 'bg-green-500' : 'bg-yellow-500'} bg-opacity-80">
+                            ${order.depositPaid ? '✓ Acconto Ricevuto' : '⚠️ Acconto da Ricevere'}
+                        </span>
+                    </div>
+                </div>
+            ` : ''}
+        </div>
+
+        <!-- Note (se presenti) -->
+        ${order.notes && order.notes.trim() ? `
+            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded mb-4">
+                <h4 class="font-bold text-yellow-800 mb-2">📝 Note</h4>
+                <p class="text-sm text-gray-700 whitespace-pre-wrap">${order.notes}</p>
+            </div>
+        ` : ''}
+
+        <!-- Pulsanti Azione -->
+        ${order.status !== 'delivered' ? `
+            <div class="flex gap-2 mt-4">
+                <button onclick="app.closeModal('order-details-modal'); app.editOrder('${order.id}')" 
+                    class="flex-1 bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 font-bold">
+                    ✏️ Modifica
+                </button>
+                <button onclick="if(confirm('Eliminare questo ordine?')) { app.deleteOrder('${order.id}'); app.closeModal('order-details-modal'); }" 
+                    class="bg-red-600 text-white px-4 py-3 rounded-lg hover:bg-red-700 font-bold">
+                    🗑️
+                </button>
+            </div>
+        ` : ''}
     `;
 
-        console.log("✅ Apro modale..."); 
         this.openModal('order-details-modal');
-        console.log("✅ Modale aperto!"); 
     },
 
     loadCustomers() {
         console.log("👥 Caricamento clienti...");
         const customers = CustomersModule.getAllCustomers('name');
         this.displayCustomers(customers);
-        this.updateCustomersStats(); 
+        this.updateCustomersStats();
     },
 
     updateCustomersStats() {
