@@ -397,6 +397,47 @@ const OrdersModule = {
         });
     },
 
+    // Ottieni totale prodotto per periodo
+    getProductTotalByPeriod(productId, startDate, endDate) {
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+
+        let totalQuantity = 0;
+
+        this.orders
+            .filter(o => {
+                if (!o.deliveryDate) return false;
+                const deliveryDate = new Date(o.deliveryDate);
+                return deliveryDate >= start && deliveryDate <= end &&
+                    o.status !== this.ORDER_STATUS.CANCELLED;
+            })
+            .forEach(order => {
+                order.items.forEach(item => {
+                    if (item.productId === productId) {
+                        totalQuantity += parseFloat(item.quantity) || 0;
+                    }
+                });
+            });
+
+        return totalQuantity;
+    },
+
+    // Ottieni ordini che contengono un prodotto specifico in un periodo
+    getOrdersByProductAndPeriod(productId, startDate, endDate) {
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+
+        return this.orders.filter(o => {
+            if (!o.deliveryDate) return false;
+            const deliveryDate = new Date(o.deliveryDate);
+
+            const inPeriod = deliveryDate >= start && deliveryDate <= end;
+            const hasProduct = o.items.some(item => item.productId === productId);
+
+            return inPeriod && hasProduct && o.status !== this.ORDER_STATUS.CANCELLED;
+        });
+    },
+
     markItemPrepared(orderId, itemIndex) {
         const order = this.getOrderById(orderId);
         if (!order) return;
@@ -469,6 +510,26 @@ const OrdersModule = {
                     if (!a.deliveryDate) return 1;
                     if (!b.deliveryDate) return -1;
                     return new Date(a.deliveryDate) - new Date(b.deliveryDate);
+                });
+                break;
+            case 'delivery_with_order_number':
+                // Ordina per data di consegna e poi per numero ordine (numericamente)
+                sorted.sort((a, b) => {
+                    // Prima confronta le date
+                    if (!a.deliveryDate) return 1;
+                    if (!b.deliveryDate) return -1;
+                    const dateCompare = new Date(a.deliveryDate) - new Date(b.deliveryDate);
+
+                    if (dateCompare !== 0) return dateCompare;
+
+                    // Se stessa data, ordina per numero ordine (estrai numero prima del trattino)
+                    const getOrderNum = (orderNumber) => {
+                        if (!orderNumber) return 0;
+                        const match = orderNumber.match(/^(\d+)-/);
+                        return match ? parseInt(match[1]) : 0;
+                    };
+
+                    return getOrderNum(a.orderNumber) - getOrderNum(b.orderNumber);
                 });
                 break;
             case 'amount':

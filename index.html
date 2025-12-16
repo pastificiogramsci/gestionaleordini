@@ -742,6 +742,48 @@
                 </details>
             </div>
 
+            <!-- Filtro Prodotto -->
+            <div class="bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg shadow-lg p-4 mb-6">
+                <details>
+                    <summary class="font-bold cursor-pointer mb-3 text-lg">🔍 Filtro Prodotto per Periodo</summary>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mt-3">
+                        <div>
+                            <label class="block text-sm font-bold mb-1">Prodotto</label>
+                            <select id="product-filter-select" class="w-full px-3 py-2 border rounded text-gray-800">
+                                <option value="">Seleziona prodotto...</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold mb-1">Data Inizio</label>
+                            <input type="date" id="product-filter-start"
+                                class="w-full px-3 py-2 border rounded text-gray-800">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold mb-1">Data Fine</label>
+                            <input type="date" id="product-filter-end"
+                                class="w-full px-3 py-2 border rounded text-gray-800">
+                        </div>
+                        <div class="flex items-end">
+                            <button onclick="app.applyProductFilter()"
+                                class="w-full bg-white text-blue-600 px-4 py-2 rounded hover:bg-gray-100 font-bold">
+                                📊 Calcola
+                            </button>
+                        </div>
+                    </div>
+                    <div id="product-filter-result" class="mt-4 hidden">
+                        <div class="bg-white text-gray-800 rounded-lg p-4">
+                            <h4 class="font-bold text-lg mb-2" id="product-result-title"></h4>
+                            <p class="text-3xl font-bold text-blue-600 mb-2" id="product-result-quantity"></p>
+                            <p class="text-sm text-gray-600 mb-3" id="product-result-orders"></p>
+                            <button onclick="app.showProductOrders()"
+                                class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm font-bold">
+                                📋 Vedi Ordini
+                            </button>
+                        </div>
+                    </div>
+                </details>
+            </div>
+
             <!-- Filtri per Stato (Grandi) -->
             <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
                 <button onclick="app.filterOrders('all')" id="filter-all"

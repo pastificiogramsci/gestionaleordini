@@ -329,12 +329,25 @@ const App = {
                 this.loadDashboard();
                 break;
             case 'orders':
-                const orderDateFilter = document.getElementById('order-date-filter');
-                if (orderDateFilter && !orderDateFilter.value) {
-                    orderDateFilter.value = this.getTomorrowDate();
-                }
+                // Resetta i filtri data
+                document.getElementById('order-date-filter').value = '';
+                document.getElementById('order-month-filter').value = '';
+                document.getElementById('order-year-filter').value = '';
+
+                // Resetta filtro stato
+                this.currentOrderFilter = null;
+
                 this.populateYearFilter();
-                this.applyOrderFilters();
+                this.populateProductFilter();
+                this.updateOrdersStats();
+                this.updateFilterButtons();
+
+                // Mostra tutti gli ordini futuri (da oggi in poi)
+                const today = new Date().toISOString().split('T')[0];
+                const futureOrders = OrdersModule.getAllOrders('delivery_with_order_number')
+                    .filter(o => !o.deliveryDate || o.deliveryDate >= today);
+
+                this.displayOrders(futureOrders);
                 break;
             case 'preparation':
                 const prepDate = document.getElementById('prep-date');
@@ -541,13 +554,20 @@ const App = {
     },
 
     loadOrders() {
-        this.displayOrders(OrdersModule.getAllOrders('recent'));
-        this.populateYearFilter();
+        // PRIMA aggiorna le stats e i bottoni
         this.updateOrdersStats();
+        this.updateFilterButtons();
+
+        // POI popola i filtri
+        this.populateYearFilter();
+        this.populateProductFilter();
+
+        // INFINE mostra gli ordini
+        this.displayOrders(OrdersModule.getAllOrders('delivery_with_order_number'));
     },
 
     updateOrdersStats() {
-        const orders = OrdersModule.getAllOrders('recent');
+        const orders = OrdersModule.getAllOrders('delivery_with_order_number');
         const today = new Date().toISOString().split('T')[0];
 
         // Stats header
@@ -1899,64 +1919,115 @@ const App = {
             cancelled: "Annullato"
         };
 
-        container.innerHTML = orders.map(o => {
-            const customer = CustomersModule.getCustomerById(o.customerId);
-            const customerName = customer ? `${customer.firstName} ${customer.lastName}` : 'Cliente sconosciuto';
+        // Raggruppa ordini per data
+        const ordersByDate = {};
+        orders.forEach(order => {
+            const date = order.deliveryDate || 'no-date';
+            if (!ordersByDate[date]) {
+                ordersByDate[date] = [];
+            }
+            ordersByDate[date].push(order);
+        });
 
-            return `
-            <div class="bg-white p-4 rounded-lg shadow cursor-pointer" onclick="app.viewOrderDetails('${o.id}')">
-                <div class="flex justify-between items-start mb-2">
-                    <div>
-                        <h3 class="font-bold text-lg">
-                            #${o.orderNumber || 'N/A'} - ${customerName}
-                            ${o.modifications ? '<span class="ml-2 bg-orange-500 text-white px-2 py-1 rounded-full text-xs">⚠️ Da modificare</span>' : ''}
-                            ${o.deliveryDate && o.deliveryDate < new Date().toISOString().split('T')[0] && o.status !== 'delivered' ? '<span class="ml-2 bg-red-500 text-white px-2 py-1 rounded-full text-xs">📅 Data passata</span>' : ''}
-                            ${o.deposit > 0 ? (o.depositPaid ? '<span class="ml-2 bg-green-500 text-white px-2 py-1 rounded-full text-xs">✓ Acconto</span>' : '<span class="ml-2 bg-yellow-500 text-white px-2 py-1 rounded-full text-xs">⚠️ Acconto richiesto</span>') : ''}
-                        </h3>
-                        <p class="text-sm text-gray-600">${o.items.length} prodotti</p>
-                        ${o.deliveryDate ? `<p class="text-sm text-gray-600">📅 Consegna: ${Utils.formatDate(o.deliveryDate)} ${o.deliveryTime || ''}</p>` : ''}
-                        ${o.deposit > 0 ? `<p class="text-sm font-medium ${o.depositPaid ? 'text-green-600' : 'text-orange-600'}">💰 Acconto: ${Utils.formatPrice(o.deposit)} ${o.depositPaid ? '(Ricevuto)' : '(Da ricevere)'}</p>` : ''}
-                        
-                        ${o.notes && o.notes.trim() ? `
-                        <div class="mt-3 bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded">
-                            <p class="text-sm font-bold text-yellow-800 mb-1">📝 Note:</p>
-                            <p class="text-sm text-gray-700">${o.notes}</p>
-                        </div>
-                        ` : ''}
+        // Ordina le date
+        const sortedDates = Object.keys(ordersByDate).sort((a, b) => {
+            if (a === 'no-date') return 1;
+            if (b === 'no-date') return -1;
+            return new Date(a) - new Date(b);
+        });
 
-                        <p class="text-xs text-gray-500">Creato: ${Utils.formatDateTime(o.createdAt)}</p>
+        // Genera HTML raggruppato per data
+        container.innerHTML = sortedDates.map(date => {
+            const dateOrders = ordersByDate[date];
+            const today = new Date().toISOString().split('T')[0];
+
+            // Intestazione data
+            let dateHeader;
+            let dateClass;
+
+            if (date === 'no-date') {
+                dateHeader = '📅 Senza data di consegna';
+                dateClass = 'bg-gray-500';
+            } else if (date === today) {
+                dateHeader = '🔥 Oggi - ' + Utils.formatDateWithDay(date);
+                dateClass = 'bg-red-500';
+            } else {
+                dateHeader = '📅 ' + Utils.formatDateWithDay(date);
+                dateClass = 'bg-blue-500';
+            }
+
+            const ordersHtml = dateOrders.map(o => {
+                const customer = CustomersModule.getCustomerById(o.customerId);
+                const customerName = customer ? `${customer.firstName} ${customer.lastName}` : 'Cliente sconosciuto';
+
+                return `
+                <div class="bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-lg transition" onclick="app.viewOrderDetails('${o.id}')">
+                    <div class="flex justify-between items-start mb-2">
+                        <div>
+                            <h3 class="font-bold text-lg">
+                                #${o.orderNumber || 'N/A'} - ${customerName}
+                                ${o.modifications ? '<span class="ml-2 bg-orange-500 text-white px-2 py-1 rounded-full text-xs">⚠️ Da modificare</span>' : ''}
+                                ${o.deliveryDate && o.deliveryDate < new Date().toISOString().split('T')[0] && o.status !== 'delivered' ? '<span class="ml-2 bg-red-500 text-white px-2 py-1 rounded-full text-xs">📅 Data passata</span>' : ''}
+                                ${o.deposit > 0 ? (o.depositPaid ? '<span class="ml-2 bg-green-500 text-white px-2 py-1 rounded-full text-xs">✓ Acconto</span>' : '<span class="ml-2 bg-yellow-500 text-white px-2 py-1 rounded-full text-xs">⚠️ Acconto richiesto</span>') : ''}
+                            </h3>
+                            <p class="text-sm text-gray-600">${o.items.length} prodotti ${o.deliveryTime ? '• Ore: ' + o.deliveryTime : ''}</p>
+                            ${o.deposit > 0 ? `<p class="text-sm font-medium ${o.depositPaid ? 'text-green-600' : 'text-orange-600'}">💰 Acconto: ${Utils.formatPrice(o.deposit)} ${o.depositPaid ? '(Ricevuto)' : '(Da ricevere)'}</p>` : ''}
+                            
+                            ${o.notes && o.notes.trim() ? `
+                            <div class="mt-3 bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded">
+                                <p class="text-sm font-bold text-yellow-800 mb-1">📝 Note:</p>
+                                <p class="text-sm text-gray-700">${o.notes}</p>
+                            </div>
+                            ` : ''}
+
+                            <p class="text-xs text-gray-500 mt-2">Creato: ${Utils.formatDateTime(o.createdAt)}</p>
                         </div>
                         <div class="text-right">
-                        <p class="text-2xl font-bold text-blue-600">${Utils.formatPrice(o.totalAmount)}</p>
-                        ${o.deposit > 0 && !o.depositPaid ? `<p class="text-sm text-orange-600 font-medium">Residuo: ${Utils.formatPrice(o.totalAmount - o.deposit)}</p>` : ''}
-                        <span class="text-xs px-2 py-1 rounded ${statusColors[o.status]}">${statusNames[o.status]}</span>
+                            <p class="text-2xl font-bold text-blue-600">${Utils.formatPrice(o.totalAmount)}</p>
+                            ${o.deposit > 0 && !o.depositPaid ? `<p class="text-sm text-orange-600 font-medium">Residuo: ${Utils.formatPrice(o.totalAmount - o.deposit)}</p>` : ''}
+                            <span class="text-xs px-2 py-1 rounded ${statusColors[o.status]}">${statusNames[o.status]}</span>
                         </div>
+                    </div>
+                
+                    <div class="flex gap-2 mt-3">
+                        ${o.status === 'pending' ? `<button onclick="event.stopPropagation(); OrdersModule.changeOrderStatus('${o.id}', 'in_preparation'); app.loadOrders(); app.loadDashboard()" class="text-xs px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">✓ Conferma</button>` : ''}
+                        
+                        ${o.status === 'confirmed' || o.status === 'in_preparation' ? `<button onclick="event.stopPropagation(); app.markOrderAsReady('${o.id}')" class="text-xs px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700">✓ Pronto</button>` : ''}
+                        
+                        ${o.status === 'ready' ? `<button onclick="event.stopPropagation(); OrdersModule.changeOrderStatus('${o.id}', 'delivered'); app.loadOrders(); app.loadDashboard()" class="text-xs px-3 py-1 bg-gray-600 text-white rounded hover:bg-gray-700">✓ Consegnato</button>` : ''}
+                        
+                        ${o.status === 'delivered' ? `<button onclick="event.stopPropagation(); app.undoDelivery('${o.id}')" class="text-xs px-3 py-1 bg-orange-600 text-white rounded hover:bg-orange-700">↩️ Annulla consegna</button>` : ''}
+                        
+                        ${o.status !== 'delivered' ? `<button onclick="event.stopPropagation(); app.editOrder('${o.id}')" class="text-xs px-3 py-1 bg-gray-200 rounded hover:bg-gray-300">✏️ Modifica</button>` : ''}
+                        
+                        <button onclick="event.stopPropagation(); app.deleteOrder('${o.id}')" class="text-red-600 text-sm ml-auto hover:text-red-800">🗑️</button>
+                    </div>
                 </div>
-            
-            <div class="flex gap-2 mt-3">
-                ${o.status === 'pending' ? `<button onclick="OrdersModule.changeOrderStatus('${o.id}', 'in_preparation'); app.loadOrders(); app.loadDashboard()" class="text-xs px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">✓ Conferma</button>` : ''}
-                
-                ${o.status === 'confirmed' || o.status === 'in_preparation' ? `<button onclick="app.markOrderAsReady('${o.id}')" class="text-xs px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700">✓ Pronto</button>` : ''}
-                
-                ${o.status === 'ready' ? `<button onclick="OrdersModule.changeOrderStatus('${o.id}', 'delivered'); app.loadOrders(); app.loadDashboard()" class="text-xs px-3 py-1 bg-gray-600 text-white rounded hover:bg-gray-700">✓ Consegnato</button>` : ''}
-                
-                ${o.status === 'delivered' ? `<button onclick="app.undoDelivery('${o.id}')" class="text-xs px-3 py-1 bg-orange-600 text-white rounded hover:bg-orange-700">↩️ Annulla consegna</button>` : ''}
-                
-                ${o.status !== 'delivered' ? `<button onclick="app.editOrder('${o.id}')" class="text-xs px-3 py-1 bg-gray-200 rounded hover:bg-gray-300">✏️ Modifica</button>` : ''}
-                
-                <button onclick="app.deleteOrder('${o.id}')" class="text-red-600 text-sm ml-auto hover:text-red-800">🗑️</button>
+            `;
+            }).join('');
+
+            return `
+            <div class="mb-8">
+                <div class="${dateClass} text-white px-6 py-3 rounded-lg shadow-md mb-4">
+                    <h2 class="text-xl font-bold">${dateHeader}</h2>
+                    <p class="text-sm opacity-90">${dateOrders.length} ordini</p>
+                </div>
+                <div class="space-y-4">
+                    ${ordersHtml}
+                </div>
             </div>
-        </div>
-    `;
+        `;
         }).join('');
     },
 
     filterOrders(status) {
         this.currentOrderFilter = status;
+        this.updateFilterButtons(); // ← AGGIUNGI questa riga
+
         if (status === 'all') {
             this.applyOrderFilters();
         } else {
-            let orders = OrdersModule.getAllOrders('recent').filter(o => o.status === status);
+            let orders = OrdersModule.getAllOrders('delivery_with_order_number').filter(o => o.status === status);
 
             // Applica anche filtri data se attivi
             const dateFilter = document.getElementById('order-date-filter').value;
@@ -1979,8 +2050,9 @@ const App = {
         const dateFilter = document.getElementById('order-date-filter').value;
         const monthFilter = document.getElementById('order-month-filter').value;
         const yearFilter = document.getElementById('order-year-filter').value;
+        const today = new Date().toISOString().split('T')[0];
 
-        let orders = OrdersModule.getAllOrders('recent');
+        let orders = OrdersModule.getAllOrders('delivery_with_order_number');
 
         // Filtra per data specifica
         if (dateFilter) {
@@ -1994,6 +2066,10 @@ const App = {
         else if (yearFilter) {
             orders = orders.filter(o => o.deliveryDate && o.deliveryDate.startsWith(yearFilter));
         }
+        // Nessun filtro data = mostra solo ordini futuri
+        else {
+            orders = orders.filter(o => !o.deliveryDate || o.deliveryDate >= today);
+        }
 
         // Applica anche filtro stato se attivo
         if (this.currentOrderFilter && this.currentOrderFilter !== 'all') {
@@ -2001,6 +2077,7 @@ const App = {
         }
 
         this.displayOrders(orders);
+        this.updateFilterButtons();
     },
 
     clearOrderFilters() {
@@ -2019,7 +2096,8 @@ const App = {
         this.currentOrderFilter = null;
 
         // Mostra tutti gli ordini
-        this.displayOrders(OrdersModule.getAllOrders('recent'));
+        this.displayOrders(OrdersModule.getAllOrders('delivery_with_order_number')); // ← CAMBIA 'recent'
+        this.updateFilterButtons();
 
         Utils.showToast("📋 Tutti gli ordini visualizzati", "info");
     },
@@ -2032,6 +2110,83 @@ const App = {
 
         select.innerHTML = '<option value="">Tutti gli anni</option>' +
             years.map(y => `<option value="${y}">${y}</option>`).join('');
+    },
+
+    updateFilterButtons() {
+        const filters = ['all', 'pending', 'in_preparation', 'ready', 'delivered'];
+
+        filters.forEach(filter => {
+            const btn = document.getElementById(`filter-${filter}`);
+            if (!btn) return;
+
+            // Rimuovi evidenziazione da tutti
+            btn.classList.remove('ring-4', 'ring-blue-500', 'ring-offset-2');
+
+            // Aggiungi evidenziazione al filtro attivo
+            if ((filter === 'all' && !this.currentOrderFilter) ||
+                this.currentOrderFilter === filter) {
+                btn.classList.add('ring-4', 'ring-blue-500', 'ring-offset-2');
+            }
+        });
+    },
+
+    // Popola select prodotti nel filtro
+    populateProductFilter() {
+        const select = document.getElementById('product-filter-select');
+        if (!select) return;
+
+        const products = ProductsModule.getAllProducts();
+        select.innerHTML = '<option value="">Seleziona prodotto...</option>' +
+            products.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+    },
+
+    // Applica filtro prodotto
+    applyProductFilter() {
+        const productId = document.getElementById('product-filter-select').value;
+        const startDate = document.getElementById('product-filter-start').value;
+        const endDate = document.getElementById('product-filter-end').value;
+
+        if (!productId || !startDate || !endDate) {
+            Utils.showToast("⚠️ Compila tutti i campi", "error");
+            return;
+        }
+
+        const product = ProductsModule.getProductById(productId);
+        const totalQuantity = OrdersModule.getProductTotalByPeriod(productId, startDate, endDate);
+        const orders = OrdersModule.getOrdersByProductAndPeriod(productId, startDate, endDate);
+
+        // Mostra risultato
+        const resultDiv = document.getElementById('product-filter-result');
+        const titleEl = document.getElementById('product-result-title');
+        const quantityEl = document.getElementById('product-result-quantity');
+        const ordersEl = document.getElementById('product-result-orders');
+
+        titleEl.textContent = product ? product.name : 'Prodotto';
+        quantityEl.textContent = `${totalQuantity} ${product?.unit || 'pz'}`;
+        ordersEl.textContent = `In ${orders.length} ordini dal ${Utils.formatDate(startDate)} al ${Utils.formatDate(endDate)}`;
+
+        resultDiv.classList.remove('hidden');
+
+        // Salva per "Vedi Ordini"
+        this.currentProductFilter = {
+            productId,
+            startDate,
+            endDate,
+            orders
+        };
+    },
+
+    // Mostra ordini filtrati per prodotto
+    showProductOrders() {
+        if (!this.currentProductFilter) return;
+
+        const orders = this.currentProductFilter.orders;
+        this.displayOrders(orders);
+
+        Utils.showToast(`📋 ${orders.length} ordini visualizzati`, "info");
+
+        // Scroll verso la lista
+        document.getElementById('orders-list').scrollIntoView({ behavior: 'smooth' });
     },
 
     openNewOrderModal() {
