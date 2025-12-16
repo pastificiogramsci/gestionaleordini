@@ -206,17 +206,6 @@ _Pastificio Gramsci_`;
             message += `• ${productName} - ${item.quantity} kg \n`;
         });
 
-        // Totale
-        message += `\n💰 Totale: €${order.totalAmount.toFixed(2)}`;
-        if (order.deposit > 0) {
-            message += `\n💵 Acconto: €${order.deposit.toFixed(2)}`;
-            if (order.depositPaid) {
-                message += ` ✅ pagato`;
-            } else {
-                message += ` ⏳ da pagare`;
-            }
-        }
-
         // Note
         if (order.notes) {
             message += `\n\n📝 Note: ${order.notes}`;
@@ -280,9 +269,9 @@ _Pastificio Gramsci_`;
 
         let message = `📦 Ciao ${displayName}!
 
-Il tuo ordine *#${order.orderNumber}* è pronto per il ritiro! ✅
+Il tuo ordine *#${order.orderNumber}* è stato consegnato! 🎉
 
-Vieni a ritirarlo quando vuoi! 😊`;
+Grazie per averci scelto! 😊`;
 
         if (hasCoupon) {
             const coupon = customer.coupons?.find(c => !c.used && !c.notified);

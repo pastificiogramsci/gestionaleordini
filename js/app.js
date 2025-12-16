@@ -3100,10 +3100,20 @@ const App = {
     },
 
     viewOrderDetails(orderId) {
+        console.log("👁️ Visualizza ordine:", orderId);
+
         const order = OrdersModule.formatOrderDetails(orderId);
-        if (!order) return;
+        console.log("📦 Order ricevuto:", order); // ← AGGIUNGI
+
+        if (!order) {
+            console.log("❌ Order è null!"); // ← AGGIUNGI
+            Utils.showToast("Ordine non trovato", "error");
+            return;
+        }
 
         const content = document.getElementById('order-details-content');
+        console.log("📄 Content element:", content); // ← AGGIUNGI
+
         content.innerHTML = `
         <p class="mb-2"><strong>Cliente:</strong> ${order.customerName}</p>
         <p class="mb-2"><strong>Data consegna:</strong> ${order.deliveryDate ? Utils.formatDate(order.deliveryDate) : '-'} ${order.deliveryTime || ''}</p>
@@ -3124,14 +3134,16 @@ const App = {
         </div>
     `;
 
+        console.log("✅ Apro modale..."); 
         this.openModal('order-details-modal');
+        console.log("✅ Modale aperto!"); 
     },
 
     loadCustomers() {
         console.log("👥 Caricamento clienti...");
         const customers = CustomersModule.getAllCustomers('name');
         this.displayCustomers(customers);
-        this.updateCustomersStats(); // ← AGGIUNGI
+        this.updateCustomersStats(); 
     },
 
     updateCustomersStats() {
@@ -4010,12 +4022,6 @@ const App = {
     // ==========================================
     // ACTIONS
     // ==========================================
-
-    // Visualizza dettagli ordine
-    viewOrderDetails(orderId) {
-        console.log("👁️ Visualizza ordine:", orderId);
-        // TODO: Mostra dettagli ordine in modal
-    },
 
     // Scanner QR Fidelity
     openFidelityQRScanner() {
