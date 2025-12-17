@@ -554,16 +554,21 @@ const App = {
     },
 
     loadOrders() {
-        // PRIMA aggiorna le stats e i bottoni
+        this.populateYearFilter();
+        this.populateProductFilter();
         this.updateOrdersStats();
         this.updateFilterButtons();
 
-        // POI popola i filtri
-        this.populateYearFilter();
-        this.populateProductFilter();
-
-        // INFINE mostra gli ordini
-        this.displayOrders(OrdersModule.getAllOrders('delivery_with_order_number'));
+        // Se c'è un filtro attivo, applicalo
+        if (this.currentOrderFilter && this.currentOrderFilter !== 'all') {
+            this.applyOrderFilters();
+        } else {
+            // Altrimenti mostra tutti gli ordini futuri
+            const today = new Date().toISOString().split('T')[0];
+            const futureOrders = OrdersModule.getAllOrders('delivery_with_order_number')
+                .filter(o => o.status !== 'delivered');
+            this.displayOrders(futureOrders);
+        }
     },
 
     updateOrdersStats() {
