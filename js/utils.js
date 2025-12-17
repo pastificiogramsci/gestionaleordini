@@ -125,6 +125,26 @@ const Utils = {
 
         return `${dayName} ${day} ${month} ${year}`;
     },
+
+    // Formatta quantità prodotto (gestisce pezzi e kg)
+    formatProductQuantity(quantity, product, item) {
+        if (!product) return `${quantity} kg`;
+
+        // Se prodotto venduto a peso con peso medio disponibile
+        if (item?.mode === 'weight' && product.averageWeight && product.averageWeight > 0) {
+            const pieces = Math.round(quantity / product.averageWeight);
+            return `${pieces} ${pieces === 1 ? 'pezzo' : 'pezzi'} (${quantity.toFixed(2)} kg)`;
+        }
+
+        // Se prodotto venduto a pezzi
+        if (item?.mode === 'pieces') {
+            const pieces = Math.round(quantity);
+            return `${pieces} ${pieces === 1 ? 'pezzo' : 'pezzi'}`;
+        }
+
+        // Default: kg con 2 decimali
+        return `${quantity.toFixed(2)} ${product.unit || 'kg'}`;
+    },
 };
 
 // Rendi Utils disponibile globalmente

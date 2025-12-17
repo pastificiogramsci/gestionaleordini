@@ -1976,12 +1976,12 @@ const App = {
             <div class="bg-gray-50 rounded p-3 mb-2">
                 <div class="text-sm text-gray-700 space-y-1.5">
                     ${o.items.slice(0, 3).map(item => {
-                                const product = ProductsModule.getProductById(item.productId);
-                                return `<div class="flex items-center">
+                    const product = ProductsModule.getProductById(item.productId);
+                    return `<div class="flex items-center">
                             <span class="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
-                            <span><strong>${product?.name || 'Prodotto'}</strong> - ${item.quantity} ${item.unit || 'kg'}</span>
+                            <span><strong>${product?.name || 'Prodotto'}</strong> - ${Utils.formatProductQuantity(item.quantity, product, item)}</span>
                         </div>`;
-                            }).join('')}
+                }).join('')}
                     ${o.items.length > 3 ? `<div class="text-gray-500 italic text-center mt-2">...e altri ${o.items.length - 3} prodotti</div>` : ''}
                 </div>
             </div>
@@ -2177,8 +2177,20 @@ const App = {
         const ordersEl = document.getElementById('product-result-orders');
 
         titleEl.textContent = product ? product.name : 'Prodotto';
-        quantityEl.textContent = `${totalQuantity} ${product?.unit || 'pz'}`;
+
+        // Se prodotto ha peso medio, calcola anche i pezzi
+        let quantityText = '';
+        if (product && product.averageWeight && product.averageWeight > 0) {
+            const pieces = Math.ceil(totalQuantity / product.averageWeight);
+            quantityText = `${pieces} ${pieces === 1 ? 'pezzo' : 'pezzi'} (${totalQuantity.toFixed(2)} kg)`;
+        } else {
+            quantityText = `${totalQuantity.toFixed(2)} ${product?.unit || 'kg'}`;
+        }
+
+        quantityEl.textContent = quantityText;
         ordersEl.textContent = `In ${orders.length} ordini dal ${Utils.formatDate(startDate)} al ${Utils.formatDate(endDate)}`;
+
+
 
         resultDiv.classList.remove('hidden');
 

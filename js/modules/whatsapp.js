@@ -134,20 +134,7 @@ _Pastificio Gramsci_`;
 
         const itemsList = order.items.map(item => {
             const product = ProductsModule.getProductById(item.productId);
-
-            let displayQty = '';
-
-            if (item.mode === 'weight' && product?.averageWeight) {
-                const pezzi = Math.round(item.quantity / product.averageWeight);
-                displayQty = `${pezzi} pz`;
-            } else if (item.mode === 'pieces') {
-                displayQty = `${item.quantity} pz`;
-            } else if (item.mode === 'kg') {
-                displayQty = `${item.quantity.toFixed(2)} kg`;
-            } else {
-                displayQty = `${item.quantity.toFixed(2)} ${item.unit || 'kg'}`;
-            }
-
+            const displayQty = Utils.formatProductQuantity(item.quantity, product, item);
             return `• ${product?.name || 'Prodotto'} - ${displayQty}`;
         }).join('\n');
 
@@ -203,7 +190,8 @@ _Pastificio Gramsci_`;
         order.items.forEach(item => {
             const product = ProductsModule.getProductById(item.productId);
             const productName = product?.name || 'Prodotto';
-            message += `• ${productName} - ${item.quantity} kg \n`;
+            const displayQty = Utils.formatProductQuantity(item.quantity, product, item);
+            message += `• ${productName} - ${displayQty}\n`;
         });
 
         // Note
