@@ -1972,17 +1972,17 @@ const App = {
             </h3>
             <p class="text-sm text-gray-600 mb-2">${o.items.length} prodotti ${o.deliveryTime ? '• Ore: ' + o.deliveryTime : ''}</p>
             
-            <!-- Lista Prodotti -->
-            <div class="bg-gray-50 rounded p-2 mb-2">
-                <div class="text-xs text-gray-700 space-y-1">
+           <!-- Lista Prodotti -->
+            <div class="bg-gray-50 rounded p-3 mb-2">
+                <div class="text-sm text-gray-700 space-y-1.5">
                     ${o.items.slice(0, 3).map(item => {
-                    const product = ProductsModule.getProductById(item.productId);
-                    return `<div class="flex justify-between">
-                            <span>• ${product?.name || 'Prodotto'} (${item.quantity} ${item.unit || 'kg'})</span>
-                            <span class="font-medium">${Utils.formatPrice(item.price * item.quantity)}</span>
+                                const product = ProductsModule.getProductById(item.productId);
+                                return `<div class="flex items-center">
+                            <span class="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
+                            <span><strong>${product?.name || 'Prodotto'}</strong> - ${item.quantity} ${item.unit || 'kg'}</span>
                         </div>`;
-                }).join('')}
-                    ${o.items.length > 3 ? `<div class="text-gray-500 italic text-center mt-1">...e altri ${o.items.length - 3} prodotti</div>` : ''}
+                            }).join('')}
+                    ${o.items.length > 3 ? `<div class="text-gray-500 italic text-center mt-2">...e altri ${o.items.length - 3} prodotti</div>` : ''}
                 </div>
             </div>
             
