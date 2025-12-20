@@ -2067,12 +2067,24 @@ const App = {
     },
 
     applyOrderFilters() {
+        const customerFilter = document.getElementById('order-customer-filter').value.toLowerCase().trim();
         const dateFilter = document.getElementById('order-date-filter').value;
         const monthFilter = document.getElementById('order-month-filter').value;
         const yearFilter = document.getElementById('order-year-filter').value;
         const today = new Date().toISOString().split('T')[0];
 
         let orders = OrdersModule.getAllOrders('delivery_with_order_number');
+
+        // Filtra per cliente (nome o cognome)
+        if (customerFilter) {
+            orders = orders.filter(o => {
+                const customer = CustomersModule.getCustomerById(o.customerId);
+                if (!customer) return false;
+
+                const fullName = `${customer.firstName || ''} ${customer.lastName || ''}`.toLowerCase();
+                return fullName.includes(customerFilter);
+            });
+        }
 
         // Filtra per data specifica
         if (dateFilter) {
@@ -2086,9 +2098,9 @@ const App = {
         else if (yearFilter) {
             orders = orders.filter(o => o.deliveryDate && o.deliveryDate.startsWith(yearFilter));
         }
-        // Nessun filtro data = mostra solo ordini futuri
-        else {
-            orders = orders.filter(o => !o.deliveryDate || o.deliveryDate >= today);
+        // Nessun filtro data = mostra solo ordini futuri (non consegnati)
+        else if (!customerFilter) {
+            orders = orders.filter(o => o.status !== 'delivered');
         }
 
         // Applica anche filtro stato se attivo
@@ -2101,6 +2113,7 @@ const App = {
     },
 
     clearOrderFilters() {
+        document.getElementById('order-customer-filter').value = '';
         document.getElementById('order-date-filter').value = '';
         document.getElementById('order-month-filter').value = '';
         document.getElementById('order-year-filter').value = '';
