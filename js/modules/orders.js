@@ -447,6 +447,16 @@ const OrdersModule = {
         return order;
     },
 
+    unmarkItemPrepared(orderId, itemIndex) {
+        const order = this.getOrderById(orderId);
+        if (!order || !order.items[itemIndex]) return false;
+
+        order.items[itemIndex].prepared = false;
+        this.saveOrders();
+        console.log(`🔄 Item ${itemIndex} dell'ordine ${orderId} - preparazione annullata`);
+        return true;
+    },
+
     markAllItemsOfProductPrepared(productId, date) {
         const orders = this.getOrdersByDeliveryDate(date).filter(o =>
             o.status === 'pending' || o.status === 'in_preparation' || o.status === 'confirmed'

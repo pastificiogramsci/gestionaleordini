@@ -7,6 +7,7 @@ const App = {
     initialized: false,
     currentTab: 'dashboard',
     isProcessing: false,
+    openPreparationItems: new Set(),
 
     // ==========================================
     // INIZIALIZZAZIONE
@@ -352,7 +353,7 @@ const App = {
             case 'preparation':
                 const prepDate = document.getElementById('prep-date');
                 if (prepDate && !prepDate.value) {
-                    prepDate.value = this.getTomorrowDate();
+                    prepDate.value = new Date().toISOString().split('T')[0];
                 }
                 this.loadPreparation();
                 break;
@@ -1540,6 +1541,14 @@ const App = {
         const container = document.getElementById('preparation-list');
         const today = new Date().toISOString().split('T')[0];
 
+        // Salva quali tendine sono attualmente aperte
+        products.forEach((p, idx) => {
+            const element = document.getElementById(`prep-${idx}`);
+            if (element && !element.classList.contains('hidden')) {
+                this.openPreparationItems.add(p.productId);
+            }
+        });
+
         // Filtra prodotti con ordini preparabili (data non passata)
         const preparableProducts = products.filter(p => {
             return p.orders.some(o => {
@@ -1595,11 +1604,12 @@ const App = {
     <!-- Desktop: Tabella (visibile solo su schermi medi+) -->
     <div class="hidden md:block">
         <table class="w-full text-sm">
-            <thead class="bg-gray-100">
+           <thead class="bg-gray-100">
                 <tr>
                     <th class="px-3 py-2 text-left">Ordine</th>
                     <th class="px-3 py-2 text-left">Cliente</th>
                     <th class="px-3 py-2 text-right">Quantità</th>
+                    <th class="px-3 py-2 text-center">Sacchetti</th>
                     <th class="px-3 py-2 text-center">Stato</th>
                     <th class="px-3 py-2 text-center">Azione</th>
                 </tr>
@@ -1610,22 +1620,53 @@ const App = {
                 const itemIdx = order.items.findIndex(i => i.productId === p.productId);
                 const item = order.items[itemIdx];
                 const isPrepared = item?.prepared;
+                const bagsData = app.getBagsData(o.orderId, p.productId);
+                const allBagsChecked = bagsData.total > 0 && bagsData.checked.every(c => c);
 
                 return `
                         <tr class="border-b ${isPrepared ? 'bg-green-50' : ''}">
                             <td class="px-3 py-2"><span class="bg-blue-600 text-white px-2 py-1 rounded text-xs">${o.orderNumber}</span></td>
                             <td class="px-3 py-2">${o.customerName}</td>
                             <td class="px-3 py-2 text-right font-bold">${o.quantity.toFixed(2)}</td>
+                            <td class="px-3 py-2">
+                                ${!isPrepared ? `
+                                    <div class="flex flex-col gap-1 items-center">
+                                        <input type="number" min="0" max="20" value="${bagsData.total || ''}" 
+                                            placeholder="N°"
+                                            onchange="app.updateBagCount('${o.orderId}', '${p.productId}', this.value)"
+                                            class="w-16 px-2 py-1 border rounded text-xs text-center">
+                                        ${bagsData.total > 0 ? `
+                                            <div class="flex gap-1 flex-wrap justify-center">
+                                                ${bagsData.checked.map((checked, idx) => `
+                                                    <label class="cursor-pointer">
+                                                        <input type="checkbox" ${checked ? 'checked' : ''} 
+                                                            onchange="app.toggleBag('${o.orderId}', '${p.productId}', ${idx})"
+                                                            class="w-4 h-4">
+                                                    </label>
+                                                `).join('')}
+                                            </div>
+                                            <span class="text-xs ${allBagsChecked ? 'text-green-600 font-bold' : 'text-gray-600'}">
+                                                ${bagsData.checked.filter(c => c).length}/${bagsData.total}
+                                            </span>
+                                        ` : ''}
+                                    </div>
+                                ` : '<span class="text-green-600 font-bold text-xs">✓</span>'}
+                            </td>
                             <td class="px-3 py-2 text-center">${isPrepared ? '<span class="text-green-600 font-bold">✓</span>' : '-'}</td>
                             <td class="px-3 py-2 text-center">
                                 ${!isPrepared ? `
                                     <button onclick="app.markItemPrepared('${o.orderId}', ${itemIdx})" class="bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700">Fatto</button>
-                                ` : '<span class="text-green-600 text-xs">Completato</span>'}
+                                ` : `
+                                    <div class="flex flex-col gap-1 items-center">
+                                        <span class="text-green-600 text-xs font-bold">✓ Completato</span>
+                                        <button onclick="app.unmarkItemPrepared('${o.orderId}', ${itemIdx})" class="bg-orange-500 text-white px-2 py-1 rounded text-xs hover:bg-orange-600">↩️ Annulla</button>
+                                    </div>
+                                `}
                             </td>
                         </tr>
                         ${order.notes && order.notes.trim() ? `
                             <tr class="${isPrepared ? 'bg-green-50' : ''}">
-                                <td colspan="5" class="px-3 py-2">
+                                <td colspan="6" class="px-3 py-2">
                                     <div class="bg-yellow-50 border-l-4 border-yellow-400 p-2 rounded">
                                         <span class="text-xs font-bold text-yellow-800">📝 Note:</span>
                                         <span class="text-xs text-gray-700 ml-2">${order.notes}</span>
@@ -1668,8 +1709,14 @@ const App = {
                                 ` : ''}
                                 
                                 ${isPrepared ? `
-                                    <div class="bg-green-100 border-2 border-green-400 rounded-lg p-3 text-center">
-                                        <span class="text-green-600 font-bold text-lg">✓ Completato</span>
+                                    <div class="space-y-2">
+                                        <div class="bg-green-100 border-2 border-green-400 rounded-lg p-3 text-center">
+                                            <span class="text-green-600 font-bold text-lg">✓ Completato</span>
+                                        </div>
+                                        <button onclick="app.unmarkItemPrepared('${o.orderId}', ${itemIdx})" 
+                                                class="w-full bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 font-bold">
+                                            ↩️ Annulla preparazione
+                                        </button>
                                     </div>
                                 ` : `
                                     <button onclick="app.markItemPrepared('${o.orderId}', ${itemIdx})" 
@@ -1685,6 +1732,18 @@ const App = {
             </div>
             `;
         }).join('');
+
+        // Ripristina tendine che erano aperte
+        setTimeout(() => {
+            products.forEach((p, idx) => {
+                if (this.openPreparationItems.has(p.productId)) {
+                    const element = document.getElementById(`prep-${idx}`);
+                    if (element) {
+                        element.classList.remove('hidden');
+                    }
+                }
+            });
+        }, 10);
     },
 
     markItemPrepared(orderId, itemIndex) {
@@ -1703,6 +1762,28 @@ const App = {
         this.loadDashboard();
     },
 
+    unmarkItemPrepared(orderId, itemIndex) {
+        const order = OrdersModule.getOrderById(orderId);
+        if (!order) return;
+
+        if (confirm("Annullare la preparazione di questo prodotto?")) {
+            const item = order.items[itemIndex];
+
+            // Rimuovi preparazione
+            OrdersModule.unmarkItemPrepared(orderId, itemIndex);
+
+            // Reset sacchetti
+            if (item?.productId) {
+                const key = `bags_${orderId}_${item.productId}`;
+                localStorage.removeItem(key);
+            }
+
+            this.loadPreparation();
+            this.loadDashboard();
+            Utils.showToast("✅ Preparazione annullata", "success");
+        }
+    },
+
     markAllProduct(productId) {
         const date = document.getElementById('prep-date').value;
 
@@ -1716,6 +1797,45 @@ const App = {
         const marked = OrdersModule.markAllItemsOfProductPrepared(productId, date);
         Utils.showToast(`✅ ${marked} item preparati`, "success");
         this.loadPreparation();
+    },
+
+    // Gestione sacchetti preparazione
+    getBagsData(orderId, productId) {
+        const key = `bags_${orderId}_${productId}`;
+        const data = localStorage.getItem(key);
+        return data ? JSON.parse(data) : { total: 0, checked: [] };
+    },
+
+    saveBagsData(orderId, productId, data) {
+        const key = `bags_${orderId}_${productId}`;
+        localStorage.setItem(key, JSON.stringify(data));
+    },
+
+    updateBagCount(orderId, productId, count) {
+        const data = this.getBagsData(orderId, productId);
+        data.total = parseInt(count) || 0;
+        data.checked = new Array(data.total).fill(false);
+        this.saveBagsData(orderId, productId, data);
+        this.loadPreparation();
+    },
+
+    toggleBag(orderId, productId, bagIndex) {
+        const data = this.getBagsData(orderId, productId);
+        if (bagIndex < data.checked.length) {
+            data.checked[bagIndex] = !data.checked[bagIndex];
+            this.saveBagsData(orderId, productId, data);
+
+            // Se tutti i sacchetti sono spuntati, segna come preparato
+            if (data.total > 0 && data.checked.every(c => c)) {
+                const order = OrdersModule.getOrderById(orderId);
+                const itemIdx = order.items.findIndex(i => i.productId === productId);
+                if (itemIdx !== -1) {
+                    this.markItemPrepared(orderId, itemIdx);
+                }
+            } else {
+                this.loadPreparation();
+            }
+        }
     },
 
     applyPrepFilters() {
@@ -1744,7 +1864,7 @@ const App = {
         document.getElementById('prep-date').value = '';
         document.getElementById('prep-month-filter').value = '';
         document.getElementById('prep-year-filter').value = '';
-        document.getElementById('prep-date').value = this.getTomorrowDate();
+        document.getElementById('prep-date').value = new Date().toISOString().split('T')[0];
         this.loadPreparation();
     },
 
@@ -1982,10 +2102,12 @@ const App = {
                 <div class="text-sm text-gray-700 space-y-1.5">
                     ${o.items.slice(0, 3).map(item => {
                     const product = ProductsModule.getProductById(item.productId);
+                    const bagsData = app.getBagsData(o.id, item.productId);
+                    const bagsInfo = bagsData.total > 0 ? ` <span class="text-blue-600">(${bagsData.total} sacch.)</span>` : '';
                     return `<div class="flex items-center">
                             <span class="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
-                            <span><strong>${product?.name || 'Prodotto'}</strong> - ${Utils.formatProductQuantity(item.quantity, product, item)}</span>
-                        </div>`;
+                            <span><strong>${product?.name || 'Prodotto'}</strong> - ${Utils.formatProductQuantity(item.quantity, product, item)}${bagsInfo}</span>
+                    </div>`;
                 }).join('')}
                     ${o.items.length > 3 ? `<div class="text-gray-500 italic text-center mt-2">...e altri ${o.items.length - 3} prodotti</div>` : ''}
                 </div>
@@ -3211,18 +3333,38 @@ const App = {
                 <h4 class="font-bold text-gray-800">📋 Prodotti</h4>
             </div>
             <div class="divide-y">
-                ${order.items.map(item => `
-                    <div class="flex justify-between items-center p-3 hover:bg-gray-50">
-                        <div class="flex-1">
-                            <p class="font-medium text-gray-800">${item.productName}</p>
-                            <p class="text-sm text-gray-600">Quantità: ${item.quantity} ${item.unit || 'kg'}</p>
-                        </div>
-                        <div class="text-right">
-                            <p class="font-bold text-gray-800">${Utils.formatPrice(item.price * item.quantity)}</p>
-                            <p class="text-xs text-gray-500">${Utils.formatPrice(item.price)}/${item.unit || 'kg'}</p>
+                ${order.items.map(item => {
+            const bagsData = app.getBagsData(order.id, item.productId);
+            const checkedCount = bagsData.checked.filter(c => c).length;
+
+            return `
+                    <div class="p-3 hover:bg-gray-50">
+                        <div class="flex justify-between items-center">
+                            <div class="flex-1">
+                                <p class="font-medium text-gray-800">${item.productName}</p>
+                                <p class="text-sm text-gray-600">Quantità: ${item.quantity} ${item.unit || 'kg'}</p>
+                                ${bagsData.total > 0 ? `
+                                    <div class="mt-2 bg-blue-50 rounded p-2">
+                                        <p class="text-xs font-bold text-blue-800 mb-1">📦 Sacchetti:</p>
+                                        <div class="flex gap-1 flex-wrap">
+                                            ${bagsData.checked.map((checked, idx) => `
+                                                <span class="text-lg">${checked ? '✅' : '☐'}</span>
+                                            `).join('')}
+                                        </div>
+                                        <p class="text-xs mt-1 ${checkedCount === bagsData.total ? 'text-green-600 font-bold' : 'text-gray-600'}">
+                                            ${checkedCount}/${bagsData.total} pronti
+                                        </p>
+                                    </div>
+                                ` : ''}
+                            </div>
+                            <div class="text-right">
+                                <p class="font-bold text-gray-800">${Utils.formatPrice(item.price * item.quantity)}</p>
+                                <p class="text-xs text-gray-500">${Utils.formatPrice(item.price)}/${item.unit || 'kg'}</p>
+                            </div>
                         </div>
                     </div>
-                `).join('')}
+                `;
+        }).join('')}
             </div>
         </div>
 
