@@ -351,6 +351,8 @@ const App = {
                 this.displayOrders(futureOrders);
                 break;
             case 'preparation':
+                this.openPreparationItems.clear();
+
                 const prepDate = document.getElementById('prep-date');
                 if (prepDate && !prepDate.value) {
                     prepDate.value = new Date().toISOString().split('T')[0];
@@ -1492,6 +1494,7 @@ const App = {
     },
 
     loadPreparation() {
+        this.openPreparationItems.clear();
         const date = document.getElementById('prep-date').value;
         if (!date) {
             Utils.showToast("Seleziona una data", "warning");
