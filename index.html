@@ -1066,12 +1066,17 @@
         <!-- Modal Dettagli Ordine -->
         <div id="order-details-modal"
             class="modal fixed inset-0 bg-black bg-opacity-50 items-center justify-center p-4 z-50 hidden">
-            <div class="bg-white rounded-lg p-6 w-full max-w-lg">
-                <div class="flex justify-between mb-4">
+            <div class="bg-white rounded-lg w-full max-w-lg max-h-[90vh] flex flex-col">
+                <!-- Header fisso -->
+                <div class="flex justify-between items-center p-4 border-b sticky top-0 bg-white rounded-t-lg">
                     <h3 class="text-xl font-bold">Dettagli Ordine</h3>
-                    <button onclick="app.closeModal('order-details-modal')" class="text-gray-500">✕</button>
+                    <button onclick="app.closeModal('order-details-modal')"
+                        class="text-gray-500 hover:text-gray-700 text-2xl font-bold w-10 h-10 flex items-center justify-center">
+                        ✕
+                    </button>
                 </div>
-                <div id="order-details-content"></div>
+                <!-- Contenuto scrollabile -->
+                <div id="order-details-content" class="overflow-y-auto p-6"></div>
             </div>
         </div>
 
