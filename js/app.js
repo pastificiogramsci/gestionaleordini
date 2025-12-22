@@ -8,6 +8,7 @@ const App = {
     currentTab: 'dashboard',
     isProcessing: false,
     openPreparationItems: new Set(),
+    openOrderDays: new Set(),
 
     // ==========================================
     // INIZIALIZZAZIONE
@@ -2022,147 +2023,168 @@ const App = {
 
     displayOrders(orders) {
         const container = document.getElementById('orders-list');
-        if (!container) return;
 
-        if (orders.length === 0) {
-            container.innerHTML = '<p class="text-gray-500 text-center py-8">Nessun ordine</p>';
+        if (!orders || orders.length === 0) {
+            container.innerHTML = '<p class="text-center text-gray-500 py-8">Nessun ordine trovato</p>';
             return;
         }
 
         const statusColors = {
-            pending: "bg-yellow-100 text-yellow-800",
-            confirmed: "bg-blue-100 text-blue-800",
-            in_preparation: "bg-purple-100 text-purple-800",
-            ready: "bg-green-100 text-green-800",
-            delivered: "bg-gray-100 text-gray-800",
-            cancelled: "bg-red-100 text-red-800"
+            pending: 'bg-yellow-100 text-yellow-800',
+            confirmed: 'bg-blue-100 text-blue-800',
+            in_preparation: 'bg-purple-100 text-purple-800',
+            ready: 'bg-green-100 text-green-800',
+            delivered: 'bg-gray-100 text-gray-800',
+            cancelled: 'bg-red-100 text-red-800'
         };
 
         const statusNames = {
-            pending: "In attesa",
-            confirmed: "Confermato",
-            in_preparation: "In preparazione",
-            ready: "Pronto",
-            delivered: "Consegnato",
-            cancelled: "Annullato"
+            pending: 'In attesa',
+            confirmed: 'Confermato',
+            in_preparation: 'In preparazione',
+            ready: 'Pronto',
+            delivered: 'Consegnato',
+            cancelled: 'Annullato'
         };
 
-        // Raggruppa ordini per data
-        const ordersByDate = {};
-        orders.forEach(order => {
-            const date = order.deliveryDate || 'no-date';
-            if (!ordersByDate[date]) {
-                ordersByDate[date] = [];
+        // Raggruppa per data
+        const byDate = {};
+        orders.forEach(o => {
+            const date = o.deliveryDate || 'no-date';
+            if (!byDate[date]) {
+                byDate[date] = [];
             }
-            ordersByDate[date].push(order);
+            byDate[date].push(o);
         });
 
         // Ordina le date
-        const sortedDates = Object.keys(ordersByDate).sort((a, b) => {
+        const sortedDates = Object.keys(byDate).sort((a, b) => {
             if (a === 'no-date') return 1;
             if (b === 'no-date') return -1;
-            return new Date(a) - new Date(b);
+            return a.localeCompare(b);
         });
 
-        // Genera HTML raggruppato per data
-        container.innerHTML = sortedDates.map(date => {
-            const dateOrders = ordersByDate[date];
-            const today = new Date().toISOString().split('T')[0];
+        const today = new Date().toISOString().split('T')[0];
 
-            // Intestazione data
-            let dateHeader;
-            let dateClass;
+        container.innerHTML = sortedDates.map((date, dateIdx) => {
+            const dateOrders = byDate[date];
 
-            if (date === 'no-date') {
-                dateHeader = '📅 Senza data di consegna';
-                dateClass = 'bg-gray-500';
-            } else if (date === today) {
-                dateHeader = '🔥 Oggi - ' + Utils.formatDateWithDay(date);
-                dateClass = 'bg-red-500';
-            } else {
-                dateHeader = '📅 ' + Utils.formatDateWithDay(date);
-                dateClass = 'bg-blue-500';
+            // Calcola totale fatturato giornata
+            const dailyTotal = dateOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+
+            // Determina colore intestazione
+            let headerColor = 'bg-gray-500';
+            let headerIcon = '📅';
+            let dateLabel = 'Senza data di consegna';
+
+            if (date !== 'no-date') {
+                dateLabel = Utils.formatDateWithDay(date);
+                if (date === today) {
+                    headerColor = 'bg-red-500';
+                    headerIcon = '🔥';
+                } else if (date > today) {
+                    headerColor = 'bg-blue-500';
+                }
             }
 
-            const ordersHtml = dateOrders.map(o => {
+            // Verifica se questa giornata è aperta
+            const isOpen = this.openOrderDays.has(date);
+
+            return `
+            <div class="mb-6">
+                <!-- Intestazione giornata cliccabile -->
+                <div class="${headerColor} text-white p-4 rounded-lg shadow-lg mb-3 cursor-pointer hover:opacity-90 transition"
+                     onclick="app.toggleOrderDay('${date}')">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <h3 class="text-xl font-bold">${headerIcon} ${dateLabel}</h3>
+                            <p class="text-sm opacity-90">${dateOrders.length} ordini • Totale: ${Utils.formatPrice(dailyTotal)}</p>
+                        </div>
+                        <span class="text-3xl transform transition-transform ${isOpen ? '' : 'rotate-180'}">▼</span>
+                    </div>
+                </div>
+
+                <!-- Ordini della giornata -->
+                <div id="day-${dateIdx}" class="space-y-3 ${isOpen ? '' : 'hidden'}">
+                    ${dateOrders.map(o => {
                 const customer = CustomersModule.getCustomerById(o.customerId);
-                const customerName = customer ? `${customer.firstName} ${customer.lastName}` : 'Cliente sconosciuto';
+                const customerName = customer ? CustomersModule.getFullName(o.customerId) : 'Cliente non trovato';
 
                 return `
-                <div class="bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-lg transition" onclick="app.viewOrderDetails('${o.id}')">
-    <div class="flex justify-between items-start mb-2">
-        <div class="flex-1 mr-4">
-            <h3 class="font-bold text-lg">
-                #${o.orderNumber || 'N/A'} - ${customerName}
-                ${o.modifications ? '<span class="ml-2 bg-orange-500 text-white px-2 py-1 rounded-full text-xs">⚠️ Da modificare</span>' : ''}
-                ${o.deliveryDate && o.deliveryDate < new Date().toISOString().split('T')[0] && o.status !== 'delivered' ? '<span class="ml-2 bg-red-500 text-white px-2 py-1 rounded-full text-xs">📅 Data passata</span>' : ''}
-                ${o.deposit > 0 ? (o.depositPaid ? '<span class="ml-2 bg-green-500 text-white px-2 py-1 rounded-full text-xs">✓ Acconto</span>' : '<span class="ml-2 bg-yellow-500 text-white px-2 py-1 rounded-full text-xs">⚠️ Acconto richiesto</span>') : ''}
-            </h3>
-            <p class="text-sm text-gray-600 mb-2">${o.items.length} prodotti ${o.deliveryTime ? '• Ore: ' + o.deliveryTime : ''}</p>
-            
-           <!-- Lista Prodotti -->
-            <div class="bg-gray-50 rounded p-3 mb-2">
-                <div class="text-sm text-gray-700 space-y-1.5">
-                    ${o.items.slice(0, 3).map(item => {
+                            <div class="bg-white p-4 rounded-lg shadow cursor-pointer hover:shadow-lg transition" onclick="app.viewOrderDetails('${o.id}')">
+                                <div class="flex justify-between items-start mb-2">
+                                    <div class="flex-1 mr-4">
+                                        <h3 class="font-bold text-lg">
+                                            #${o.orderNumber || 'N/A'} - ${customerName}
+                                            ${o.modifications ? '<span class="ml-2 bg-orange-500 text-white px-2 py-1 rounded-full text-xs">⚠️ Da modificare</span>' : ''}
+                                            ${o.deliveryDate && o.deliveryDate < today && o.status !== 'delivered' ? '<span class="ml-2 bg-red-500 text-white px-2 py-1 rounded-full text-xs">📅 Data passata</span>' : ''}
+                                            ${o.deposit > 0 ? (o.depositPaid ? '<span class="ml-2 bg-green-500 text-white px-2 py-1 rounded-full text-xs">✓ Acconto</span>' : '<span class="ml-2 bg-yellow-500 text-white px-2 py-1 rounded-full text-xs">⚠️ Acconto richiesto</span>') : ''}
+                                        </h3>
+                                        <p class="text-sm text-gray-600 mb-2">${o.items.length} prodotti ${o.deliveryTime ? '• Ore: ' + o.deliveryTime : ''}</p>
+                                        
+                                        <!-- Lista Prodotti -->
+                                        <div class="bg-gray-50 rounded p-3 mb-2">
+                                            <div class="text-sm text-gray-700 space-y-1.5">
+                                                ${o.items.slice(0, 3).map(item => {
                     const product = ProductsModule.getProductById(item.productId);
                     const bagsData = app.getBagsData(o.id, item.productId);
                     const bagsInfo = bagsData.total > 0 ? ` <span class="text-blue-600">(${bagsData.total} sacch.)</span>` : '';
                     return `<div class="flex items-center">
-                            <span class="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
-                            <span><strong>${product?.name || 'Prodotto'}</strong> - ${Utils.formatProductQuantity(item.quantity, product, item)}${bagsInfo}</span>
-                    </div>`;
+                                                        <span class="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
+                                                        <span><strong>${product?.name || 'Prodotto'}</strong> - ${Utils.formatProductQuantity(item.quantity, product, item)}${bagsInfo}</span>
+                                                    </div>`;
                 }).join('')}
-                    ${o.items.length > 3 ? `<div class="text-gray-500 italic text-center mt-2">...e altri ${o.items.length - 3} prodotti</div>` : ''}
-                </div>
-            </div>
-            
-            ${o.deposit > 0 ? `<p class="text-sm font-medium ${o.depositPaid ? 'text-green-600' : 'text-orange-600'}">💰 Acconto: ${Utils.formatPrice(o.deposit)} ${o.depositPaid ? '(Ricevuto)' : '(Da ricevere)'}</p>` : ''}
-            
-            ${o.notes && o.notes.trim() ? `
-            <div class="mt-3 bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded">
-                <p class="text-sm font-bold text-yellow-800 mb-1">📝 Note:</p>
-                <p class="text-sm text-gray-700">${o.notes}</p>
-            </div>
-            ` : ''}
+                                                ${o.items.length > 3 ? `<div class="text-gray-500 italic text-center mt-2">...e altri ${o.items.length - 3} prodotti</div>` : ''}
+                                            </div>
+                                        </div>
+                                        
+                                        ${o.deposit > 0 ? `<p class="text-sm font-medium ${o.depositPaid ? 'text-green-600' : 'text-orange-600'}">💰 Acconto: ${Utils.formatPrice(o.deposit)} ${o.depositPaid ? '(Ricevuto)' : '(Da ricevere)'}</p>` : ''}
+                                        
+                                        ${o.notes && o.notes.trim() ? `
+                                        <div class="mt-3 bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded">
+                                            <p class="text-sm font-bold text-yellow-800 mb-1">📝 Note:</p>
+                                            <p class="text-sm text-gray-700">${o.notes}</p>
+                                        </div>
+                                        ` : ''}
 
-            <p class="text-xs text-gray-500 mt-2">Creato: ${Utils.formatDateTime(o.createdAt)}</p>
-        </div>
-        <div class="text-right">
-            <p class="text-2xl font-bold text-blue-600">${Utils.formatPrice(o.totalAmount)}</p>
-            ${o.deposit > 0 && !o.depositPaid ? `<p class="text-sm text-orange-600 font-medium">Residuo: ${Utils.formatPrice(o.totalAmount - o.deposit)}</p>` : ''}
-            <span class="text-xs px-2 py-1 rounded ${statusColors[o.status]}">${statusNames[o.status]}</span>
-        </div>
-    </div>
-
-    <div class="flex gap-2 mt-3">
-        ${o.status === 'pending' ? `<button onclick="event.stopPropagation(); OrdersModule.changeOrderStatus('${o.id}', 'in_preparation'); app.loadOrders(); app.loadDashboard()" class="text-xs px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">✓ Conferma</button>` : ''}
-        
-        ${o.status === 'confirmed' || o.status === 'in_preparation' ? `<button onclick="event.stopPropagation(); app.markOrderAsReady('${o.id}')" class="text-xs px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700">✓ Pronto</button>` : ''}
-        
-        ${o.status === 'ready' ? `<button onclick="event.stopPropagation(); OrdersModule.changeOrderStatus('${o.id}', 'delivered'); app.loadOrders(); app.loadDashboard()" class="text-xs px-3 py-1 bg-gray-600 text-white rounded hover:bg-gray-700">✓ Consegnato</button>` : ''}
-        
-        ${o.status === 'delivered' ? `<button onclick="event.stopPropagation(); app.undoDelivery('${o.id}')" class="text-xs px-3 py-1 bg-orange-600 text-white rounded hover:bg-orange-700">↩️ Annulla consegna</button>` : ''}
-        
-        ${o.status !== 'delivered' ? `<button onclick="event.stopPropagation(); app.editOrder('${o.id}')" class="text-xs px-3 py-1 bg-gray-200 rounded hover:bg-gray-300">✏️ Modifica</button>` : ''}
-        
-        <button onclick="event.stopPropagation(); app.deleteOrder('${o.id}')" class="text-red-600 text-sm ml-auto hover:text-red-800">🗑️</button>
-    </div>
-</div>
-            `;
-            }).join('');
-
-            return `
-            <div class="mb-8">
-                <div class="${dateClass} text-white px-6 py-3 rounded-lg shadow-md mb-4">
-                    <h2 class="text-xl font-bold">${dateHeader}</h2>
-                    <p class="text-sm opacity-90">${dateOrders.length} ordini</p>
-                </div>
-                <div class="space-y-4">
-                    ${ordersHtml}
+                                        <p class="text-xs text-gray-500 mt-2">Creato: ${Utils.formatDateTime(o.createdAt)}</p>
+                                    </div>
+                                    <div class="text-right">
+                                        <p class="text-2xl font-bold text-blue-600">${Utils.formatPrice(o.totalAmount)}</p>
+                                        ${o.deposit > 0 && !o.depositPaid ? `<p class="text-sm text-orange-600 font-medium">Residuo: ${Utils.formatPrice(o.totalAmount - o.deposit)}</p>` : ''}
+                                        <span class="text-xs px-2 py-1 rounded ${statusColors[o.status]}">${statusNames[o.status]}</span>
+                                    </div>
+                                </div>
+                            
+                                <div class="flex gap-2 mt-3">
+                                    ${o.status === 'pending' ? `<button onclick="event.stopPropagation(); OrdersModule.changeOrderStatus('${o.id}', 'in_preparation'); app.loadOrders(); app.loadDashboard()" class="text-xs px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">✓ Conferma</button>` : ''}
+                                    
+                                    ${o.status === 'confirmed' || o.status === 'in_preparation' ? `<button onclick="event.stopPropagation(); app.markOrderAsReady('${o.id}')" class="text-xs px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700">✓ Pronto</button>` : ''}
+                                    
+                                    ${o.status === 'ready' ? `<button onclick="event.stopPropagation(); OrdersModule.changeOrderStatus('${o.id}', 'delivered'); app.loadOrders(); app.loadDashboard()" class="text-xs px-3 py-1 bg-gray-600 text-white rounded hover:bg-gray-700">✓ Consegnato</button>` : ''}
+                                    
+                                    ${o.status === 'delivered' ? `<button onclick="event.stopPropagation(); app.undoDelivery('${o.id}')" class="text-xs px-3 py-1 bg-orange-600 text-white rounded hover:bg-orange-700">↩️ Annulla consegna</button>` : ''}
+                                    
+                                    ${o.status !== 'delivered' ? `<button onclick="event.stopPropagation(); app.editOrder('${o.id}')" class="text-xs px-3 py-1 bg-gray-200 rounded hover:bg-gray-300">✏️ Modifica</button>` : ''}
+                                    
+                                    <button onclick="event.stopPropagation(); app.deleteOrder('${o.id}')" class="text-red-600 text-sm ml-auto hover:text-red-800">🗑️</button>
+                                </div>
+                            </div>
+                        `;
+            }).join('')}
                 </div>
             </div>
         `;
         }).join('');
+    },
+
+    toggleOrderDay(date) {
+        if (this.openOrderDays.has(date)) {
+            this.openOrderDays.delete(date);
+        } else {
+            this.openOrderDays.add(date);
+        }
+        this.loadOrders();
     },
 
     filterOrders(status) {
@@ -3209,10 +3231,19 @@ const App = {
             if (!confirm(
                 `⚠️ ATTENZIONE\n\n` +
                 `Ci sono ancora ${unprepared} prodotto/i NON preparato/i.\n\n` +
-                `Vuoi comunque segnare l'ordine come PRONTO?`
+                `Segnare l'ordine come PRONTO segnerà automaticamente\n` +
+                `tutti i prodotti come preparati.\n\n` +
+                `Vuoi continuare?`
             )) {
                 return;
             }
+
+            // Segna automaticamente tutti gli item come preparati
+            order.items.forEach((item, idx) => {
+                if (!item.prepared) {
+                    OrdersModule.markItemPrepared(orderId, idx);
+                }
+            });
         }
 
         // Cambia stato a ready
@@ -3223,7 +3254,7 @@ const App = {
         this.loadDashboard();
         this.loadPreparation();
 
-        Utils.showToast("✅ Ordine pronto!", "success");
+        Utils.showToast("✅ Ordine pronto e prodotti preparati!", "success");
     },
 
     async deleteAllOrders() {
