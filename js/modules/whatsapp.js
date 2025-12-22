@@ -210,18 +210,29 @@ _Pastificio Gramsci_`;
 
         const displayName = this.getDisplayName(customer);
 
-        const message = `🎫 Ciao ${displayName}!
+        // ⬇️ LEGGI SEMPRE DALLA CAMPAGNA (RETROATTIVO) ⬇️
+        const campaign = CouponsModule.getCampaignById(coupon.campaignId);
+        const description = campaign ? campaign.description : coupon.description;
+        // ⬆️ FINE MODIFICA RETROATTIVA ⬆️
 
-Hai ricevuto un *nuovo coupon sconto*! 🎉
+        const message = `🎁 REGALO SPECIALE! 🎁
 
-*Campagna:* ${coupon.campaignName}
-*Descrizione:* ${coupon.description}
+Ciao ${displayName}!
+
+Hai ricevuto un *COUPON SCONTO* per ringraziarti della tua fedeltà! 🎉
+
+🎫 *COSA INCLUDE:*
+➡️ ${description}
+
+📱 *COME USARLO:*
+Mostra questo QR code alla cassa al tuo prossimo acquisto!
+
 *Codice:* ${coupon.code}
 *Valido fino al:* ${Utils.formatDate(coupon.expiryDate)}
 
-Mostra questo coupon alla cassa per usare lo sconto!
+Non perderlo! ⏰
 
-Grazie per la tua fedeltà! 😊
+Grazie di cuore! ❤️
 
 _Pastificio Gramsci_`;
 
@@ -239,13 +250,13 @@ _Pastificio Gramsci_`;
                     this.openWhatsApp(phone, message);
                 }, 1000);
 
-                Utils.showToast("✅ Card coupon scaricata! Mandala su WhatsApp", "success");
+                Utils.showToast("📱 Card coupon scaricata! Mandala su WhatsApp", "success");
             } else {
                 this.openWhatsApp(phone, message);
             }
         });
     },
-
+    
     sendDeliveryNotification(order) {
         const customer = CustomersModule.getCustomerById(order.customerId);
         if (!customer) return;

@@ -1150,8 +1150,11 @@ const App = {
                     <button onclick="app.assignCoupons('${c.id}')" class="flex-1 bg-pink-600 text-white px-4 py-2 rounded hover:bg-pink-700">
                         Assegna Coupon
                     </button>
-                    <button onclick="app.viewCampaignDetails('${c.id}')" class="flex-1 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-                        Dettagli
+                    <button onclick="app.editCampaign('${c.id}')" class="flex-1 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                        ✏️ Modifica
+                    </button>
+                    <button onclick="app.viewCampaignDetails('${c.id}')" class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700">
+                        👁️
                     </button>
                     <button onclick="app.deleteCampaign('${c.id}')" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">
                         🗑️
@@ -1337,6 +1340,83 @@ const App = {
             CouponsModule.deleteCampaign(campaignId);
             this.loadCoupons();
         }
+    },
+
+    editCampaign(campaignId) {
+        const campaign = CouponsModule.getCampaignById(campaignId);
+        if (!campaign) {
+            Utils.showToast("Campagna non trovata", "error");
+            return;
+        }
+
+        // Crea modal di modifica
+        const modalHtml = `
+        <div class="space-y-4">
+            <h3 class="text-xl font-bold">✏️ Modifica Campagna</h3>
+            
+            <div>
+                <label class="block text-sm font-bold mb-1">Nome campagna</label>
+                <input type="text" id="edit-campaign-name" value="${campaign.name}" 
+                    class="w-full px-3 py-2 border rounded">
+            </div>
+            
+            <div>
+                <label class="block text-sm font-bold mb-1">Descrizione (cosa include lo sconto)</label>
+                <textarea id="edit-campaign-description" rows="3"
+                    class="w-full px-3 py-2 border rounded"
+                    placeholder="Es: 20% di sconto su ordini da 20€">${campaign.description}</textarea>
+                <p class="text-xs text-gray-500 mt-1">💡 Questa descrizione apparirà nel messaggio WhatsApp</p>
+            </div>
+            
+            <div>
+                <label class="block text-sm font-bold mb-1">Data scadenza</label>
+                <input type="date" id="edit-campaign-expiry" value="${campaign.expiryDate}"
+                    class="w-full px-3 py-2 border rounded">
+            </div>
+            
+            <div class="flex gap-2">
+                <button onclick="document.getElementById('edit-campaign-modal').remove()" 
+                    class="flex-1 bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
+                    Annulla
+                </button>
+                <button onclick="app.saveEditedCampaign('${campaignId}')" 
+                    class="flex-1 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                    💾 Salva
+                </button>
+            </div>
+        </div>
+    `;
+
+        const div = document.createElement('div');
+        div.id = 'edit-campaign-modal';
+        div.innerHTML = `
+        <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onclick="this.remove()">
+            <div class="bg-white rounded-lg p-6 max-w-md w-full" onclick="event.stopPropagation()">
+                ${modalHtml}
+            </div>
+        </div>
+    `;
+        document.body.appendChild(div);
+    },
+
+    saveEditedCampaign(campaignId) {
+        const name = document.getElementById('edit-campaign-name').value;
+        const description = document.getElementById('edit-campaign-description').value;
+        const expiryDate = document.getElementById('edit-campaign-expiry').value;
+
+        if (!name || !description || !expiryDate) {
+            Utils.showToast("❌ Compila tutti i campi", "error");
+            return;
+        }
+
+        CouponsModule.updateCampaign(campaignId, {
+            name,
+            description,
+            expiryDate
+        });
+
+        document.getElementById('edit-campaign-modal').remove();
+        this.loadCoupons();
     },
 
     formatCampaignDates(campaign) {
