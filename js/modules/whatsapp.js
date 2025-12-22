@@ -246,7 +246,7 @@ _Pastificio Gramsci_`;
         });
     },
 
-    sendDeliveryNotification(order, hasCoupon = false) {
+    sendDeliveryNotification(order) {
         const customer = CustomersModule.getCustomerById(order.customerId);
         if (!customer) return;
 
@@ -255,56 +255,17 @@ _Pastificio Gramsci_`;
 
         const displayName = this.getDisplayName(customer);
 
-        let message = `📦 Ciao ${displayName}!
+        const message = `📦 Ciao ${displayName}!
 
 Il tuo ordine *#${order.orderNumber}* è stato consegnato! 🎉
 
-Grazie per averci scelto! 😊`;
+Grazie per averci scelto! 😊
 
-        if (hasCoupon) {
-            const coupon = customer.coupons?.find(c => !c.used && !c.notified);
-            if (coupon) {
-                message += `
+⭐⭐⭐⭐⭐
+Ti è piaciuto? Lasciaci una recensione su Google!
+👉 https://g.page/r/CUYacCbpX0mKEBM/review
 
-🎁 *SORPRESA!* Hai ricevuto un coupon sconto!
-
-*Descrizione:* ${coupon.description}
-*Codice:* ${coupon.code}
-
-Usalo nel tuo prossimo acquisto!`;
-
-                coupon.notified = true;
-                CustomersModule.saveCustomers();
-
-                message += `
-
-_Pastificio Gramsci_`;
-
-                QRModule.generateCouponQR(customer.id, coupon.id, (blob) => {
-                    if (blob) {
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        const fileName = this.getDisplayName(customer).replace(/\s+/g, '-');
-                        a.href = url;
-                        a.download = `coupon-${fileName}.png`;
-                        a.click();
-                        URL.revokeObjectURL(url);
-
-                        Utils.showToast("📱 Card coupon scaricata! Mandala su WhatsApp", "success");
-
-                        setTimeout(() => {
-                            this.openWhatsApp(phone, message);
-                        }, 1000);
-                    } else {
-                        this.openWhatsApp(phone, message);
-                    }
-                });
-
-                return;
-            }
-        }
-
-        message += `
+Ci aiuti tantissimo! 🙏
 
 _Pastificio Gramsci_`;
 

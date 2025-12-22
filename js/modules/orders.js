@@ -218,6 +218,23 @@ const OrdersModule = {
                 const stampsToAdd = Math.floor(order.totalAmount / 20);
                 if (stampsToAdd > 0) {
                     FidelityModule.addStamps(order.customerId, stampsToAdd, order.id);
+
+                    // Messaggio bollini OPZIONALE (dopo 2 secondi dal messaggio consegna)
+                    setTimeout(() => {
+                        if (confirm("Mandare notifica bollini fidelity su WhatsApp?")) {
+                            const customer = CustomersModule.getCustomerById(order.customerId);
+                            const fidelity = FidelityModule.getFidelityCustomer(order.customerId);
+                            if (customer && fidelity) {
+                                WhatsAppModule.sendStampsNotification(
+                                    customer,
+                                    stampsToAdd,
+                                    fidelity.stamps,
+                                    10 - (fidelity.stamps % 10),
+                                    Math.floor(fidelity.stamps / 10) - fidelity.rewardsUsed
+                                );
+                            }
+                        }
+                    }, 2000);
                 }
             } else {
                 console.log('🎫 Coupon attivo - bollini non assegnati');
@@ -239,11 +256,21 @@ const OrdersModule = {
                     CouponsModule.assignCoupon(order.customerId, activeCampaign.id);
                     couponAssigned = true;
                     console.log('🎫 Coupon assegnato automaticamente');
+
+                    // Messaggio coupon OPZIONALE (dopo 4 secondi)
+                    setTimeout(() => {
+                        if (confirm("Mandare card coupon su WhatsApp?")) {
+                            const coupon = customer.coupons?.find(c => c.campaignId === activeCampaign.id);
+                            if (coupon) {
+                                WhatsAppModule.sendCouponMessage(customer, coupon);
+                            }
+                        }
+                    }, 4000);
                 }
             }
         }
 
-        // Messaggio consegna SEMPRE (con o senza coupon)
+        // Messaggio consegna SEMPRE (con link recensione Google)
         if (newStatus === this.ORDER_STATUS.DELIVERED && WhatsAppModule) {
             setTimeout(() => {
                 if (confirm("Mandare conferma consegna su WhatsApp?")) {
