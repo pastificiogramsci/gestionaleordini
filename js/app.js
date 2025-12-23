@@ -1668,14 +1668,18 @@ const App = {
                 <div class="bg-gradient-to-r from-orange-500 to-red-500 text-white p-4 flex justify-between items-center cursor-pointer" onclick="document.getElementById('prep-${idx}').classList.toggle('hidden')">
                     <div>
                         <h3 class="text-xl font-bold">🍝 ${p.productName}</h3>
-                        <p class="text-sm">${p.orders.length} ordini - Totale: ${p.totalQty.toFixed(2)}</p>
+                        <p class="text-sm">${p.orders.length} ordini - Totale: ${(() => {
+                            const product = ProductsModule.getProductById(p.productId);
+                            const firstItem = p.orders[0] ? OrdersModule.getOrderById(p.orders[0].orderId)?.items?.find(i => i.productId === p.productId) : null;
+                            return Utils.formatProductQuantity(p.totalQty, product, firstItem);
+                        })()}</p>
                     </div>
                     <div class="flex items-center gap-3">
                         <span class="text-sm">${p.orders.filter(o => {
-                const order = OrdersModule.getOrderById(o.orderId);
-                const item = order.items.find(i => i.productId === p.productId);
-                return item?.prepared;
-            }).length}/${p.orders.length} preparati</span>
+                    const order = OrdersModule.getOrderById(o.orderId);
+                    const item = order.items.find(i => i.productId === p.productId);
+                    return item?.prepared;
+                }).length}/${p.orders.length} preparati</span>
                         <span class="text-2xl">▼</span>
                     </div>
                 </div>
@@ -1700,18 +1704,23 @@ const App = {
             </thead>
             <tbody>
                 ${p.orders.map(o => {
-                const order = OrdersModule.getOrderById(o.orderId);
-                const itemIdx = order.items.findIndex(i => i.productId === p.productId);
-                const item = order.items[itemIdx];
-                const isPrepared = item?.prepared;
-                const bagsData = app.getBagsData(o.orderId, p.productId);
-                const allBagsChecked = bagsData.total > 0 && bagsData.checked.every(c => c);
+                    const order = OrdersModule.getOrderById(o.orderId);
+                    const itemIdx = order.items.findIndex(i => i.productId === p.productId);
+                    const item = order.items[itemIdx];
+                    const isPrepared = item?.prepared;
+                    const bagsData = app.getBagsData(o.orderId, p.productId);
+                    const allBagsChecked = bagsData.total > 0 && bagsData.checked.every(c => c);
 
-                return `
+                    return `
                         <tr class="border-b ${isPrepared ? 'bg-green-50' : ''}">
                             <td class="px-3 py-2"><span class="bg-blue-600 text-white px-2 py-1 rounded text-xs">${o.orderNumber}</span></td>
                             <td class="px-3 py-2">${o.customerName}</td>
-                            <td class="px-3 py-2 text-right font-bold">${o.quantity.toFixed(2)}</td>
+                            <td class="px-3 py-2 text-right font-bold">${(() => {
+                            const order = OrdersModule.getOrderById(o.orderId);
+                            const item = order.items.find(i => i.productId === p.productId);
+                            const product = ProductsModule.getProductById(p.productId);
+                            return Utils.formatProductQuantity(o.quantity, product, item);
+                        })()}</td>
                             <td class="px-3 py-2">
                                 ${!isPrepared ? `
                                     <div class="flex flex-col gap-1 items-center">
@@ -1759,7 +1768,7 @@ const App = {
                             </tr>
                         ` : ''}
                     `;
-            }).join('')}
+                }).join('')}
                 </tbody>
                 </table>
                 </div>
@@ -1767,12 +1776,12 @@ const App = {
                 <!-- Mobile: Card (visibile solo su schermi piccoli) -->
                 <div class="block md:hidden space-y-3">
                     ${p.orders.map(o => {
-                const order = OrdersModule.getOrderById(o.orderId);
-                const itemIdx = order.items.findIndex(i => i.productId === p.productId);
-                const item = order.items[itemIdx];
-                const isPrepared = item?.prepared;
+                    const order = OrdersModule.getOrderById(o.orderId);
+                    const itemIdx = order.items.findIndex(i => i.productId === p.productId);
+                    const item = order.items[itemIdx];
+                    const isPrepared = item?.prepared;
 
-                return `
+                    return `
                             <div class="border-2 rounded-lg p-4 ${isPrepared ? 'bg-green-50 border-green-300' : 'border-gray-300'}">
                                 <div class="flex justify-between items-start mb-3">
                                     <div>
@@ -1780,7 +1789,12 @@ const App = {
                                         <p class="font-bold text-lg mt-2">${o.customerName}</p>
                                     </div>
                                     <div class="text-right">
-                                        <p class="text-2xl font-bold text-orange-600">${o.quantity.toFixed(2)}</p>
+                                        <p class="text-2xl font-bold text-orange-600">${(() => {
+                            const order = OrdersModule.getOrderById(o.orderId);
+                            const item = order.items.find(i => i.productId === p.productId);
+                            const product = ProductsModule.getProductById(p.productId);
+                            return Utils.formatProductQuantity(o.quantity, product, item);
+                        })()}</p>
                                         <p class="text-xs text-gray-500">Quantità</p>
                                     </div>
                                 </div>
@@ -1810,7 +1824,7 @@ const App = {
                                 `}
                             </div>
                         `;
-            }).join('')}
+                }).join('')}
                 </div>
             </div>
             </div>
